@@ -1,0 +1,265 @@
+📱 GBChat - Ultimate Messaging Platform (GB WhatsApp Clone)
+Complete Documentation & Full Implementation
+Table of Contents
+Project Overview
+Architecture
+Project Structure
+Database Schemas
+Backend Implementation
+Frontend Implementation
+Feature List
+Setup & Deployment
+1. Project Overview
+GBChat is a feature-rich real-time messaging platform inspired by GB WhatsApp, built with MERN stack, featuring themes, scheduled messages, message reactions, stories, channels, self-destructing messages, chat locks, and more.
+
+Tech Stack
+Layer	Technology
+Frontend	React 18 + Vite + JSX
+Styling	Tailwind CSS v3.4
+State	Zustand + React Query
+Realtime	Socket.IO Client
+Backend	Node.js + Express.js
+Database	MongoDB + Mongoose
+Realtime Server	Socket.IO
+Auth	JWT + bcrypt
+File Upload	Multer + Cloudinary
+Notifications	Web Push API
+2. Architecture
+text
+
+┌─────────────────────────────────────────────────────┐
+│                    CLIENT (React + Vite)             │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
+│  │ Auth     │ │ Chat     │ │ Stories  │ │Settings│ │
+│  │ Module   │ │ Module   │ │ Module   │ │Module  │ │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬────┘ │
+│       │             │            │            │      │
+│  ┌────▼─────────────▼────────────▼────────────▼────┐ │
+│  │              Zustand Store                      │ │
+│  └────────────────────┬────────────────────────────┘ │
+│                       │                              │
+│  ┌────────────────────▼────────────────────────────┐ │
+│  │         Socket.IO Client + Axios                │ │
+│  └────────────────────┬────────────────────────────┘ │
+└───────────────────────┼──────────────────────────────┘
+                        │ WSS / HTTPS
+┌───────────────────────┼──────────────────────────────┐
+│                SERVER (Node + Express)               │
+│  ┌────────────────────▼────────────────────────────┐ │
+│  │              Socket.IO Server                   │ │
+│  └────────────────────┬────────────────────────────┘ │
+│  ┌──────────┐ ┌───────▼──┐ ┌──────────┐ ┌────────┐ │
+│  │ Auth     │ │ Message  │ │ Story    │ │ Group  │ │
+│  │ Routes   │ │ Routes   │ │ Routes   │ │ Routes │ │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬────┘ │
+│       │             │            │            │      │
+│  ┌────▼─────────────▼────────────▼────────────▼────┐ │
+│  │              MongoDB (Mongoose)                 │ │
+│  └─────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────┘
+3. Project Structure
+text
+
+gbchat/
+├── client/
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   ├── notification.mp3
+│   │   └── manifest.json
+│   └── src/
+│       ├── main.jsx
+│       ├── App.jsx
+│       ├── index.css
+│       ├── assets/
+│       │   ├── images/
+│       │   └── sounds/
+│       ├── components/
+│       │   ├── common/
+│       │   │   ├── Avatar.jsx
+│       │   │   ├── Badge.jsx
+│       │   │   ├── Button.jsx
+│       │   │   ├── Dropdown.jsx
+│       │   │   ├── EmojiPicker.jsx
+│       │   │   ├── IconButton.jsx
+│       │   │   ├── Input.jsx
+│       │   │   ├── Loader.jsx
+│       │   │   ├── Modal.jsx
+│       │   │   ├── SearchBar.jsx
+│       │   │   ├── Toast.jsx
+│       │   │   └── Tooltip.jsx
+│       │   ├── auth/
+│       │   │   ├── LoginForm.jsx
+│       │   │   ├── RegisterForm.jsx
+│       │   │   ├── OTPVerify.jsx
+│       │   │   └── ForgotPassword.jsx
+│       │   ├── chat/
+│       │   │   ├── ChatArea.jsx
+│       │   │   ├── ChatBubble.jsx
+│       │   │   ├── ChatHeader.jsx
+│       │   │   ├── ChatInput.jsx
+│       │   │   ├── ChatList.jsx
+│       │   │   ├── ChatListItem.jsx
+│       │   │   ├── MediaPreview.jsx
+│       │   │   ├── MessageActions.jsx
+│       │   │   ├── MessageReactions.jsx
+│       │   │   ├── MessageStatus.jsx
+│       │   │   ├── PinnedMessages.jsx
+│       │   │   ├── ReplyPreview.jsx
+│       │   │   ├── ScheduleMessage.jsx
+│       │   │   ├── StarredMessages.jsx
+│       │   │   ├── TypingIndicator.jsx
+│       │   │   ├── VoiceRecorder.jsx
+│       │   │   └── WallpaperPicker.jsx
+│       │   ├── contacts/
+│       │   │   ├── ContactCard.jsx
+│       │   │   ├── ContactList.jsx
+│       │   │   └── ContactProfile.jsx
+│       │   ├── groups/
+│       │   │   ├── CreateGroup.jsx
+│       │   │   ├── GroupInfo.jsx
+│       │   │   ├── GroupMembers.jsx
+│       │   │   ├── GroupSettings.jsx
+│       │   │   └── PollCreator.jsx
+│       │   ├── stories/
+│       │   │   ├── StoryBar.jsx
+│       │   │   ├── StoryCard.jsx
+│       │   │   ├── StoryCreator.jsx
+│       │   │   ├── StoryViewer.jsx
+│       │   │   └── StoryRing.jsx
+│       │   ├── channels/
+│       │   │   ├── ChannelCard.jsx
+│       │   │   ├── ChannelCreate.jsx
+│       │   │   ├── ChannelFeed.jsx
+│       │   │   └── ChannelList.jsx
+│       │   ├── calls/
+│       │   │   ├── AudioCall.jsx
+│       │   │   ├── CallHistory.jsx
+│       │   │   ├── CallInterface.jsx
+│       │   │   └── VideoCall.jsx
+│       │   ├── settings/
+│       │   │   ├── AccountSettings.jsx
+│       │   │   ├── AppearanceSettings.jsx
+│       │   │   ├── ChatSettings.jsx
+│       │   │   ├── NotificationSettings.jsx
+│       │   │   ├── PrivacySettings.jsx
+│       │   │   ├── StorageSettings.jsx
+│       │   │   └── ThemePicker.jsx
+│       │   └── layout/
+│       │       ├── MainLayout.jsx
+│       │       ├── Sidebar.jsx
+│       │       ├── SidePanel.jsx
+│       │       └── TopBar.jsx
+│       ├── hooks/
+│       │   ├── useAuth.js
+│       │   ├── useChat.js
+│       │   ├── useDebounce.js
+│       │   ├── useMediaQuery.js
+│       │   ├── useNotification.js
+│       │   ├── useSocket.js
+│       │   ├── useTheme.js
+│       │   └── useVoiceRecorder.js
+│       ├── lib/
+│       │   ├── api.js
+│       │   ├── cloudinary.js
+│       │   ├── constants.js
+│       │   ├── encryption.js
+│       │   ├── formatters.js
+│       │   ├── socket.js
+│       │   ├── toast.js
+│       │   └── validators.js
+│       ├── pages/
+│       │   ├── AuthPage.jsx
+│       │   ├── ChatPage.jsx
+│       │   ├── SettingsPage.jsx
+│       │   ├── ProfilePage.jsx
+│       │   ├── StoriesPage.jsx
+│       │   ├── ChannelsPage.jsx
+│       │   ├── CallsPage.jsx
+│       │   └── NotFoundPage.jsx
+│       ├── store/
+│       │   ├── useAuthStore.js
+│       │   ├── useChatStore.js
+│       │   ├── useStoryStore.js
+│       │   ├── useThemeStore.js
+│       │   ├── useCallStore.js
+│       │   └── useNotificationStore.js
+│       └── themes/
+│           ├── default.js
+│           ├── midnight.js
+│           ├── ocean.js
+│           ├── sunset.js
+│           ├── forest.js
+│           ├── cyberpunk.js
+│           └── index.js
+│
+├── server/
+│   ├── package.json
+│   ├── index.js
+│   ├── config/
+│   │   ├── db.js
+│   │   ├── cloudinary.js
+│   │   ├── cors.js
+│   │   └── socket.js
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── chatController.js
+│   │   ├── channelController.js
+│   │   ├── callController.js
+│   │   ├── contactController.js
+│   │   ├── groupController.js
+│   │   ├── messageController.js
+│   │   ├── storyController.js
+│   │   └── userController.js
+│   ├── middleware/
+│   │   ├── auth.js
+│   │   ├── errorHandler.js
+│   │   ├── rateLimiter.js
+│   │   ├── upload.js
+│   │   └── validate.js
+│   ├── models/
+│   │   ├── Call.js
+│   │   ├── Channel.js
+│   │   ├── Chat.js
+│   │   ├── Message.js
+│   │   ├── Poll.js
+│   │   ├── Reaction.js
+│   │   ├── Story.js
+│   │   └── User.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── channelRoutes.js
+│   │   ├── callRoutes.js
+│   │   ├── chatRoutes.js
+│   │   ├── contactRoutes.js
+│   │   ├── groupRoutes.js
+│   │   ├── messageRoutes.js
+│   │   ├── storyRoutes.js
+│   │   └── userRoutes.js
+│   ├── services/
+│   │   ├── emailService.js
+│   │   ├── notificationService.js
+│   │   ├── schedulerService.js
+│   │   └── socketService.js
+│   ├── utils/
+│   │   ├── generateToken.js
+│   │   ├── helpers.js
+│   │   └── validators.js
+│   └── socket/
+│       ├── handlers/
+│       │   ├── chatHandler.js
+│       │   ├── callHandler.js
+│       │   ├── notificationHandler.js
+│       │   ├── presenceHandler.js
+│       │   └── typingHandler.js
+│       └── index.js
+│
+├── .gitignore
+├── .env.example
+├── docker-compose.yml
+├── README.md
+└── package.json
