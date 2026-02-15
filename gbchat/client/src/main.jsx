@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App'
+import Splash from './components/common/Splash'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -15,6 +16,28 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+// App wrapper with splash screen
+const AppWrapper = () => {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    // Simulate app initialization
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2000); // Show splash for 2 seconds, or until app is ready
+
+    // Cleanup timer on unmount
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Conditionally render splash screen or app
+  if (showSplash) {
+    return <Splash />;
+  }
+
+  return <AppWithDevtools />;
+};
 
 // Conditionally render ReactQueryDevtools only in development
 const AppWithDevtools = () => (
@@ -70,7 +93,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AppWithDevtools />
+        <AppWrapper />
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>
