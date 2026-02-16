@@ -1,34 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Users, MessageCircle, Phone, VideoCamera, EllipsisHorizontal } from 'lucide-react';
-import Button from '../components/common/Button';
-import CreateGroup from '../components/groups/CreateGroup';
-import GroupInfo from '../components/groups/GroupInfo';
-import useChatStore from '../store/useChatStore';
+import React, { useState, useEffect } from 'react'
+import {
+  PlusIcon,
+  MagnifyingGlassIcon,
+  UserGroupIcon,
+  ChatBubbleLeftIcon,
+  PhoneIcon,
+  VideoCameraIcon,
+  EllipsisHorizontalIcon,
+} from '@heroicons/react/24/solid'
+import Button from '../components/common/Button'
+import CreateGroup from '../components/groups/CreateGroup'
+import GroupInfo from '../components/groups/GroupInfo'
+import useChatStore from '../store/useChatStore'
 
 const GroupsPage = () => {
-  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState(null)
+  const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false)
 
-  const { chats, fetchChats } = useChatStore();
+  const { chats, fetchChats } = useChatStore()
 
   // Filter to get only group chats
-  const groups = chats.filter(chat => chat.isGroup);
+  const groups = chats.filter(chat => chat.isGroup)
 
   useEffect(() => {
-    fetchChats();
-  }, []);
+    fetchChats()
+  }, [])
 
   const handleCreateGroupSuccess = (newGroup) => {
     // Refresh the chats to include the new group
-    fetchChats();
-    setIsCreateGroupOpen(false);
-  };
+    fetchChats()
+    setIsCreateGroupOpen(false)
+  }
 
   const handleGroupClick = (group) => {
-    setSelectedGroup(group);
-    setIsGroupInfoOpen(true);
-  };
+    setSelectedGroup(group)
+    setIsGroupInfoOpen(true)
+  }
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 pb-16">
@@ -40,7 +48,7 @@ const GroupsPage = () => {
           size="sm"
           onClick={() => setIsCreateGroupOpen(true)}
         >
-          <Plus className="w-4 h-4" />
+          <PlusIcon className="w-4 h-4" />
         </Button>
       </div>
 
@@ -52,7 +60,7 @@ const GroupsPage = () => {
           size="sm"
           onClick={() => setIsCreateGroupOpen(true)}
         >
-          <Plus className="w-4 h-4 mr-1" />
+          <PlusIcon className="w-4 h-4 mr-1" />
           New Group
         </Button>
       </div>
@@ -60,7 +68,7 @@ const GroupsPage = () => {
       {/* Search */}
       <div className="p-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
             placeholder="Search groups..."
@@ -116,7 +124,7 @@ const GroupsPage = () => {
           ) : (
             <div className="flex flex-col items-center justify-center h-64 p-4">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                <Users className="w-8 h-8 text-gray-400" />
+                <UserGroupIcon className="w-8 h-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No groups yet</h3>
               <p className="text-gray-500 dark:text-gray-400 text-center mb-4">
@@ -126,7 +134,7 @@ const GroupsPage = () => {
                 variant="primary"
                 onClick={() => setIsCreateGroupOpen(true)}
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <PlusIcon className="w-4 h-4 mr-1" />
                 Create Group
               </Button>
             </div>
@@ -141,15 +149,15 @@ const GroupsPage = () => {
             className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             onClick={() => setIsCreateGroupOpen(true)}
           >
-            <Users className="w-6 h-6 text-primary-500 mb-1" />
+            <UserGroupIcon className="w-6 h-6 text-primary-500 mb-1" />
             <span className="text-xs text-gray-700 dark:text-gray-300">New Group</span>
           </button>
           <button className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-            <MessageCircle className="w-6 h-6 text-primary-500 mb-1" />
+            <ChatBubbleLeftIcon className="w-6 h-6 text-primary-500 mb-1" />
             <span className="text-xs text-gray-700 dark:text-gray-300">Broadcast</span>
           </button>
           <button className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-            <EllipsisHorizontal className="w-6 h-6 text-primary-500 mb-1" />
+            <EllipsisHorizontalIcon className="w-6 h-6 text-primary-500 mb-1" />
             <span className="text-xs text-gray-700 dark:text-gray-300">Explore</span>
           </button>
         </div>
@@ -168,11 +176,11 @@ const GroupsPage = () => {
           group={selectedGroup}
           isOpen={isGroupInfoOpen}
           onClose={() => setIsGroupInfoOpen(false)}
-          onUpdate={() => fetchChats()} // Refresh chats when group info is updated
+          onUpdate={() => fetchChats()}
         />
       )}
     </div>
-  );
-};
+  )
+}
 
-export default GroupsPage;
+export default GroupsPage
