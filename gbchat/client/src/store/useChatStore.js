@@ -17,7 +17,9 @@ const useChatStore = create((set, get) => ({
     set({ isLoading: true })
     try {
       const { data } = await api.get('/chats')
-      set({ chats: data.chats, isLoading: false })
+      // Handle both array response and object with chats property
+      const chatsArray = Array.isArray(data) ? data : (data.chats || [])
+      set({ chats: chatsArray, isLoading: false })
     } catch (error) {
       set({ isLoading: false })
       console.error('Failed to fetch chats:', error)

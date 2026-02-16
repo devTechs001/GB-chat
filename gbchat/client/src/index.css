@@ -6,12 +6,17 @@
   * {
     @apply box-border;
   }
-  
+
   body {
     @apply antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
-  
+
+  /* Safe area for notched devices */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     @apply w-2;

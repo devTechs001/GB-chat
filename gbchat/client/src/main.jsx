@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App'
-import Splash from './components/common/Splash'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -17,86 +16,31 @@ const queryClient = new QueryClient({
   },
 })
 
-// App wrapper with splash screen
-const AppWrapper = () => {
-  const [showSplash, setShowSplash] = useState(true);
-
-  useEffect(() => {
-    // Simulate app initialization
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 10000); // Show splash for 10 seconds, or until app is ready
-
-    // Cleanup timer on unmount
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Conditionally render splash screen or app
-  if (showSplash) {
-    return <Splash />;
-  }
-
-  return <AppWithDevtools />;
-};
-
-// Conditionally render ReactQueryDevtools only in development
-const AppWithDevtools = () => (
-  <>
-    <App />
-    <Toaster
-      position="top-center"
-      toastOptions={{
-        duration: 3000,
-        style: {
-          background: '#363636',
-          color: '#fff',
-        },
-        success: {
-          style: {
-            background: '#10b981',
-          },
-        },
-        error: {
-          style: {
-            background: '#ef4444',
-          },
-        },
-      }}
-    />
-    {process.env.NODE_ENV === 'development' && (
-      <React.Suspense fallback={null}>
-        <DevtoolsWrapper />
-      </React.Suspense>
-    )}
-  </>
-);
-
-const DevtoolsWrapper = () => {
-  const [devtools, setDevtools] = React.useState(null);
-
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      import('@tanstack/react-query-devtools').then((module) => {
-        setDevtools(() => module.ReactQueryDevtools);
-      }).catch(err => {
-        console.error('Failed to load React Query Devtools:', err);
-      });
-    }
-  }, []);
-
-  if (process.env.NODE_ENV !== 'development' || !devtools) {
-    return null;
-  }
-
-  // Return the devtools component with the queryClient prop
-  return <devtools client={queryClient} initialIsOpen={false} />;
-};
-
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AppWrapper />
+        <App />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              style: {
+                background: '#10b981',
+              },
+            },
+            error: {
+              style: {
+                background: '#ef4444',
+              },
+            },
+          }}
+        />
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>

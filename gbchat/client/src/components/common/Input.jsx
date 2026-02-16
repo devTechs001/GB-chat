@@ -9,12 +9,28 @@ const Input = forwardRef(({
   fullWidth = true,
   className,
   inputClassName,
+  id,
+  name,
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  disabled,
+  readOnly,
+  required,
+  min,
+  max,
+  minLength,
+  maxLength,
+  pattern,
   ...props
 }, ref) => {
+  const inputId = id || name || `input-${Math.random().toString(36).substr(2, 9)}`
+
   return (
     <div className={clsx('relative', fullWidth && 'w-full', className)}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {label}
         </label>
       )}
@@ -26,7 +42,21 @@ const Input = forwardRef(({
         )}
         <input
           ref={ref}
+          id={inputId}
+          name={name}
           type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          disabled={disabled}
+          readOnly={readOnly}
+          required={required}
+          min={min}
+          max={max}
+          minLength={minLength}
+          maxLength={maxLength}
+          pattern={pattern}
           className={clsx(
             'input-field',
             icon && 'pl-10',

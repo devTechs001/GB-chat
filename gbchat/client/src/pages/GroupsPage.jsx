@@ -31,9 +31,21 @@ const GroupsPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900 pb-16">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 bg-white dark:bg-gray-900">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Groups</h1>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => setIsCreateGroupOpen(true)}
+        >
+          <Plus className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Groups</h1>
         <Button
           variant="primary"

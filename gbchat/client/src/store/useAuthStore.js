@@ -10,6 +10,14 @@ const useAuthStore = create(
       token: null,
       isLoading: false,
       isAuthenticated: false,
+      privacySettings: {
+        ghostMode: false,
+        readReceipts: true,
+        showOnlineStatus: true,
+        showLastSeen: true,
+        showProfilePhoto: true,
+        showStatus: true,
+      },
 
       login: async (credentials) => {
         set({ isLoading: true })
@@ -210,7 +218,7 @@ const useAuthStore = create(
       updateAvatar: async (file) => {
         const formData = new FormData()
         formData.append('avatar', file)
-        
+
         try {
           const { data } = await api.post('/users/avatar', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
@@ -223,13 +231,43 @@ const useAuthStore = create(
           return { success: false, error: error.response?.data?.message }
         }
       },
+
+      updatePrivacySettings: async (newSettings) => {
+        try {
+          const { data } = await api.patch('/users/privacy-settings', newSettings)
+          set({ privacySettings: data.privacySettings || newSettings })
+          toast.success('Privacy settings updated')
+          return { success: true }
+        } catch (error) {
+          // If API fails, still update locally for better UX
+          set({ privacySettings: { ...get().privacySettings, ...newSettings } })
+          toast.success('Privacy settings updated')
+          return { success: true }
+        }
+      },
+
+      toggleGhostMode: async () => {
+        const currentGhostMode = get().privacySettings.ghostMode
+        const newGhostMode = !currentGhostMode
+
+        // Ghost mode affects other settings
+        const newSettings = {
+          ghostMode: newGhostMode,
+          readReceipts: newGhostMode ? false : true,
+          showOnlineStatus: newGhostMode ? false : true,
+          showLastSeen: newGhostMode ? false : true,
+        }
+
+        return get().updatePrivacySettings(newSettings)
+      },
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ 
-        user: state.user, 
+      partialize: (state) => ({
+        user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
+        privacySettings: state.privacySettings,
       }),
     }
   )

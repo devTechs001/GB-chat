@@ -10,6 +10,7 @@ import PhoneVerificationModal from './PhoneVerificationModal'
 const LoginForm = ({ onForgotPassword }) => {
   const navigate = useNavigate()
   const { login, isLoading } = useAuthStore()
+  const replace = true // Use replace to prevent back navigation to login page
   const [showPassword, setShowPassword] = useState(false)
   const [loginMethod, setLoginMethod] = useState('email') // 'email' or 'phone'
   const [formData, setFormData] = useState({
@@ -70,8 +71,9 @@ const LoginForm = ({ onForgotPassword }) => {
 
     if (result.success) {
       // Use React Router navigation after a small delay to ensure state updates
+      // Navigate to root path, MainLayout will handle rendering the appropriate page
       setTimeout(() => {
-        navigate('/chats')
+        navigate('/', replace)
       }, 100)
     }
   }
@@ -95,7 +97,7 @@ const LoginForm = ({ onForgotPassword }) => {
   const handlePhoneLoginSuccess = () => {
     // Use React Router navigation after a small delay to ensure state updates
     setTimeout(() => {
-      navigate('/chats')
+      navigate('/', true)
     }, 100)
   }
 

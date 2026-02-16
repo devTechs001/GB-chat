@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline'
 import useAuthStore from '../../store/useAuthStore'
 import useThemeStore from '../../store/useThemeStore'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import Avatar from '../common/Avatar'
 import clsx from 'clsx'
 
@@ -20,9 +21,9 @@ const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation()
   const { user, logout } = useAuthStore()
   const { theme, setTheme } = useThemeStore()
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
 
   const navigation = [
-    { name: 'Home', href: '/', icon: ChatBubbleLeftRightIcon },
     { name: 'Chats', href: '/chats', icon: ChatBubbleLeftRightIcon },
     { name: 'Stories', href: '/stories', icon: PhotoIcon },
     { name: 'Channels', href: '/channels', icon: SpeakerWaveIcon },
@@ -33,6 +34,13 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
+
+  const handleNavClick = (href) => {
+    // Close sidebar on mobile when navigating
+    if (!isDesktop) {
+      onClose()
+    }
   }
 
   return (
@@ -52,7 +60,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             )}
           </button>
         </div>
-        
+
         {/* User Profile */}
         <div className="flex items-center gap-3">
           <Avatar
@@ -77,11 +85,12 @@ const Sidebar = ({ isOpen, onClose }) => {
         {navigation.map((item) => {
           const Icon = item.icon
           const isActive = location.pathname === item.href
-          
+
           return (
             <NavLink
               key={item.name}
               to={item.href}
+              onClick={() => handleNavClick(item.href)}
               className={clsx(
                 isActive ? 'sidebar-item-active' : 'sidebar-item',
                 'group'

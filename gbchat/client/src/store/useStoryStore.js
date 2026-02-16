@@ -12,7 +12,9 @@ const useStoryStore = create((set, get) => ({
     set({ isLoading: true })
     try {
       const { data } = await api.get('/stories')
-      set({ stories: data.stories, isLoading: false })
+      // Handle both array response and object with stories property
+      const storiesArray = Array.isArray(data) ? data : (data.stories || [])
+      set({ stories: storiesArray, isLoading: false })
     } catch (error) {
       set({ isLoading: false })
       console.error('Failed to fetch stories:', error)
@@ -24,7 +26,11 @@ const useStoryStore = create((set, get) => ({
       const { data } = await api.get('/stories/my-story')
       set({ myStory: data.story })
     } catch (error) {
-      console.error('Failed to fetch my story:', error)
+      // 404 means user has no story yet, which is normal
+      if (error.response?.status !== 404) {
+        console.error('Failed to fetch my story:', error)
+      }
+      set({ myStory: null })
     }
   },
 

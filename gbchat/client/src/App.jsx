@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import useAuthStore from './store/useAuthStore'
@@ -10,92 +10,84 @@ import Onboard from './components/common/Onboard'
 import MainLayout from './components/layout/MainLayout'
 
 // Lazy load pages for better performance
-const AuthPage = lazy(() => import('./pages/AuthPage'))
-const HomePage = lazy(() => import('./pages/HomePage'))
-const ChatPage = lazy(() => import('./pages/ChatPage'))
-const StoriesPage = lazy(() => import('./pages/StoriesPage'))
-const ChannelsPage = lazy(() => import('./pages/ChannelsPage'))
-const CallsPage = lazy(() => import('./pages/CallsPage'))
-const GroupsPage = lazy(() => import('./pages/GroupsPage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const ProfilePage = lazy(() => import('./pages/ProfilePage'))
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
-const TermsAndConditions = lazy(() => import('./pages/legal/TermsAndConditions'))
-const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'))
+const AuthPage = React.lazy(() => import('./pages/AuthPage'))
+const ChatPage = React.lazy(() => import('./pages/ChatPage'))
+const StoriesPage = React.lazy(() => import('./pages/StoriesPage'))
+const ChannelsPage = React.lazy(() => import('./pages/ChannelsPage'))
+const CallsPage = React.lazy(() => import('./pages/CallsPage'))
+const GroupsPage = React.lazy(() => import('./pages/GroupsPage'))
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'))
+const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'))
+const TermsAndConditions = React.lazy(() => import('./pages/legal/TermsAndConditions'))
+const PrivacyPolicy = React.lazy(() => import('./pages/legal/PrivacyPolicy'))
 
 function App() {
-  const { user, checkAuth, isLoading } = useAuthStore()
+  const { user, isAuthenticated, isLoading, checkAuth } = useAuthStore()
   const { theme, initTheme } = useThemeStore()
   const { connect, disconnect } = useSocket()
 
   // State for onboarding flow
   const [showSplash, setShowSplash] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
 
+  // Initialize app on mount
   useEffect(() => {
-    // Check if user has already completed onboarding
-    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding')
+    const initializeApp = async () => {
+      // Check onboarding status
+      const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding') === 'true'
 
-    // Check if there's a persisted token (user might be logged in)
-    const persistedState = localStorage.getItem('auth-storage')
+      // Check if user has persisted auth
+      const persistedState = localStorage.getItem('auth-storage')
+      let hasValidToken = false
 
-    let hasToken = false
-    if (persistedState) {
-      try {
-        const parsedState = JSON.parse(persistedState)
-        if (parsedState.token && parsedState.isAuthenticated) {
-          hasToken = true
+      if (persistedState) {
+        try {
+          const parsed = JSON.parse(persistedState)
+          hasValidToken = !!(parsed.token && parsed.isAuthenticated)
+        } catch (e) {
+          console.error('Error parsing persisted auth state:', e)
         }
-      } catch (e) {
-        console.error('Error parsing persisted auth state:', e)
       }
-    }
 
-    // If there's a persisted token, don't show splash initially
-    // We'll still call checkAuth to verify the token is valid
-    if (!hasToken) {
-      if (hasCompletedOnboarding) {
-        // Show splash if user is not authenticated and onboarding is completed
-        const splashTimer = setTimeout(() => {
+      // Initialize theme
+      initTheme()
+
+      // Verify auth status
+      await checkAuth()
+
+      // Determine what to show
+      if (hasValidToken) {
+        // User has valid token - skip splash, go to app
+        setShowSplash(false)
+        setShowOnboarding(false)
+      } else if (hasCompletedOnboarding) {
+        // User completed onboarding but no token - show splash briefly
+        setTimeout(() => {
           setShowSplash(false)
-        }, 1500) // Show splash for 1.5 seconds even if onboarding is completed
-
-        return () => clearTimeout(splashTimer)
+        }, 1500)
       } else {
-        // Show splash then onboarding for new users
-        const splashTimer = setTimeout(() => {
+        // New user - show splash then onboarding
+        setTimeout(() => {
           setShowSplash(false)
           setShowOnboarding(true)
         }, 2000)
+      }
 
-        return () => clearTimeout(splashTimer)
-      }
-    } else {
-      // If there's a persisted token, skip splash initially
-      setShowSplash(false)
-      if (hasCompletedOnboarding) {
-        setShowOnboarding(false)
-      }
+      setIsInitialized(true)
     }
 
-    // Call checkAuth and initTheme
-    checkAuth()
-    initTheme()
-  }, []) // Empty dependency array to run only once on mount
+    initializeApp()
+  }, [])
 
-  // Update splash/onboarding state when user authentication status changes
-  useEffect(() => {
-    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding')
+  // Handle onboarding completion
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('hasCompletedOnboarding', 'true')
+    setShowOnboarding(false)
+  }
 
-    if (user) {
-      // User is authenticated, hide splash and onboarding
-      setShowSplash(false)
-      if (hasCompletedOnboarding) {
-        setShowOnboarding(false)
-      }
-    }
-  }, [user])
-
+  // Connect socket when user is authenticated
   useEffect(() => {
     if (user) {
       connect(user._id)
@@ -105,25 +97,23 @@ function App() {
     return () => disconnect()
   }, [user])
 
+  // Apply theme to document
   useEffect(() => {
-    // Apply theme to document
     document.documentElement.className = theme
     document.documentElement.style.setProperty('color-scheme', theme)
   }, [theme])
 
-  // Show splash screen initially
-  if (showSplash) {
+  // Show splash during initialization
+  if (!isInitialized || showSplash) {
     return <Splash />
   }
 
-  // Show onboarding flow if not completed
+  // Show onboarding if needed
   if (showOnboarding) {
-    return <Onboard onComplete={() => {
-      localStorage.setItem('hasCompletedOnboarding', 'true')
-      setShowOnboarding(false)
-    }} />
+    return <Onboard onComplete={handleOnboardingComplete} />
   }
 
+  // Show loading while checking auth
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-bg">
@@ -132,17 +122,22 @@ function App() {
     )
   }
 
+  // Main app routes
   return (
     <AnimatePresence mode="wait">
-      <Suspense fallback={<Loader fullScreen />}>
+      <React.Suspense fallback={<Loader fullScreen />}>
         <Routes>
-          <Route path="/auth" element={
-            user ? <Navigate to="/" /> : <AuthPage />
-          } />
+          {/* Public route */}
+          <Route
+            path="/auth"
+            element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />}
+          />
 
-          <Route path="/" element={
-            user ? <MainLayout /> : <Navigate to="/auth" />
-          }>
+          {/* Protected routes */}
+          <Route
+            path="/"
+            element={isAuthenticated ? <MainLayout /> : <Navigate to="/auth" replace />}
+          >
             <Route index element={<ChatPage />} />
             <Route path="chats" element={<ChatPage />} />
             <Route path="stories" element={<StoriesPage />} />
@@ -153,11 +148,14 @@ function App() {
             <Route path="profile/:userId" element={<ProfilePage />} />
           </Route>
 
+          {/* Public legal pages */}
           <Route path="/terms" element={<TermsAndConditions />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+
+          {/* 404 */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
-      </Suspense>
+      </React.Suspense>
     </AnimatePresence>
   )
 }

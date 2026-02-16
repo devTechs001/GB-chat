@@ -36,9 +36,9 @@ const SettingsPage = () => {
   const ActiveComponent = sections.find(s => s.id === activeSection)?.component
 
   return (
-    <div className="flex flex-col md:flex-row h-full bg-gray-50 dark:bg-dark-bg">
+    <div className="flex flex-col md:flex-row h-full bg-gray-50 dark:bg-dark-bg pb-16 lg:pb-0">
       {/* Mobile Header */}
-      <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h1>
       </div>
 

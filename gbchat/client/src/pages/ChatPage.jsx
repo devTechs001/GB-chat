@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Bars3Icon } from '@heroicons/react/24/outline'
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import ChatList from '../components/chat/ChatList'
 import ChatArea from '../components/chat/ChatArea'
 import StoryBar from '../components/stories/StoryBar'
@@ -10,7 +10,7 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import clsx from 'clsx'
 
 const ChatPage = () => {
-  const { toggleSidebar } = useOutletContext()
+  const { toggleSidebar, isSidebarOpen } = useOutletContext()
   const { activeChat, setActiveChat, fetchChats } = useChatStore()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const [showChatList, setShowChatList] = useState(!isMobile)
@@ -42,8 +42,29 @@ const ChatPage = () => {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Mobile Header with Menu Button */}
+      {isMobile && showChatList && (
+        <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4">
+          <button
+            onClick={toggleSidebar}
+            className="p-2 -ml-2 text-gray-600 dark:text-gray-400"
+          >
+            {isSidebarOpen ? (
+              <XMarkIcon className="w-6 h-6" />
+            ) : (
+              <Bars3Icon className="w-6 h-6" />
+            )}
+          </button>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">GBChat</h1>
+          <div className="w-8" /> {/* Spacer for balance */}
+        </div>
+      )}
+
       {/* Story Bar - Always visible on top */}
-      <div className="hidden md:block">
+      <div className={clsx(
+        'hidden md:block',
+        isMobile && showChatList && 'mt-14'
+      )}>
         <StoryBar />
       </div>
 
@@ -109,16 +130,6 @@ const ChatPage = () => {
           )}
         </div>
       </div>
-
-      {/* Mobile Hamburger Menu */}
-      {isMobile && showChatList && (
-        <button
-          onClick={toggleSidebar}
-          className="fixed bottom-6 right-6 p-4 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 z-20"
-        >
-          <Bars3Icon className="w-6 h-6" />
-        </button>
-      )}
     </div>
   )
 }

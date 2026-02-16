@@ -14,26 +14,22 @@ import {
   FingerPrintIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
+import useAuthStore from '../../store/useAuthStore'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
 import Input from '../common/Input'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
-const PrivacySettings = () => {
-  const [privacySettings, setPrivacySettings] = useState({
-    lastSeen: 'everyone',
-    profilePhoto: 'contacts',
-    about: 'everyone',
-    status: 'contacts',
-    readReceipts: true,
-    groups: 'everyone',
-    calls: 'contacts',
-    onlineStatus: true,
-    typingIndicator: true,
-    messageForwarding: true,
-  })
+// Custom Ghost Icon
+const GhostIcon = ({ className }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 2C6.48 2 2 6.48 2 12v8c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55.45-1 1-1s1 .45 1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55.45-1 1-1s1 .45 1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55.45-1 1-1s1 .45 1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55.45-1 1-1s1 .45 1 1v1c0 .55.45 1 1 1s1-.45 1-1v-8c0-5.52-4.48-10-10-10zm-3 9c-.83 0-1.5-.67-1.5-1.5S8.17 8 9 8s1.5.67 1.5 1.5S9.83 11 9 11zm6 0c-.83 0-1.5-.67-1.5-1.5S14.17 8 15 8s1.5.67 1.5 1.5S15.83 11 15 11z"/>
+  </svg>
+)
 
+const PrivacySettings = () => {
+  const { privacySettings, updatePrivacySettings, toggleGhostMode } = useAuthStore()
   const [security, setSecurity] = useState({
     twoFactorAuth: false,
     biometricLock: false,
@@ -67,19 +63,12 @@ const PrivacySettings = () => {
     { value: '1hour', label: 'After 1 hour' },
   ]
 
-  const handlePrivacyChange = (setting, value) => {
-    setPrivacySettings(prev => ({ ...prev, [setting]: value }))
-    toast.success(`${setting.replace(/([A-Z])/g, ' $1').toLowerCase()} updated`)
+  const handlePrivacyChange = async (setting, value) => {
+    await updatePrivacySettings({ [setting]: value })
   }
 
-  const handleSecurityToggle = (setting) => {
-    if (setting === 'twoFactorAuth' && !security[setting]) {
-      setShow2FAModal(true)
-      return
-    }
-    
-    setSecurity(prev => ({ ...prev, [setting]: !prev[setting] }))
-    toast.success(`${setting.replace(/([A-Z])/g, ' $1').toLowerCase()} ${security[setting] ? 'disabled' : 'enabled'}`)
+  const handleToggleChange = async (setting) => {
+    await updatePrivacySettings({ [setting]: !privacySettings[setting] })
   }
 
   const handlePasswordChange = async () => {
@@ -164,6 +153,57 @@ const PrivacySettings = () => {
           </div>
         </div>
       )}
+
+      {/* Ghost Mode - Premium Feature */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <GhostIcon className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">Ghost Mode</h3>
+              <p className="text-white/90 mb-3">
+                Browse anonymously - hide your online status, last seen, and read receipts from everyone.
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded">
+                  <EyeSlashIcon className="w-3 h-3" />
+                  Hide Online Status
+                </span>
+                <span className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded">
+                  <ClockIcon className="w-3 h-3" />
+                  Hide Last Seen
+                </span>
+                <span className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded">
+                  <DocumentTextIcon className="w-3 h-3" />
+                  Disable Read Receipts
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={toggleGhostMode}
+            className={clsx(
+              'relative inline-flex h-8 w-14 items-center rounded-full transition-colors',
+              privacySettings.ghostMode ? 'bg-white' : 'bg-white/30'
+            )}
+          >
+            <span
+              className={clsx(
+                'inline-block h-6 w-6 transform rounded-full bg-purple-600 transition-transform',
+                privacySettings.ghostMode ? 'translate-x-7' : 'translate-x-1'
+              )}
+            />
+          </button>
+        </div>
+        {privacySettings.ghostMode && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-white/90">
+            <ShieldCheckIcon className="w-4 h-4" />
+            Ghost mode is active - You're browsing anonymously
+          </div>
+        )}
+      </div>
 
       {/* Privacy Settings */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
@@ -258,8 +298,9 @@ const PrivacySettings = () => {
               <input
                 type="checkbox"
                 checked={privacySettings.readReceipts}
-                onChange={(e) => handlePrivacyChange('readReceipts', e.target.checked)}
-                className="toggle-switch"
+                onChange={(e) => handleToggleChange('readReceipts')}
+                disabled={privacySettings.ghostMode}
+                className="toggle-switch disabled:opacity-50"
               />
             </label>
 
@@ -268,24 +309,61 @@ const PrivacySettings = () => {
                 <UserGroupIcon className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    Group Invites
+                    Online Status
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Who can add you to groups
+                    Show when you're online
                   </p>
                 </div>
               </div>
-              <select
-                value={privacySettings.groups}
-                onChange={(e) => handlePrivacyChange('groups', e.target.value)}
-                className="text-sm rounded-lg px-3 py-1 bg-gray-100 dark:bg-gray-700"
-              >
-                {privacyOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="checkbox"
+                checked={privacySettings.showOnlineStatus}
+                onChange={(e) => handleToggleChange('showOnlineStatus')}
+                disabled={privacySettings.ghostMode}
+                className="toggle-switch disabled:opacity-50"
+              />
+            </label>
+
+            <label className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ClockIcon className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    Last Seen
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Show your last seen time
+                  </p>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={privacySettings.showLastSeen}
+                onChange={(e) => handleToggleChange('showLastSeen')}
+                disabled={privacySettings.ghostMode}
+                className="toggle-switch disabled:opacity-50"
+              />
+            </label>
+
+            <label className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <PhotoIcon className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    Profile Photo
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Show your profile photo
+                  </p>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={privacySettings.showProfilePhoto}
+                onChange={(e) => handleToggleChange('showProfilePhoto')}
+                className="toggle-switch"
+              />
             </label>
           </div>
         </div>
