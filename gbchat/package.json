@@ -1,0 +1,27 @@
+{
+  "name": "gbchat",
+  "version": "1.0.0",
+  "description": "GBChat - Ultimate Messaging Platform (GB WhatsApp Clone)",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && nodemon index.js",
+    "start": "node server/index.js",
+    "build": "npm run build:client",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build"
+  },
+  "keywords": [
+    "messaging",
+    "whatsapp",
+    "chat",
+    "realtime",
+    "mern"
+  ],
+  "author": "GBChat Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

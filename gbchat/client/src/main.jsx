@@ -25,7 +25,7 @@ const AppWrapper = () => {
     // Simulate app initialization
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2000); // Show splash for 2 seconds, or until app is ready
+    }, 10000); // Show splash for 10 seconds, or until app is ready
 
     // Cleanup timer on unmount
     return () => clearTimeout(timer);
@@ -77,7 +77,9 @@ const DevtoolsWrapper = () => {
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       import('@tanstack/react-query-devtools').then((module) => {
-        setDevtools(module.ReactQueryDevtools);
+        setDevtools(() => module.ReactQueryDevtools);
+      }).catch(err => {
+        console.error('Failed to load React Query Devtools:', err);
       });
     }
   }, []);
@@ -86,7 +88,8 @@ const DevtoolsWrapper = () => {
     return null;
   }
 
-  return React.createElement(devtools, { initialIsOpen: false });
+  // Return the devtools component with the queryClient prop
+  return <devtools client={queryClient} initialIsOpen={false} />;
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(

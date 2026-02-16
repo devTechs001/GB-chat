@@ -2,13 +2,15 @@
 import User from "../models/User.js";
 import { generateToken } from "../utils/generateToken.js";
 import crypto from "crypto";
+import phoneVerificationService from "../services/phoneVerificationService.js";
 
 export const register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password } = req.body;
 
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+    // Either email or phone must be provided
+    if (!fullName || (!email && !phone) || !password) {
+      return res.status(400).json({ message: "Full name, email or phone, and password are required" });
     }
 
     if (password.length < 6) {
@@ -17,9 +19,20 @@ export const register = async (req, res, next) => {
         .json({ message: "Password must be at least 6 characters" });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
+    // Check if email already exists (if provided)
+    if (email) {
+      const existingUserByEmail = await User.findOne({ email });
+      if (existingUserByEmail) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+    }
+
+    // Check if phone already exists (if provided)
+    if (phone) {
+      const existingUserByPhone = await User.findOne({ phone });
+      if (existingUserByPhone) {
+        return res.status(400).json({ message: "Phone number already registered" });
+      }
     }
 
     const user = await User.create({
@@ -51,18 +64,71 @@ export const register = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, password } = req.body;
 
-    const user = await User.findOne({ email }).select("+password");
+    // Either email or phone must be provided
+    if (!email && !phone) {
+      return res.status(400).json({ message: "Email or phone number is required" });
+    }
+
+    let user;
+    if (email) {
+      user = await User.findOne({ email }).select("+password");
+    } else if (phone) {
+      user = await User.findOne({ phone }).select("+password");
+    }
+
     if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    user.status = "online";
+    user.lastSeen = new Date();
+    await user.save();
+
+    const token = generateToken(user._id, res);
+
+    res.json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      about: user.about,
+      status: user.status,
+      theme: user.theme,
+      privacy: user.privacy,
+      notifications: user.notifications,
+      token,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const phoneLogin = async (req, res, next) => {
+  try {
+    const { phone, code } = req.body;
+
+    if (!phone || !code) {
+      return res.status(400).json({ message: "Phone number and verification code are required" });
+    }
+
+    // Verify the phone number and code
+    const result = await phoneVerificationService.verifyPhoneNumber(phone, code);
+
+    if (!result.success) {
+      return res.status(401).json({ message: result.message || "Invalid verification code" });
+    }
+
+    const user = result.user;
+
+    // Update user status
     user.status = "online";
     user.lastSeen = new Date();
     await user.save();

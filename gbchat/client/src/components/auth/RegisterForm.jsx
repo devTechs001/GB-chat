@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, EyeSlashIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
 import Input from '../common/Input'
 import Button from '../common/Button'
 import useAuthStore from '../../store/useAuthStore'
@@ -12,9 +12,11 @@ const RegisterForm = () => {
   const { register, isLoading } = useAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [registrationMethod, setRegistrationMethod] = useState('email') // 'email' or 'phone'
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     username: '',
     password: '',
     confirmPassword: '',
@@ -26,7 +28,7 @@ const RegisterForm = () => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     const newValue = type === 'checkbox' ? checked : value
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: newValue
@@ -51,8 +53,14 @@ const RegisterForm = () => {
       newErrors.name = 'Name is required'
     }
 
-    if (!validators.email(formData.email)) {
-      newErrors.email = 'Invalid email address'
+    if (registrationMethod === 'email') {
+      if (!validators.email(formData.email)) {
+        newErrors.email = 'Invalid email address'
+      }
+    } else if (registrationMethod === 'phone') {
+      if (!validators.phone(formData.phone)) {
+        newErrors.phone = 'Invalid phone number'
+      }
     }
 
     const usernameValidation = validators.username(formData.username)
@@ -81,12 +89,20 @@ const RegisterForm = () => {
     e.preventDefault()
     if (!validate()) return
 
-    const result = await register({
-      name: formData.name,
-      email: formData.email,
+    const registrationData = {
+      fullName: formData.name, // Changed from 'name' to 'fullName' to match backend
       username: formData.username,
       password: formData.password,
-    })
+    }
+
+    // Add either email or phone based on registration method
+    if (registrationMethod === 'email') {
+      registrationData.email = formData.email
+    } else if (registrationMethod === 'phone') {
+      registrationData.phone = formData.phone
+    }
+
+    const result = await register(registrationData)
 
     if (result.success) {
       navigate('/')
@@ -95,7 +111,7 @@ const RegisterForm = () => {
 
   const getPasswordStrengthColor = () => {
     if (!passwordStrength) return 'bg-gray-200'
-    
+
     switch (passwordStrength.strength) {
       case 'weak':
         return 'bg-red-500'
@@ -112,7 +128,7 @@ const RegisterForm = () => {
 
   const getPasswordStrengthWidth = () => {
     if (!passwordStrength) return '0%'
-    
+
     switch (passwordStrength.strength) {
       case 'weak':
         return '25%'
@@ -140,16 +156,62 @@ const RegisterForm = () => {
         autoComplete="name"
       />
 
-      <Input
-        label="Email Address"
-        type="email"
-        name="email"
-        value={formData.email}
-        onChange={handleChange}
-        error={errors.email}
-        placeholder="john@example.com"
-        autoComplete="email"
-      />
+      {/* Registration Method Toggle */}
+      <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 p-1 bg-gray-50 dark:bg-gray-700">
+        <button
+          type="button"
+          className={`flex-1 py-2 px-4 text-sm font-medium rounded-md ${
+            registrationMethod === 'email'
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
+          }`}
+          onClick={() => setRegistrationMethod('email')}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <EnvelopeIcon className="w-4 h-4" />
+            Email
+          </div>
+        </button>
+        <button
+          type="button"
+          className={`flex-1 py-2 px-4 text-sm font-medium rounded-md ${
+            registrationMethod === 'phone'
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
+          }`}
+          onClick={() => setRegistrationMethod('phone')}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <PhoneIcon className="w-4 h-4" />
+            Phone
+          </div>
+        </button>
+      </div>
+
+      {/* Email or Phone Input */}
+      {registrationMethod === 'email' ? (
+        <Input
+          label="Email Address"
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          error={errors.email}
+          placeholder="john@example.com"
+          autoComplete="email"
+        />
+      ) : (
+        <Input
+          label="Phone Number"
+          type="tel"
+          name="phone"
+          value={formData.phone}
+          onChange={handleChange}
+          error={errors.phone}
+          placeholder="+1 (555) 123-4567"
+          autoComplete="tel"
+        />
+      )}
 
       <Input
         label="Username"
