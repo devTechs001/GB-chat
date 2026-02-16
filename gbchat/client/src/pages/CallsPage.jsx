@@ -27,9 +27,9 @@ const CallsPage = () => {
     fetchCallHistory()
   }, [])
 
-  const filteredCalls = callHistory.filter((call) => {
+  const filteredCalls = (callHistory || []).filter((call) => {
     if (filter !== 'all' && call.type !== filter) return false
-    if (searchQuery && !call.user.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && !call.user?.name?.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
     return true

@@ -12,9 +12,11 @@ const useCallStore = create((set, get) => ({
     set({ isLoading: true })
     try {
       const { data } = await api.get('/calls/history')
-      set({ callHistory: data.calls, isLoading: false })
+      // Handle both array and object responses
+      const callsArray = Array.isArray(data) ? data : (data.calls || [])
+      set({ callHistory: callsArray, isLoading: false })
     } catch (error) {
-      set({ isLoading: false })
+      set({ callHistory: [], isLoading: false })
       console.error('Failed to fetch call history:', error)
     }
   },
