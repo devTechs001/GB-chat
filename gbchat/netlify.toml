@@ -2,6 +2,7 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration/
 
 [build]
+  base = "."
   command = "cd client && npm install && npm run build"
   publish = "client/dist"
 
