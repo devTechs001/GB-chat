@@ -2,13 +2,16 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration/
 
 [build]
-  base = "."
   command = "cd client && npm install && npm run build"
   publish = "client/dist"
 
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_VERSION = "9"
+  NODE_VERSION = "20"
+  NPM_VERSION = "10"
+
+# Environment variables - MUST be set in Netlify dashboard
+# VITE_API_URL = "https://your-backend.onrender.com/api"
+# VITE_SOCKET_URL = "https://your-backend.onrender.com"
 
 # SPA Redirect for React Router
 [[redirects]]
