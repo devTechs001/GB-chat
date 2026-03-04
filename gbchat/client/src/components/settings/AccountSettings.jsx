@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { CameraIcon, TrashIcon } from '@heroicons/react/24/outline'
 import Avatar from '../common/Avatar'
 import Input from '../common/Input'
@@ -8,17 +8,26 @@ import toast from 'react-hot-toast'
 
 const AccountSettings = () => {
   const { user, updateProfile, updateAvatar } = useAuthStore()
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    username: user?.username || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    bio: user?.bio || '',
-    website: user?.website || '',
-    location: user?.location || '',
-  })
   const [loading, setLoading] = useState(false)
   const [avatarFile, setAvatarFile] = useState(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    about: '',
+  })
+
+  // Initialize form data when user is loaded
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.fullName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        about: user.about || 'Hey there! I\'m using GBChat',
+      })
+    }
+  }, [user])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -27,24 +36,43 @@ const AccountSettings = () => {
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0]
-    if (file) {
-      setAvatarFile(file)
-      const result = await updateAvatar(file)
-      if (result.success) {
-        setAvatarFile(null)
-      }
+    if (!file) return
+
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB')
+      return
+    }
+
+    setAvatarFile(file)
+    const result = await updateAvatar(file)
+    if (result.success) {
+      setAvatarFile(null)
+    } else {
+      setAvatarFile(null)
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
 
+    // Validate
+    if (!formData.name || formData.name.trim() === '') {
+      toast.error('Name is required')
+      return
+    }
+
+    setLoading(true)
     const result = await updateProfile(formData)
     setLoading(false)
 
-    if (!result.success) {
-      // Errors are already shown via toast in the store
+    if (result.success) {
+      toast.success('Profile updated!')
     }
   }
 
@@ -111,24 +139,18 @@ const AccountSettings = () => {
             value={formData.name}
             onChange={handleChange}
             placeholder="John Doe"
+            required
           />
           <Input
-            label="Username"
-            name="username"
-            value={formData.username}
+            label="Email"
+            name="email"
+            type="email"
+            value={formData.email}
             onChange={handleChange}
-            placeholder="johndoe"
+            placeholder="john@example.com"
+            disabled
           />
         </div>
-
-        <Input
-          label="Email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleChange}
-          placeholder="john@example.com"
-        />
 
         <Input
           label="Phone"
@@ -141,36 +163,19 @@ const AccountSettings = () => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Bio
+            About
           </label>
           <textarea
-            name="bio"
-            value={formData.bio}
+            name="about"
+            value={formData.about}
             onChange={handleChange}
             rows={3}
             maxLength={200}
             className="input-field resize-none w-full"
-            placeholder="Tell us about yourself..."
+            placeholder="Hey there! I'm using GBChat"
           />
-          <p className="mt-1 text-xs text-gray-500">{formData.bio.length}/200</p>
+          <p className="mt-1 text-xs text-gray-500">{formData.about.length}/200</p>
         </div>
-
-        <Input
-          label="Website"
-          name="website"
-          type="url"
-          value={formData.website}
-          onChange={handleChange}
-          placeholder="https://example.com"
-        />
-
-        <Input
-          label="Location"
-          name="location"
-          value={formData.location}
-          onChange={handleChange}
-          placeholder="City, Country"
-        />
 
         <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
           <Button type="submit" variant="primary" loading={loading} className="w-full sm:w-auto">

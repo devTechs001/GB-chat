@@ -24,7 +24,20 @@ const ChatListItem = ({ chat, onClick }) => {
   const { user } = useAuthStore()
   const isActive = activeChat?._id === chat._id
   const unreadCount = unreadCounts[chat._id] || 0
-  const isOnline = onlineUsers.includes(chat.userId)
+
+  // Get the other participant's info (not the current user)
+  const participants = chat.participants || []
+  const otherParticipant = participants.find(p => {
+    const pId = p.user?._id || p.user
+    return pId !== user?._id
+  })
+
+  // Use participant name if available, otherwise fallback to chat.name
+  const displayName = otherParticipant?.user?.fullName || chat.name || 'Unknown'
+  const displayAvatar = otherParticipant?.user?.avatar || chat.avatar
+  const isOnline = otherParticipant?.user?.status === 'online'
+  const lastSeen = otherParticipant?.user?.lastSeen
+
   const isTyping = typingUsers[chat._id]?.length > 0
 
   // Format time with seconds for today, otherwise show days ago
@@ -160,8 +173,8 @@ const ChatListItem = ({ chat, onClick }) => {
       {/* Avatar with online status */}
       <div className="relative flex-shrink-0">
         <Avatar
-          src={chat.avatar}
-          alt={chat.name}
+          src={displayAvatar}
+          alt={displayName}
           size="md"
           status={isOnline ? 'online' : 'offline'}
           className="transition-transform group-hover:scale-105"
@@ -184,7 +197,7 @@ const ChatListItem = ({ chat, onClick }) => {
               chat.isPinned && 'text-primary-600 dark:text-primary-400',
               chat.isStarred && 'flex items-center gap-1'
             )}>
-              {chat.name}
+              {displayName}
               {chat.isStarred && <StarIconSolid className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />}
             </h3>
 
@@ -248,9 +261,9 @@ const ChatListItem = ({ chat, onClick }) => {
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
               Online
             </span>
-          ) : chat.lastSeen ? (
-            <span className="text-gray-400 dark:text-gray-500" title={`Last seen: ${new Date(chat.lastSeen).toLocaleString()}`}>
-              {formatLastSeen(chat.lastSeen)}
+          ) : lastSeen ? (
+            <span className="text-gray-400 dark:text-gray-500" title={`Last seen: ${new Date(lastSeen).toLocaleString()}`}>
+              {formatLastSeen(lastSeen)}
             </span>
           ) : null}
         </div>

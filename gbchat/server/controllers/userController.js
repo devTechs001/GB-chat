@@ -58,27 +58,45 @@ export const getUserProfile = async (req, res, next) => {
 
 export const uploadAvatar = async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "No file provided" });
+    if (!req.file) {
+      console.error('No file in request');
+      return res.status(400).json({ message: "No file provided" });
+    }
 
-    const b64 = Buffer.from(req.file.buffer).toString("base64");
-    const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+    console.log('Uploading avatar:', req.file.path, req.file.size, req.file.mimetype);
 
-    const result = await cloudinary.uploader.upload(dataURI, {
-      folder: "gbchat/avatars",
-      width: 500,
-      height: 500,
-      crop: "fill",
-      gravity: "face",
-    });
+    let avatarUrl;
 
+    // Try Cloudinary, fallback to local storage
+    try {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "gbchat/avatars",
+        width: 500,
+        height: 500,
+        crop: "fill",
+        gravity: "face",
+      });
+      avatarUrl = result.secure_url;
+      console.log('✓ Uploaded to Cloudinary:', avatarUrl);
+    } catch (cloudinaryError) {
+      console.log('Cloudinary failed, using local file:', cloudinaryError.message);
+      // Fallback: use local file path
+      avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      console.log('✓ Using local avatar:', avatarUrl);
+    }
+
+    // Update user
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { avatar: result.secure_url },
+      { avatar: avatarUrl },
       { new: true }
-    );
+    ).select('fullName email phone avatar about status theme privacy notifications');
 
-    res.json({ avatar: user.avatar });
+    // Return full user object
+    res.json(user);
   } catch (error) {
+    console.error('Avatar upload error:', error.message);
+    console.error('Stack:', error.stack);
     next(error);
   }
 };

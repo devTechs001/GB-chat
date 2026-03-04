@@ -224,11 +224,19 @@ const useAuthStore = create(
 
       updateProfile: async (updates) => {
         try {
-          const { data } = await api.patch('/users/profile', updates)
-          set({ user: data.user })
+          // Map frontend fields to backend fields
+          const backendUpdates = {}
+          if (updates.name) backendUpdates.fullName = updates.name
+          if (updates.about) backendUpdates.about = updates.about
+          if (updates.phone) backendUpdates.phone = updates.phone
+
+          const { data } = await api.put('/auth/profile', backendUpdates)
+          // Backend returns user directly
+          set({ user: data })
           toast.success('Profile updated successfully')
           return { success: true }
         } catch (error) {
+          console.error('Profile update error:', error)
           toast.error(error.response?.data?.message || 'Update failed')
           return { success: false, error: error.response?.data?.message }
         }
@@ -239,13 +247,16 @@ const useAuthStore = create(
         formData.append('avatar', file)
 
         try {
+          // Use /users/avatar endpoint
           const { data } = await api.post('/users/avatar', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           })
-          set({ user: data.user })
+          // Backend returns user directly
+          set({ user: data })
           toast.success('Avatar updated successfully')
           return { success: true }
         } catch (error) {
+          console.error('Avatar upload error:', error)
           toast.error(error.response?.data?.message || 'Upload failed')
           return { success: false, error: error.response?.data?.message }
         }

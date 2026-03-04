@@ -27,6 +27,7 @@ import clsx from 'clsx'
 import { format, isToday, isYesterday, subDays } from 'date-fns'
 import useChatStore from '../../store/useChatStore'
 import useGBFeaturesStore from '../../store/useGBFeaturesStore'
+import useAuthStore from '../../store/useAuthStore'
 import ChatDisplaySettings from '../settings/ChatDisplaySettings'
 import WallpaperSelector from './WallpaperSelector'
 import MediaGallery from './MediaGallery'
@@ -51,6 +52,7 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
   const navigate = useNavigate()
   const { onlineUsers } = useChatStore()
   const { gbFeatures, toggleQuickSetting } = useGBFeaturesStore()
+  const { user } = useAuthStore()
   const [showSearch, setShowSearch] = useState(false)
   const [showQuickSettings, setShowQuickSettings] = useState(false)
   const [showDisplaySettings, setShowDisplaySettings] = useState(false)
@@ -58,7 +60,20 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
   const [showMediaGallery, setShowMediaGallery] = useState(false)
   const [showStarredModal, setShowStarredModal] = useState(false)
   const [showLockSettings, setShowLockSettings] = useState(false)
-  const isOnline = chat.isGroup ? false : onlineUsers.includes(chat.userId)
+
+  // Get the other participant's info (not the current user)
+  const participants = chat.participants || []
+  const otherParticipant = participants.find(p => {
+    const pId = p.user?._id || p.user
+    return pId !== user?._id
+  })
+
+  // Use participant data if available
+  const displayName = otherParticipant?.user?.fullName || chat.name || 'Unknown'
+  const displayAvatar = otherParticipant?.user?.avatar || chat.avatar
+  const isOnline = otherParticipant?.user?.status === 'online'
+  const lastSeen = otherParticipant?.user?.lastSeen
+  const isGroup = chat.isGroup
 
   // Format last seen time with detailed information
   const formatLastSeen = (lastSeenAt) => {
@@ -298,26 +313,26 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
             className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 cursor-pointer"
           >
             <Avatar
-              src={chat.avatar}
-              alt={chat.name}
+              src={displayAvatar}
+              alt={displayName}
               size="sm"
               status={isOnline ? 'online' : 'offline'}
             />
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-gray-900 dark:text-white truncate text-sm md:text-base">
-                {chat.name}
+                {displayName}
               </h3>
               <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                {chat.isGroup ? (
+                {isGroup ? (
                   <span>{chat.memberCount} members</span>
                 ) : isOnline ? (
                   <span className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                     Online
                   </span>
-                ) : chat.lastSeen ? (
-                  <span title={`Last seen: ${new Date(chat.lastSeen).toLocaleString()}`}>
-                    Last seen {formatLastSeen(chat.lastSeen)}
+                ) : lastSeen ? (
+                  <span title={`Last seen: ${new Date(lastSeen).toLocaleString()}`}>
+                    Last seen {formatLastSeen(lastSeen)}
                   </span>
                 ) : (
                   <span>Last seen recently</span>

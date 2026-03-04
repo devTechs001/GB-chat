@@ -146,10 +146,10 @@ function App() {
       <AnimatePresence mode="wait">
         <React.Suspense fallback={<Loader fullScreen />}>
           <Routes>
-            {/* Public route */}
+            {/* Public route - redirect to home if already authenticated */}
             <Route
               path="/auth"
-              element={isAuthenticated ? <Navigate to="/auth" replace /> : <AuthPage />}
+              element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />}
             />
 
             {/* Protected routes */}

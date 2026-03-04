@@ -1,7 +1,26 @@
 // server/middleware/upload.js
 import multer from "multer";
+import path from "path";
+import { fileURLToPath } from 'url';
 
-const storage = multer.memoryStorage();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Memory storage for most uploads
+const memoryStorage = multer.memoryStorage();
+
+// Disk storage for avatar uploads (needed for cloudinary)
+const diskStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '..', 'uploads', 'avatars');
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const userId = req.user?._id || 'unknown';
+    cb(null, 'avatar-' + userId + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
@@ -25,12 +44,20 @@ const fileFilter = (req, file, cb) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("File type not supported"), false);
+    cb(new Error("File type not allowed"), false);
   }
 };
 
+// Memory upload for general use
 export const upload = multer({
-  storage,
+  storage: memoryStorage,
   fileFilter,
   limits: { fileSize: 64 * 1024 * 1024 }, // 64MB
+});
+
+// Disk upload specifically for avatars
+export const uploadAvatarDisk = multer({
+  storage: diskStorage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB for avatars
 });
