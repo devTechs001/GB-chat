@@ -14,6 +14,38 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Initialize theme from localStorage before React renders
+      try {
+        const themeStorage = localStorage.getItem('theme-storage');
+        if (themeStorage) {
+          const { state } = JSON.parse(themeStorage);
+          if (state && state.theme) {
+            const themes = {
+              light: 'light',
+              dark: 'dark',
+              'gb-green': 'dark theme-gb-green',
+              amoled: 'dark theme-amoled',
+              midnight: 'dark midnight',
+              ocean: 'dark ocean',
+              'ocean-deep': 'dark theme-ocean-deep',
+              sunset: 'dark sunset',
+              'sunset-glow': 'dark theme-sunset-glow',
+              forest: 'dark forest',
+              cyberpunk: 'dark cyberpunk',
+              neon: 'dark theme-neon',
+              glass: 'dark theme-glass',
+              rose: 'dark theme-rose',
+            };
+            const themeClass = themes[state.theme] || 'light';
+            document.documentElement.className = themeClass;
+          }
+        }
+      } catch (e) {
+        // Fall back to light theme if parsing fails
+        document.documentElement.className = 'light';
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

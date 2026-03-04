@@ -1,10 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useState } from 'react'
+import { motion } from 'framer-motion'
 import {
-  SunIcon,
-  MoonIcon,
-  ComputerDesktopIcon,
-  SwatchIcon,
   PhotoIcon,
   ArrowPathIcon,
   CheckIcon,
@@ -22,41 +18,46 @@ const AppearanceSettings = () => {
     setFontSize,
     chatWallpaper,
     setChatWallpaper,
+    bubbleStyle,
+    setBubbleStyle,
+    chatEffect,
+    setChatEffect,
+    messageAnimation,
+    setMessageAnimation,
     getAvailableThemes,
   } = useThemeStore()
 
-  const [customColors, setCustomColors] = useState({
-    primary: '#0ea5e9',
-    secondary: '#64748b',
-    accent: '#f97316',
-    background: '#ffffff',
-    surface: '#f8fafc',
-    text: '#0f172a',
-  })
-
-  const [previewMode, setPreviewMode] = useState(false)
   const [selectedWallpaper, setSelectedWallpaper] = useState(null)
 
-  const themes = [
-    { id: 'light', name: 'Light', icon: SunIcon, preview: 'bg-white' },
-    { id: 'dark', name: 'Dark', icon: MoonIcon, preview: 'bg-gray-900' },
-    { id: 'auto', name: 'System', icon: ComputerDesktopIcon, preview: 'bg-gradient-to-r from-white to-gray-900' },
-  ]
-
-  const customThemes = [
-    { id: 'ocean', name: 'Ocean', colors: ['#0891b2', '#0e7490', '#155e75'] },
-    { id: 'sunset', name: 'Sunset', colors: ['#f97316', '#ea580c', '#dc2626'] },
-    { id: 'forest', name: 'Forest', colors: ['#22c55e', '#16a34a', '#15803d'] },
-    { id: 'lavender', name: 'Lavender', colors: ['#a78bfa', '#8b5cf6', '#7c3aed'] },
-    { id: 'rose', name: 'Rose Gold', colors: ['#f43f5e', '#e11d48', '#be123c'] },
-    { id: 'midnight', name: 'Midnight', colors: ['#3730a3', '#312e81', '#1e1b4b'] },
-  ]
+  const allThemes = getAvailableThemes()
 
   const fontSizes = [
     { id: 'small', label: 'Small', size: '14px' },
     { id: 'medium', label: 'Medium', size: '16px' },
     { id: 'large', label: 'Large', size: '18px' },
     { id: 'xlarge', label: 'Extra Large', size: '20px' },
+  ]
+
+  const bubbleStyles = [
+    { id: 'modern', name: 'Modern', preview: 'rounded-2xl' },
+    { id: 'classic', name: 'Classic', preview: 'rounded-lg' },
+    { id: 'minimal', name: 'Minimal', preview: 'rounded-md' },
+    { id: 'rounded', name: 'Bubble', preview: 'rounded-3xl' },
+  ]
+
+  const chatEffects = [
+    { id: 'none', name: 'None', emoji: '🚫' },
+    { id: 'particles', name: 'Particles', emoji: '✨' },
+    { id: 'snow', name: 'Snow', emoji: '❄️' },
+    { id: 'hearts', name: 'Hearts', emoji: '💕' },
+    { id: 'stars', name: 'Stars', emoji: '⭐' },
+  ]
+
+  const messageAnimations = [
+    { id: 'slide', name: 'Slide In' },
+    { id: 'fade', name: 'Fade In' },
+    { id: 'pop', name: 'Pop In' },
+    { id: 'none', name: 'None' },
   ]
 
   const wallpapers = [
@@ -71,15 +72,8 @@ const AppearanceSettings = () => {
 
   const handleThemeChange = (themeId) => {
     setTheme(themeId)
-    toast.success(`Theme changed to ${themes.find(t => t.id === themeId)?.name}`)
-  }
-
-  const handleCustomThemeApply = (themeData) => {
-    // Apply custom theme
-    Object.entries(themeData.colors).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(`--color-${key}`, value)
-    })
-    toast.success(`Applied ${themeData.name} theme`)
+    const themeData = allThemes[themeId]
+    toast.success(`Theme changed to ${themeData?.name || themeId}`)
   }
 
   const handleWallpaperUpload = (event) => {
@@ -104,6 +98,9 @@ const AppearanceSettings = () => {
       setTheme('light')
       setFontSize('medium')
       setChatWallpaper(null)
+      setBubbleStyle('modern')
+      setChatEffect('none')
+      setMessageAnimation('slide')
       toast.success('Appearance settings reset to defaults')
     }
   }
@@ -113,127 +110,124 @@ const AppearanceSettings = () => {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Appearance
+          🎨 Appearance
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Customize how GBChat looks on your device
+          Customize how GBChat looks — themes, effects, and more
         </p>
       </div>
 
-      {/* Theme Selection */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+      {/* Theme Selection Grid */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Theme
+          Themes
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {themes.map((themeOption) => {
-            const Icon = themeOption.icon
-            return (
-              <button
-                key={themeOption.id}
-                onClick={() => handleThemeChange(themeOption.id)}
-                className={clsx(
-                  'relative p-4 rounded-lg border-2 transition-all',
-                  'hover:shadow-md',
-                  theme === themeOption.id
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                )}
-              >
-                {theme === themeOption.id && (
-                  <div className="absolute top-2 right-2">
-                    <CheckIcon className="w-5 h-5 text-primary-600" />
-                  </div>
-                )}
-                <Icon className="w-8 h-8 mx-auto mb-2 text-gray-700 dark:text-gray-300" />
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {themeOption.name}
-                </p>
-                <div className={clsx('mt-2 h-2 rounded-full', themeOption.preview)} />
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Custom Themes */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Color Themes
-          </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPreviewMode(!previewMode)}
-          >
-            {previewMode ? 'Exit Preview' : 'Preview'}
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {customThemes.map((customTheme) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {Object.entries(allThemes).map(([themeId, themeData]) => (
             <motion.button
-              key={customTheme.id}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleCustomThemeApply(customTheme)}
-              className="relative group"
+              key={themeId}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => handleThemeChange(themeId)}
+              className={clsx(
+                'relative p-3 rounded-xl border-2 transition-all text-left',
+                theme === themeId
+                  ? 'border-primary-500 shadow-lg ring-2 ring-primary-500/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
+              )}
             >
-              <div className="aspect-square rounded-lg overflow-hidden shadow-sm group-hover:shadow-md transition-shadow">
-                <div className="h-full w-full flex">
-                  {customTheme.colors.map((color, index) => (
-                    <div
-                      key={index}
-                      className="flex-1"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
+              {theme === themeId && (
+                <div className="absolute top-2 right-2 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center">
+                  <CheckIcon className="w-3 h-3 text-white" />
                 </div>
+              )}
+              {/* Color preview strip */}
+              <div
+                className="w-full h-8 rounded-lg mb-2"
+                style={{ background: `linear-gradient(135deg, ${themeData.primary}, ${themeData.background})` }}
+              />
+              <div className="flex items-center gap-1.5">
+                <span className="text-base">{themeData.emoji}</span>
+                <p className="font-medium text-gray-900 dark:text-white text-sm">
+                  {themeData.name}
+                </p>
               </div>
-              <p className="mt-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-                {customTheme.name}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {themeData.description}
               </p>
             </motion.button>
           ))}
         </div>
+      </div>
 
-        {/* Custom Color Picker */}
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-            Custom Colors
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(customColors).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={value}
-                  onChange={(e) => setCustomColors(prev => ({
-                    ...prev,
-                    [key]: e.target.value
-                  }))}
-                  className="w-10 h-10 rounded cursor-pointer"
-                />
-                <div>
-                  <p className="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">
-                    {key}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {value}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            className="mt-4"
-            onClick={() => handleCustomThemeApply({ name: 'Custom', colors: customColors })}
-          >
-            Apply Custom Theme
-          </Button>
+      {/* Bubble Style */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          💬 Bubble Style
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {bubbleStyles.map((style) => (
+            <button
+              key={style.id}
+              onClick={() => setBubbleStyle(style.id)}
+              className={clsx(
+                'p-4 rounded-xl border-2 transition-all',
+                bubbleStyle === style.id
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+              )}
+            >
+              <div className={clsx('w-full h-6 bg-primary-500 mb-2', style.preview)} />
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{style.name}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat Effects */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          ✨ Chat Effects
+        </h3>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          {chatEffects.map((effect) => (
+            <button
+              key={effect.id}
+              onClick={() => setChatEffect(effect.id)}
+              className={clsx(
+                'p-3 rounded-xl border-2 transition-all text-center',
+                chatEffect === effect.id
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+              )}
+            >
+              <span className="text-2xl block mb-1">{effect.emoji}</span>
+              <p className="text-xs font-medium text-gray-900 dark:text-white">{effect.name}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Message Animations */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          🎬 Message Animations
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {messageAnimations.map((anim) => (
+            <button
+              key={anim.id}
+              onClick={() => setMessageAnimation(anim.id)}
+              className={clsx(
+                'p-3 rounded-xl border-2 transition-all',
+                messageAnimation === anim.id
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+              )}
+            >
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{anim.name}</p>
+            </button>
+          ))}
         </div>
       </div>
 

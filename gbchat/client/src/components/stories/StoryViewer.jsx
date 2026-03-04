@@ -32,9 +32,14 @@ const StoryViewer = ({
   const videoRef = useRef(null)
   const progressInterval = useRef(null)
 
-  const currentStoryItem = story.media[currentIndex]
+  const currentStoryItem = story?.media?.[currentIndex]
   const isVideo = currentStoryItem?.type === 'video'
   const duration = isVideo ? 15000 : 5000 // 15s for video, 5s for image
+
+  // Handle case when story or media is undefined
+  if (!story || !story.media || story.media.length === 0) {
+    return null
+  }
 
   useEffect(() => {
     // Reset progress when story changes
@@ -60,7 +65,7 @@ const StoryViewer = ({
   }, [currentIndex, isPaused, story])
 
   const handleNextStory = () => {
-    if (currentIndex < story.media.length - 1) {
+    if (currentIndex < (story?.media?.length || 0) - 1) {
       onIndexChange(currentIndex + 1)
     } else {
       onNext()

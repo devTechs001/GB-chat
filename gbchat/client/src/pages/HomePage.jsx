@@ -1,145 +1,115 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  MessageCircle, 
-  Users, 
-  Phone, 
-  Camera, 
-  Lock, 
-  Star,
-  TrendingUp,
-  Download
+import {
+  MessageCircle,
+  Lock,
+  Shield,
+  EyeOff,
+  Zap,
+  Download,
+  Ghost,
 } from 'lucide-react';
 import Button from '../components/common/Button';
-import Avatar from '../components/common/Avatar';
 
 const HomePage = () => {
   const [activeFeature, setActiveFeature] = useState(0);
-  const [isVisible, setIsVisible] = useState({});
 
   const features = [
     {
-      icon: <MessageCircle className="w-8 h-8" />,
+      icon: <MessageCircle className="w-7 h-7" />,
       title: "Instant Messaging",
-      description: "Send messages instantly with real-time delivery and read receipts."
+      description: "Lightning-fast messaging with real-time delivery and smart read receipts.",
+      gradient: "from-green-500 to-emerald-600"
     },
     {
-      icon: <Users className="w-8 h-8" />,
-      title: "Group Chats",
-      description: "Create groups with up to 256 members and enjoy group conversations."
+      icon: <Shield className="w-7 h-7" />,
+      title: "Ghost Mode",
+      description: "Go invisible. Hide online status, typing indicators, and read receipts.",
+      gradient: "from-purple-500 to-violet-600"
     },
     {
-      icon: <Phone className="w-8 h-8" />,
-      title: "Voice & Video Calls",
-      description: "Make high-quality voice and video calls with your contacts."
+      icon: <Palette className="w-7 h-7" />,
+      title: "14+ Premium Themes",
+      description: "AMOLED, Neon, Glassmorphism, Cyberpunk — customize everything.",
+      gradient: "from-pink-500 to-rose-600"
     },
     {
-      icon: <Camera className="w-8 h-8" />,
-      title: "Media Sharing",
-      description: "Share photos, videos, documents and other media files seamlessly."
+      icon: <EyeOff className="w-7 h-7" />,
+      title: "Anti-Delete Messages",
+      description: "See deleted messages. Nobody can hide what they said from you.",
+      gradient: "from-red-500 to-orange-600"
     },
     {
-      icon: <Lock className="w-8 h-8" />,
+      icon: <Lock className="w-7 h-7" />,
       title: "End-to-End Encryption",
-      description: "Your conversations are secured with military-grade encryption."
+      description: "Military-grade encryption for all messages, calls, and media.",
+      gradient: "from-blue-500 to-cyan-600"
     },
     {
-      icon: <Star className="w-8 h-8" />,
-      title: "Custom Themes",
-      description: "Personalize your chat experience with custom themes and wallpapers."
+      icon: <Zap className="w-7 h-7" />,
+      title: "Custom Effects",
+      description: "Particles, snow, hearts, stars — make your chats come alive.",
+      gradient: "from-yellow-500 to-amber-600"
     }
   ];
 
-  const testimonials = [
-    {
-      name: "Alex Johnson",
-      role: "Product Manager",
-      content: "GBChat has transformed how our team communicates. The interface is intuitive and the features are robust.",
-      avatar: "https://randomuser.me/api/portraits/men/32.jpg"
-    },
-    {
-      name: "Sarah Williams",
-      role: "Designer",
-      content: "The privacy features and customization options make GBChat stand out from other messaging apps.",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg"
-    },
-    {
-      name: "Michael Chen",
-      role: "Developer",
-      content: "As someone who values security, I appreciate the end-to-end encryption and open source nature of GBChat.",
-      avatar: "https://randomuser.me/api/portraits/men/22.jpg"
-    }
+  const gbExclusive = [
+    { icon: '🧊', title: 'Freeze Last Seen', desc: 'Lock your last seen at any time' },
+    { icon: '👻', title: 'Ghost Mode', desc: 'Be completely invisible to everyone' },
+    { icon: '🔒', title: 'App Lock', desc: 'Fingerprint & pattern lock support' },
+    { icon: '🚫', title: 'Anti-Delete', desc: 'See messages others have deleted' },
+    { icon: '📞', title: 'Call Blocker', desc: 'Block calls from unknown numbers' },
+    { icon: '🎨', title: 'Custom Bubbles', desc: 'Change chat bubble styles & colors' },
+    { icon: '✈️', title: 'DND Mode', desc: 'Receive messages without notifications' },
+    { icon: '📊', title: 'Chat Analytics', desc: 'See detailed chat statistics' },
   ];
 
   const stats = [
-    { value: "10M+", label: "Active Users" },
-    { value: "99.9%", label: "Uptime" },
-    { value: "150+", label: "Countries" },
-    { value: "24/7", label: "Support" }
+    { value: "10M+", label: "Active Users", icon: "👥" },
+    { value: "99.9%", label: "Uptime", icon: "⚡" },
+    { value: "150+", label: "Countries", icon: "🌍" },
+    { value: "14+", label: "Themes", icon: "🎨" }
   ];
 
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveFeature(prev => (prev + 1) % features.length);
     }, 3000);
-
     return () => clearInterval(interval);
   }, []);
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.5 }
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 text-white overflow-hidden">
+      {/* Ambient Background Effects */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
+      </div>
+
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+      <nav className="sticky top-0 z-50 bg-gray-950/60 backdrop-blur-2xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 flex items-center">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary-500 to-primary-600 flex items-center justify-center">
-                  <MessageCircle className="h-5 w-5 text-white" />
-                </div>
-                <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">GBChat</span>
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
+                <MessageCircle className="h-5 w-5 text-white" />
               </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">GBChat</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-400 font-semibold border border-primary-500/30">PRO</span>
             </div>
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-4">
-                <Link to="#features" className="text-gray-600 dark:text-gray-300 hover:text-primary-500 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                  Features
-                </Link>
-                <Link to="#testimonials" className="text-gray-600 dark:text-gray-300 hover:text-primary-500 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                  Testimonials
-                </Link>
-                <Link to="#download" className="text-gray-600 dark:text-gray-300 hover:text-primary-500 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                  Download
-                </Link>
-              </div>
+            <div className="hidden md:flex items-center gap-6">
+              <a href="#features" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Features</a>
+              <a href="#gb-exclusive" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">GB Exclusive</a>
+              <a href="#download" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Download</a>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center gap-3">
               <Link to="/auth">
-                <Button variant="outline">Sign In</Button>
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">Sign In</Button>
               </Link>
-              <Link to="/auth" className="ml-4">
-                <Button variant="primary">Get Started</Button>
+              <Link to="/auth">
+                <Button className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/30">Get Started</Button>
               </Link>
             </div>
           </div>
@@ -147,79 +117,54 @@ const HomePage = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-16 pb-20 sm:pt-24 sm:pb-32 lg:pt-32 lg:pb-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-medium mb-8"
-            >
-              <span className="h-2 w-2 bg-primary-500 rounded-full mr-2 animate-pulse"></span>
-              Now available on all platforms
-            </motion.div>
-            
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.1 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white leading-tight"
-            >
-              Connect. Communicate.{' '}
-              <span className="bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">
-                Collaborate.
-              </span>
-            </motion.h1>
-            
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="mt-6 text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto"
-            >
-              Experience secure, fast, and reliable messaging with advanced features designed for modern communication needs.
-            </motion.p>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="mt-10 flex flex-col sm:flex-row justify-center gap-4"
-            >
-              <Link to="/auth">
-                <Button size="lg" className="min-w-[200px]">
-                  Start Free Trial
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline" className="min-w-[200px]">
-                <Download className="w-4 h-4 mr-2" />
-                Download App
+      <section className="relative pt-20 pb-24 sm:pt-32 sm:pb-36">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium mb-8">
+            <span className="h-2 w-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-gray-300">Now with <span className="text-primary-400 font-semibold">Ghost Mode</span> & <span className="text-purple-400 font-semibold">Anti-Delete</span></span>
+          </motion.div>
+
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1 }}
+            className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-tight">
+            The <span className="bg-gradient-to-r from-primary-400 via-green-400 to-emerald-400 bg-clip-text text-transparent">Ultimate</span>
+            <br />
+            Messaging Experience
+          </motion.h1>
+
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
+            className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto">
+            Privacy-first messaging with advanced features. Ghost mode, anti-delete, 14+ premium themes, and encrypted calls — all in one app.
+          </motion.p>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3 }}
+            className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+            <Link to="/auth">
+              <Button size="lg" className="min-w-[220px] bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-xl shadow-primary-500/25 text-lg py-3">
+                🚀 Get Started Free
               </Button>
-            </motion.div>
-          </div>
+            </Link>
+            <Button size="lg" variant="outline" className="min-w-[220px] border-white/20 text-white hover:bg-white/10 text-lg py-3">
+              <Download className="w-5 h-5 mr-2" />
+              Download App
+            </Button>
+          </motion.div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 bg-gray-50 dark:bg-gray-800/50">
+      <section className="py-16 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="text-center"
-              >
-                <div className="text-3xl sm:text-4xl font-bold text-primary-600 dark:text-primary-400">
+              <motion.div key={index} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="text-center group">
+                <div className="text-3xl mb-2">{stat.icon}</div>
+                <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                   {stat.value}
                 </div>
-                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  {stat.label}
-                </div>
+                <div className="mt-1 text-sm text-gray-500">{stat.label}</div>
               </motion.div>
             ))}
           </div>
@@ -227,171 +172,58 @@ const HomePage = () => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20">
+      <section id="features" className="py-24 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Powerful Features
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Everything you need for seamless communication and collaboration
+            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              className="text-3xl sm:text-4xl font-bold mb-4">
+              Powerful <span className="bg-gradient-to-r from-primary-400 to-emerald-400 bg-clip-text text-transparent">Features</span>
+            </motion.h2>
+            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+              Everything you need for the ultimate messaging experience
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-100 dark:border-gray-700"
-              >
-                <div className="text-primary-500 mb-4">
+              <motion.div key={index} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.5, delay: index * 0.1 }}
+                whileHover={{ y: -5, scale: 1.02 }}
+                className="group bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {feature.description}
-                </p>
+                <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Feature Showcase */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-12 lg:gap-16">
-            <div className="lg:col-span-5">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                Secure & Reliable
-              </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-                Our platform ensures your communications remain private and secure with industry-leading encryption standards.
-              </p>
-              
-              <div className="space-y-4">
-                {features.slice(0, 3).map((feature, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className={`flex items-start p-4 rounded-lg cursor-pointer transition-colors ${
-                      activeFeature === index 
-                        ? 'bg-primary-50 dark:bg-primary-900/30 border-l-4 border-primary-500' 
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                    }`}
-                    onClick={() => setActiveFeature(index)}
-                  >
-                    <div className="text-primary-500 mt-1 mr-3">
-                      {feature.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white">
-                        {feature.title}
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                        {feature.description}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="mt-10 lg:mt-0 lg:col-span-7 flex items-center justify-center">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-                className="relative"
-              >
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Chat Preview</h3>
-                    <div className="flex space-x-2">
-                      <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                      <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                      <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <Avatar src="https://randomuser.me/api/portraits/women/65.jpg" size="sm" />
-                      <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 max-w-xs">
-                        <p className="text-gray-800 dark:text-gray-200">Hey! How are you doing today?</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">10:30 AM</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start justify-end">
-                      <div className="bg-primary-500 text-white rounded-lg p-3 max-w-xs">
-                        <p>I'm doing great! Just working on some new features for our app.</p>
-                        <p className="text-xs text-primary-100 mt-1">10:31 AM</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-3">
-                      <Avatar src="https://randomuser.me/api/portraits/men/33.jpg" size="sm" />
-                      <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 max-w-xs">
-                        <p>That sounds exciting! Count me in if you need any help.</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">10:32 AM</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section id="testimonials" className="py-20">
+      {/* GB Exclusive Features */}
+      <section id="gb-exclusive" className="py-24 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              What Our Users Say
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Join millions of satisfied users who trust GBChat for their daily communication needs
-            </p>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium mb-4">
+              <Ghost className="w-4 h-4" /> GB Exclusive
+            </motion.div>
+            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              className="text-3xl sm:text-4xl font-bold mb-4">
+              Features You Won't Find <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Anywhere Else</span>
+            </motion.h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-100 dark:border-gray-700"
-              >
-                <div className="flex items-center mb-4">
-                  <Avatar src={testimonial.avatar} size="md" />
-                  <div className="ml-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white">{testimonial.name}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{testimonial.role}</p>
-                  </div>
-                </div>
-                <p className="text-gray-600 dark:text-gray-300 italic">
-                  "{testimonial.content}"
-                </p>
-                <div className="flex mt-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {gbExclusive.map((item, index) => (
+              <motion.div key={index} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }} transition={{ duration: 0.4, delay: index * 0.05 }}
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 border border-white/10 hover:border-purple-500/30 transition-all text-center group cursor-pointer">
+                <div className="text-3xl mb-3 group-hover:scale-125 transition-transform">{item.icon}</div>
+                <h4 className="font-semibold text-white text-sm mb-1">{item.title}</h4>
+                <p className="text-gray-500 text-xs">{item.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -399,82 +231,66 @@ const HomePage = () => {
       </section>
 
       {/* CTA Section */}
-      <section id="download" className="py-20 bg-gradient-to-r from-primary-500 to-primary-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              Ready to get started?
+      <section id="download" className="py-24 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-600/20 via-transparent to-purple-600/20" />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <div className="text-5xl mb-6">🚀</div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Ready to Experience the <span className="bg-gradient-to-r from-primary-400 to-emerald-400 bg-clip-text text-transparent">Future</span>?
             </h2>
-            <p className="text-xl text-primary-100 max-w-2xl mx-auto mb-8">
-              Join millions of users who trust GBChat for secure and reliable communication
+            <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-10">
+              Join millions of users who chose privacy, customization, and the best messaging experience.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button size="lg" variant="secondary" className="bg-white text-primary-600 hover:bg-gray-100 min-w-[200px]">
-                <Download className="w-4 h-4 mr-2" />
-                Download Now
-              </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 min-w-[200px]">
-                Schedule Demo
-              </Button>
+              <Link to="/auth">
+                <Button size="lg" className="min-w-[220px] bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-xl shadow-primary-500/25 text-lg py-3">
+                  <Download className="w-5 h-5 mr-2" />
+                  Download Now
+                </Button>
+              </Link>
+              <Link to="/auth">
+                <Button size="lg" variant="outline" className="min-w-[220px] border-white/20 text-white hover:bg-white/10 text-lg py-3">
+                  Create Account
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <footer className="border-t border-white/5 bg-gray-950/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary-500 to-primary-600 flex items-center justify-center">
-                  <MessageCircle className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 flex items-center justify-center">
+                  <MessageCircle className="h-4 w-4 text-white" />
                 </div>
-                <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">GBChat</span>
+                <span className="text-lg font-bold text-white">GBChat</span>
               </div>
-              <p className="mt-4 text-gray-600 dark:text-gray-400">
-                Secure messaging for everyone. Built with privacy and usability in mind.
+              <p className="mt-4 text-gray-500 text-sm leading-relaxed">
+                Privacy-first messaging with advanced GB features. Built for those who want more.
               </p>
             </div>
-            
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider">Product</h3>
-              <ul className="mt-4 space-y-2">
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Features</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Security</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Pricing</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Download</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider">Company</h3>
-              <ul className="mt-4 space-y-2">
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">About</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Blog</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Careers</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Contact</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider">Support</h3>
-              <ul className="mt-4 space-y-2">
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Help Center</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Terms of Service</a></li>
-                <li><a href="#" className="text-gray-600 dark:text-gray-400 hover:text-primary-500">Community</a></li>
-              </ul>
-            </div>
+            {[
+              { title: 'Product', links: ['Features', 'Security', 'Themes', 'Download'] },
+              { title: 'Company', links: ['About', 'Blog', 'Careers', 'Contact'] },
+              { title: 'Support', links: ['Help Center', 'Privacy Policy', 'Terms', 'Community'] },
+            ].map((col) => (
+              <div key={col.title}>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{col.title}</h3>
+                <ul className="mt-4 space-y-2">
+                  {col.links.map((link) => (
+                    <li key={link}><a href="#" className="text-gray-500 hover:text-primary-400 text-sm transition-colors">{link}</a></li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          
-          <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700 text-center text-gray-600 dark:text-gray-400">
-            <p>&copy; 2024 GBChat. All rights reserved.</p>
+          <div className="mt-12 pt-8 border-t border-white/5 text-center text-gray-600 text-sm">
+            <p>&copy; 2026 GBChat. All rights reserved. Made with 💚</p>
           </div>
         </div>
       </footer>

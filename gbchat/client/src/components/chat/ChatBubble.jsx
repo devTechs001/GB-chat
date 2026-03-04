@@ -6,13 +6,46 @@ import Avatar from '../common/Avatar'
 import MessageStatus from './MessageStatus'
 import MessageReactions from './MessageReactions'
 import MessageActions from './MessageActions'
+import useThemeStore from '../../store/useThemeStore'
+import useGBFeaturesStore from '../../store/useGBFeaturesStore'
+import useAuthStore from '../../store/useAuthStore'
 import {
   PhotoIcon,
   DocumentIcon,
   PlayCircleIcon,
   MicrophoneIcon,
   MapPinIcon,
+  SignalIcon,
+  WifiIcon,
 } from '@heroicons/react/24/outline'
+
+// Animation variants for messages
+const messageAnimations = {
+  slide: {
+    initial: { x: 20, opacity: 0 },
+    animate: { x: 0, opacity: 1 },
+  },
+  fade: {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+  },
+  pop: {
+    initial: { scale: 0.5, opacity: 0 },
+    animate: { scale: 1, opacity: 1 },
+  },
+  none: {
+    initial: {},
+    animate: {},
+  },
+}
+
+// Bubble border radius styles
+const bubbleRadii = {
+  modern: 'rounded-2xl',
+  classic: 'rounded-lg',
+  minimal: 'rounded-md',
+  rounded: 'rounded-3xl',
+}
 
 const ChatBubble = ({
   message,
@@ -22,9 +55,49 @@ const ChatBubble = ({
   onLongPress,
   isSelected,
   showAvatar = true,
+  onSchedule,
 }) => {
   const [showActions, setShowActions] = useState(false)
   const [pressTimer, setPressTimer] = useState(null)
+  const { bubbleStyle, messageAnimation } = useThemeStore()
+  const { gbFeatures } = useGBFeaturesStore()
+  const { user } = useAuthStore()
+
+  const animVariant = messageAnimations[messageAnimation] || messageAnimations.slide
+  const bubbleRadius = bubbleRadii[bubbleStyle] || bubbleRadii.modern
+
+  // GB Features settings
+  const hideSecondTick = gbFeatures?.privacy?.hideSecondTick || false
+  const hideBlueTicks = gbFeatures?.privacy?.hideBlueTicks || false
+  const showNetworkIndicator = gbFeatures?.display?.showNetworkIndicator || false
+  const exactTimestamps = gbFeatures?.advanced?.exactTimestamps || false
+
+  // Simulate network strength (in real app, this would come from navigator.connection)
+  const [networkStrength] = useState(() => {
+    if (typeof navigator !== 'undefined' && navigator.connection) {
+      const downlink = navigator.connection.downlink
+      if (downlink >= 10) return 4
+      if (downlink >= 5) return 3
+      if (downlink >= 1) return 2
+      return 1
+    }
+    return 4 // Default to full strength
+  })
+
+  // Safely get sender info
+  const senderName = message.sender?.fullName || message.sender?.name || 'User'
+  const senderAvatar = message.sender?.avatar || ''
+
+  // Debug: Log message status on first render
+  if (!window.loggedStatus) {
+    console.log('[ChatBubble] Message status debug:', {
+      status: message.status,
+      isMine,
+      hasStatus: !!message.status,
+      message: message
+    })
+    window.loggedStatus = true
+  }
 
   const handleMouseDown = () => {
     const timer = setTimeout(() => {
@@ -40,6 +113,11 @@ const ChatBubble = ({
   }
 
   const renderContent = () => {
+    // Handle content that might be an object {text: "..."} or string
+    const contentText = typeof message.content === 'object' && message.content !== null
+      ? message.content.text || JSON.stringify(message.content)
+      : message.content || '';
+
     switch (message.type) {
       case 'image':
         return (
@@ -50,12 +128,12 @@ const ChatBubble = ({
               className="rounded-lg max-w-[200px] md:max-w-[300px] cursor-pointer"
               onClick={() => window.open(message.media[0]?.url, '_blank')}
             />
-            {message.content && (
-              <p className="mt-2 text-sm">{message.content}</p>
+            {contentText && (
+              <p className="mt-2 text-sm">{contentText}</p>
             )}
           </div>
         )
-      
+
       case 'video':
         return (
           <div className="relative">
@@ -64,12 +142,12 @@ const ChatBubble = ({
               controls
               className="rounded-lg max-w-[200px] md:max-w-[300px]"
             />
-            {message.content && (
-              <p className="mt-2 text-sm">{message.content}</p>
+            {contentText && (
+              <p className="mt-2 text-sm">{contentText}</p>
             )}
           </div>
         )
-      
+
       case 'audio':
         return (
           <div className="flex items-center gap-2">
@@ -77,7 +155,7 @@ const ChatBubble = ({
             <audio src={message.media[0]?.url} controls className="max-w-[200px]" />
           </div>
         )
-      
+
       case 'document':
         return (
           <a
@@ -97,7 +175,7 @@ const ChatBubble = ({
             </div>
           </a>
         )
-      
+
       case 'location':
         return (
           <div className="flex items-center gap-2">
@@ -110,22 +188,42 @@ const ChatBubble = ({
             </div>
           </div>
         )
-      
+
       default:
         return (
           <div>
+            {/* Reply Box with Enhanced Sender Info */}
             {message.replyTo && (
-              <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg border-l-2 border-primary-500">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {message.replyTo.sender.name}
-                </p>
+              <div className="mb-2 p-2 bg-black/10 dark:bg-white/10 rounded-lg border-l-2 border-primary-500">
+                <div className="flex items-center gap-1.5 mb-1">
+                  {/* Small avatar for reply sender */}
+                  {message.replyTo.sender && (
+                    <Avatar
+                      src={message.replyTo.sender.avatar || message.replyTo.sender?.avatar}
+                      alt={message.replyTo.sender?.fullName || message.replyTo.sender?.name || 'User'}
+                      size="xs"
+                      className="w-4 h-4 flex-shrink-0"
+                    />
+                  )}
+                  <p className="text-xs font-medium text-primary-600 dark:text-primary-400 truncate">
+                    {message.replyTo.sender?.fullName || message.replyTo.sender?.name || message.replyTo.sender || 'Unknown'}
+                  </p>
+                  {/* Badge if replying to own message */}
+                  {message.replyTo.sender?._id === user?._id && (
+                    <span className="text-[9px] px-1 py-0.5 bg-primary-500/20 text-primary-300 rounded-full font-medium">
+                      You
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                  {message.replyTo.content}
+                  {typeof message.replyTo.content === 'object' && message.replyTo.content !== null
+                    ? message.replyTo.content.text || JSON.stringify(message.replyTo.content)
+                    : message.replyTo.content || `📎 ${message.replyTo.type || 'Media'} message`}
                 </p>
               </div>
             )}
             <p className="whitespace-pre-wrap break-words text-sm md:text-base">
-              {message.content}
+              {contentText}
             </p>
           </div>
         )
@@ -147,8 +245,8 @@ const ChatBubble = ({
       {/* Avatar for received messages */}
       {!isMine && showAvatar && (
         <Avatar
-          src={message.sender.avatar}
-          alt={message.sender.name}
+          src={senderAvatar}
+          alt={senderName}
           size="xs"
           className="mb-1"
         />
@@ -156,8 +254,9 @@ const ChatBubble = ({
 
       {/* Message bubble */}
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        initial={animVariant.initial}
+        animate={animVariant.animate}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
         className={clsx(
           'relative group',
           'max-w-[75%] md:max-w-[60%]'
@@ -167,7 +266,8 @@ const ChatBubble = ({
       >
         <div
           className={clsx(
-            'px-3 py-2 rounded-2xl',
+            'px-3 py-2',
+            bubbleRadius,
             isMine
               ? 'bg-primary-600 text-white rounded-br-sm'
               : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-sm',
@@ -178,22 +278,36 @@ const ChatBubble = ({
           {/* Sender name for group chats */}
           {!isMine && message.chat?.isGroup && (
             <p className="text-xs font-medium text-primary-600 dark:text-primary-400 mb-1">
-              {message.sender.name}
+              {senderName}
             </p>
           )}
 
           {/* Message content */}
           {renderContent()}
 
-          {/* Time and status */}
+          {/* Time and Status with GB Features */}
           <div className={clsx(
-            'flex items-center gap-1 mt-1',
+            'flex items-center gap-1.5 mt-1',
             'text-xs',
             isMine ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
           )}>
-            <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
-            {isMine && <MessageStatus status={message.status} />}
-            {message.isEdited && <span className="italic">(edited)</span>}
+            <span>
+              {exactTimestamps
+                ? format(new Date(message.createdAt), 'HH:mm:ss')
+                : format(new Date(message.createdAt), 'HH:mm')
+              }
+            </span>
+            {isMine && (
+              <MessageStatus
+                status={message.status || 'sent'}
+                showNetwork={showNetworkIndicator}
+                networkStrength={networkStrength}
+                hideSecondTick={hideSecondTick}
+                hideBlueTicks={hideBlueTicks}
+                exactTimestamp={exactTimestamps}
+              />
+            )}
+            {message.isEdited && <span className="italic text-[10px]">(edited)</span>}
           </div>
         </div>
 
@@ -212,6 +326,8 @@ const ChatBubble = ({
             message={message}
             isMine={isMine}
             onReply={onReply}
+            chatId={message.chat?._id}
+            onSchedule={onSchedule}
             className="absolute top-0 right-0 md:block hidden"
           />
         )}

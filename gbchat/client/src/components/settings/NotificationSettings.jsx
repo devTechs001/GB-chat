@@ -76,13 +76,13 @@ const NotificationSettings = () => {
   ]
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Notification Settings
         </h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
           Manage how you receive notifications
         </p>
       </div>
@@ -91,7 +91,7 @@ const NotificationSettings = () => {
       {permission !== 'granted' && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <BellIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+            <BellIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
               <h4 className="font-medium text-yellow-900 dark:text-yellow-100">
                 Enable Browser Notifications
@@ -102,7 +102,7 @@ const NotificationSettings = () => {
               <Button
                 size="sm"
                 variant="primary"
-                className="mt-3"
+                className="mt-3 w-full sm:w-auto"
                 onClick={handleRequestPermission}
               >
                 Enable Notifications
@@ -115,12 +115,12 @@ const NotificationSettings = () => {
       {/* Notification Options */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm divide-y divide-gray-200 dark:divide-gray-700">
         {notificationOptions.map((option) => (
-          <div key={option.key} className="p-6">
-            <div className="flex items-center justify-between">
+          <div key={option.key} className="p-4 md:p-6">
+            <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3
                   className={clsx(
-                    'font-medium',
+                    'font-medium text-sm md:text-base',
                     option.disabled
                       ? 'text-gray-400 dark:text-gray-600'
                       : 'text-gray-900 dark:text-white'
@@ -130,7 +130,7 @@ const NotificationSettings = () => {
                 </h3>
                 <p
                   className={clsx(
-                    'text-sm mt-1',
+                    'text-xs md:text-sm mt-1',
                     option.disabled
                       ? 'text-gray-400 dark:text-gray-600'
                       : 'text-gray-500 dark:text-gray-400'
@@ -144,7 +144,7 @@ const NotificationSettings = () => {
                 onChange={() => handleToggle(option.key)}
                 disabled={option.disabled}
                 className={clsx(
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                  'relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors',
                   formData[option.key]
                     ? 'bg-primary-600'
                     : 'bg-gray-200 dark:bg-gray-700',
@@ -164,7 +164,7 @@ const NotificationSettings = () => {
       </div>
 
       {/* Test Notification */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
         <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
           Test Notifications
         </h3>
@@ -181,6 +181,7 @@ const NotificationSettings = () => {
             toast.success('Test notification sent')
           }}
           disabled={permission !== 'granted'}
+          className="w-full sm:w-auto"
         >
           Send Test Notification
         </Button>

@@ -56,10 +56,10 @@ const StoriesPage = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-dark-bg pb-16">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950 pb-16">
       {/* Mobile Header */}
-      <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Stories</h1>
+      <div className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">📸 Stories</h1>
         <Button
           variant="primary"
           size="sm"
@@ -69,10 +69,10 @@ const StoriesPage = () => {
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:block bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="hidden md:block bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Stories
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
+            📸 Stories
           </h1>
           <Button
             variant="primary"
@@ -94,10 +94,10 @@ const StoriesPage = () => {
               key={filterOption.id}
               onClick={() => setFilter(filterOption.id)}
               className={clsx(
-                'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
+                'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-300',
                 filter === filterOption.id
-                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-white/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200/50 dark:border-gray-700/50'
               )}
             >
               {filterOption.label}
@@ -108,9 +108,9 @@ const StoriesPage = () => {
 
       {/* My Story Section */}
       {myStory && (
-        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 p-4 md:p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            My Story
+            ✨ My Story
           </h2>
           <div className="flex items-center gap-4">
             <StoryCard
@@ -122,7 +122,7 @@ const StoriesPage = () => {
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                 <span className="flex items-center gap-1">
                   <ClockIcon className="w-4 h-4" />
-                  {myStory.media.length} {myStory.media.length === 1 ? 'photo' : 'photos'}
+                  {myStory.media?.length || 0} {myStory.media?.length === 1 ? 'photo' : 'photos'}
                 </span>
                 <span className="flex items-center gap-1">
                   <EyeIcon className="w-4 h-4" />
@@ -138,7 +138,7 @@ const StoriesPage = () => {
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
         {filteredStories.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-24 h-24 mx-auto mb-4 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-primary-500/20 to-primary-600/10 rounded-full flex items-center justify-center">
               <svg
                 className="w-12 h-12 text-gray-400"
                 fill="none"

@@ -1,0 +1,43 @@
+# GitHub Pages Configuration for GBChat Client
+# This file is used for GitHub Pages deployment
+
+# For GitHub Pages, we use a separate workflow
+# Add this to .github/workflows/deploy.yml
+
+# Manual Deployment Steps:
+# 1. Build the project: npm run build
+# 2. Deploy to gh-pages branch: npx gh-pages -d dist
+
+# GitHub Pages specific configuration
+base: /gbchat/
+
+# Build settings
+build:
+  command: npm install && npm run build
+  output: dist
+  
+# Environment variables for GitHub Pages
+environment:
+  VITE_BASE_URL: /gbchat/
+  VITE_API_URL: https://gbchat-enterprise.onrender.com/api
+  VITE_SOCKET_URL: https://gbchat-enterprise.onrender.com
+
+# Custom domain (optional)
+# Uncomment and set your domain
+# custom_domain: chat.yourdomain.com
+
+# Branch to deploy from
+branch: gh-pages
+
+# Deployment source folder
+source: client/dist
+
+# GitHub Pages doesn't support server-side features:
+# - No backend API
+# - No WebSocket server
+# - Use external backend (Render, Railway, etc.)
+# - Update API URLs to point to external backend
+
+# For full functionality, deploy backend separately:
+# - Backend: Render (see render.yaml)
+# - Frontend: GitHub Pages or Netlify

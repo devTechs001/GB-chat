@@ -23,6 +23,8 @@ import storyRoutes from "./routes/storyRoutes.js";
 import channelRoutes from "./routes/channelRoutes.js";
 import callRoutes from "./routes/callRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import privacyRoutes from "./routes/privacyRoutes.js";
+import gbFeaturesRoutes from "./routes/gbFeaturesRoutes.js";
 
 dotenv.config();
 
@@ -32,6 +34,7 @@ const server = createServer(app);
 // Initialize Socket.IO
 const io = initializeSocket(server);
 app.set("io", io);
+global.io = io; // Make io available globally for services
 
 // Middleware
 app.use(helmet());
@@ -53,6 +56,8 @@ app.use("/api/stories", storyRoutes);
 app.use("/api/channels", channelRoutes);
 app.use("/api/calls", callRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use("/api/privacy", privacyRoutes);
+app.use("/api/gb-features", gbFeaturesRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

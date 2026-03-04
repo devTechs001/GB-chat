@@ -49,10 +49,10 @@ const ChannelsPage = () => {
   })
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-dark-bg pb-16">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950 pb-16">
       {/* Mobile Header */}
-      <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Channels</h1>
+      <div className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">📢 Channels</h1>
         <Button
           variant="primary"
           size="sm"
@@ -62,10 +62,10 @@ const ChannelsPage = () => {
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:block bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="hidden md:block bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Channels
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
+            📢 Channels
           </h1>
           <Button
             variant="primary"
@@ -94,10 +94,10 @@ const ChannelsPage = () => {
               key={filterOption.id}
               onClick={() => setFilter(filterOption.id)}
               className={clsx(
-                'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
+                'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-300',
                 filter === filterOption.id
-                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                  ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-white/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200/50 dark:border-gray-700/50'
               )}
             >
               {filterOption.label}
@@ -113,7 +113,7 @@ const ChannelsPage = () => {
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className="bg-white dark:bg-gray-800 rounded-lg p-6 animate-pulse"
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 animate-pulse border border-gray-200/50 dark:border-gray-700/50"
               >
                 <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-full mb-4" />
                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
@@ -123,7 +123,7 @@ const ChannelsPage = () => {
           </div>
         ) : filteredChannels.length === 0 ? (
           <div className="text-center py-12">
-            <HashtagIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <HashtagIcon className="w-16 h-16 mx-auto text-primary-400/50 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               No channels found
             </h3>

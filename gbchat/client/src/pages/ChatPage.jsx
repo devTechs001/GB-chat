@@ -3,20 +3,41 @@ import { useOutletContext } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import ChatList from '../components/chat/ChatList'
+import EnhancedChatList from '../components/enhanced/EnhancedChatList'
+import FeatureFAB from '../components/enhanced/FeatureFAB'
+import ContactPermissions from '../components/enhanced/ContactPermissions'
 import ChatArea from '../components/chat/ChatArea'
 import StoryBar from '../components/stories/StoryBar'
+import ErrorBoundary from '../components/common/ErrorBoundary'
 import useChatStore from '../store/useChatStore'
 import useMediaQuery from '../hooks/useMediaQuery'
 import clsx from 'clsx'
+import StarredMessages from '../components/chat/StarredMessages'
+import PinnedMessages from '../components/chat/PinnedMessages'
+import ChatProfileDrawer from '../components/chat/ChatProfileDrawer'
+import useGBFeaturesStore from '../store/useGBFeaturesStore'
 
 const ChatPage = () => {
   const { toggleSidebar, isSidebarOpen } = useOutletContext()
-  const { activeChat, setActiveChat, fetchChats } = useChatStore()
+  const { activeChat, setActiveChat, fetchChats, chats } = useChatStore()
+  const { initGBFeatures } = useGBFeaturesStore()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const [showChatList, setShowChatList] = useState(!isMobile)
+  const [useEnhanced, setUseEnhanced] = useState(true) // Toggle between chat lists
+  const [showPermissions, setShowPermissions] = useState(false)
+  const [contacts, setContacts] = useState([])
+  const [showStarred, setShowStarred] = useState(false)
+  const [showPinned, setShowPinned] = useState(false)
+  const [showProfileDrawer, setShowProfileDrawer] = useState(false)
 
   useEffect(() => {
     fetchChats()
+    initGBFeatures()
+    // Load contacts (in real app, fetch from API)
+    setContacts([
+      { _id: '1', name: 'John Doe', phoneNumber: '+1234567890', isBlocked: false, isFavorite: true },
+      { _id: '2', name: 'Jane Smith', phoneNumber: '+1234567891', isBlocked: true, isFavorite: false },
+    ])
   }, [])
 
   useEffect(() => {
@@ -37,6 +58,33 @@ const ChatPage = () => {
     if (isMobile) {
       setActiveChat(null)
       setShowChatList(true)
+    }
+  }
+
+  const handleInfoClick = () => {
+    setShowProfileDrawer(true)
+  }
+
+  const handleFABAction = (actionId) => {
+    console.log('FAB Action:', actionId)
+    // Handle different FAB actions
+    switch (actionId) {
+      case 'new-chat':
+        // Open new chat modal
+        break
+      case 'new-group':
+        // Open create group modal
+        break
+      case 'add-contact':
+        setShowPermissions(true)
+        break
+      case 'starred-messages':
+        setShowStarred(true)
+        break
+      case 'pinned-messages':
+        setShowPinned(true)
+        break
+      // ... handle other actions
     }
   }
 
@@ -65,7 +113,9 @@ const ChatPage = () => {
         'hidden md:block',
         isMobile && showChatList && 'mt-14'
       )}>
-        <StoryBar />
+        <ErrorBoundary>
+          <StoryBar />
+        </ErrorBoundary>
       </div>
 
       {/* Main Chat Area */}
@@ -82,7 +132,11 @@ const ChatPage = () => {
             isMobile ? 'absolute inset-0 z-10' : 'relative'
           )}
         >
-          <ChatList onChatSelect={handleChatSelect} />
+          {useEnhanced ? (
+            <EnhancedChatList chats={chats} onChatSelect={handleChatSelect} />
+          ) : (
+            <ChatList onChatSelect={handleChatSelect} />
+          )}
         </motion.div>
 
         {/* Chat Area - Full screen on mobile when chat selected */}
@@ -126,10 +180,37 @@ const ChatPage = () => {
               </div>
             </div>
           ) : (
-            <ChatArea onBack={handleBackToList} />
+            <ChatArea onBack={handleBackToList} onInfoClick={handleInfoClick} />
           )}
         </div>
       </div>
+
+      {/* Floating Action Button */}
+      <FeatureFAB onAction={handleFABAction} />
+
+      {/* Contact Permissions Modal */}
+      <ContactPermissions
+        isOpen={showPermissions}
+        onClose={() => setShowPermissions(false)}
+        contacts={contacts}
+      />
+
+      {/* Starred Messages Modal */}
+      {showStarred && (
+        <StarredMessages onClose={() => setShowStarred(false)} />
+      )}
+
+      {/* Pinned Messages Modal */}
+      {showPinned && (
+        <PinnedMessages onClose={() => setShowPinned(false)} />
+      )}
+
+      {/* Chat Profile Drawer - GB Features */}
+      <ChatProfileDrawer
+        isOpen={showProfileDrawer}
+        onClose={() => setShowProfileDrawer(false)}
+        chat={activeChat}
+      />
     </div>
   )
 }

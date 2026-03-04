@@ -27,7 +27,10 @@ const ChatList = ({ onChatSelect, className }) => {
     if (searchQuery) {
       filtered = filtered.filter(chat =>
         chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.lastMessage?.content.toLowerCase().includes(searchQuery.toLowerCase())
+        (typeof chat.lastMessage?.content === 'string'
+          ? chat.lastMessage.content
+          : chat.lastMessage?.content?.text
+        )?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 

@@ -99,8 +99,16 @@ function App() {
 
   // Apply theme to document
   useEffect(() => {
-    document.documentElement.className = theme
-    document.documentElement.style.setProperty('color-scheme', theme)
+    const { theme: currentTheme, getAvailableThemes } = useThemeStore.getState()
+    const themes = getAvailableThemes()
+    const themeData = themes[currentTheme]
+    if (themeData) {
+      document.documentElement.className = themeData.class
+      if (themeData.primary) {
+        document.documentElement.style.setProperty('--color-primary-500', themeData.primary)
+      }
+    }
+    document.documentElement.style.setProperty('color-scheme', currentTheme.includes('dark') ? 'dark' : 'light')
   }, [theme])
 
   // Show splash during initialization

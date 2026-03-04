@@ -104,6 +104,10 @@ const PrivacySettings = () => {
     toast.success('User unblocked')
   }
 
+  const handleSecurityToggle = (setting) => {
+    setSecurity(prev => ({ ...prev, [setting]: !prev[setting] }))
+  }
+
   const setup2FA = async () => {
     // Generate QR code and secret
     try {
@@ -118,13 +122,13 @@ const PrivacySettings = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Privacy & Security
         </h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
           Manage your privacy settings and secure your account
         </p>
       </div>
@@ -133,8 +137,8 @@ const PrivacySettings = () => {
       {!security.twoFactorAuth && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-            <div>
+            <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
               <h4 className="font-medium text-yellow-900 dark:text-yellow-100">
                 Enhance Your Security
               </h4>
@@ -144,7 +148,7 @@ const PrivacySettings = () => {
               <Button
                 size="sm"
                 variant="primary"
-                className="mt-2"
+                className="mt-2 w-full sm:w-auto"
                 onClick={() => setShow2FAModal(true)}
               >
                 Enable 2FA
@@ -155,15 +159,15 @@ const PrivacySettings = () => {
       )}
 
       {/* Ghost Mode - Premium Feature */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
-        <div className="flex items-start justify-between">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-lg p-4 md:p-6 text-white">
+        <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <GhostIcon className="w-8 h-8" />
+            <div className="p-3 bg-white/20 rounded-xl flex-shrink-0">
+              <GhostIcon className="w-6 h-6 md:w-8 md:h-8" />
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">Ghost Mode</h3>
-              <p className="text-white/90 mb-3">
+              <h3 className="text-lg md:text-xl font-bold mb-2">Ghost Mode</h3>
+              <p className="text-white/90 mb-3 text-sm md:text-base">
                 Browse anonymously - hide your online status, last seen, and read receipts from everyone.
               </p>
               <div className="flex flex-wrap gap-2 text-xs">
@@ -185,7 +189,7 @@ const PrivacySettings = () => {
           <button
             onClick={toggleGhostMode}
             className={clsx(
-              'relative inline-flex h-8 w-14 items-center rounded-full transition-colors',
+              'relative inline-flex h-8 w-14 items-center rounded-full transition-colors flex-shrink-0',
               privacySettings.ghostMode ? 'bg-white' : 'bg-white/30'
             )}
           >
@@ -205,38 +209,230 @@ const PrivacySettings = () => {
         )}
       </div>
 
+      {/* GB WhatsApp Advanced Privacy */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+        <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            🛡️ GB Advanced Privacy
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Premium privacy features exclusive to GBChat
+          </p>
+        </div>
+
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          {/* Freeze Last Seen */}
+          <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xl flex-shrink-0">🧊</span>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  Freeze Last Seen
+                </p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                  Keep your last seen stuck at the current time
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={privacySettings.freezeLastSeen}
+              onChange={() => handleToggleChange('freezeLastSeen')}
+              className="toggle-switch flex-shrink-0"
+            />
+          </label>
+
+          {/* Anti-Delete Messages */}
+          <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xl flex-shrink-0">🔄</span>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  Anti-Delete Messages
+                </p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                  See messages even after the sender deletes them
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={privacySettings.antiDeleteMessages}
+              onChange={() => handleToggleChange('antiDeleteMessages')}
+              className="toggle-switch flex-shrink-0"
+            />
+          </label>
+
+          {/* Hide Second Tick */}
+          <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xl flex-shrink-0">✓✓</span>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  Hide Second Tick
+                </p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                  Don't show delivery receipts to senders
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={privacySettings.hideSecondTick}
+              onChange={() => handleToggleChange('hideSecondTick')}
+              className="toggle-switch flex-shrink-0"
+            />
+          </label>
+
+          {/* Hide Typing Indicator */}
+          <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xl flex-shrink-0">⌨️</span>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  Hide Typing
+                </p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                  Don't show "typing..." indicator to others
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={privacySettings.hideTyping}
+              onChange={() => handleToggleChange('hideTyping')}
+              className="toggle-switch flex-shrink-0"
+            />
+          </label>
+
+          {/* Hide Recording Indicator */}
+          <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xl flex-shrink-0">🎙️</span>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  Hide Recording
+                </p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                  Don't show "recording..." indicator to others
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={privacySettings.hideRecording}
+              onChange={() => handleToggleChange('hideRecording')}
+              className="toggle-switch flex-shrink-0"
+            />
+          </label>
+
+          {/* Anti View Once */}
+          <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xl flex-shrink-0">👁️</span>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  Anti View Once
+                </p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                  View once media won't auto-delete after viewing
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={privacySettings.antiViewOnce}
+              onChange={() => handleToggleChange('antiViewOnce')}
+              className="toggle-switch flex-shrink-0"
+            />
+          </label>
+
+          {/* DND Mode */}
+          <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xl flex-shrink-0">🔕</span>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  DND Mode
+                </p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                  Disable all notifications and internet for GBChat
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={privacySettings.dndMode}
+              onChange={() => handleToggleChange('dndMode')}
+              className="toggle-switch flex-shrink-0"
+            />
+          </label>
+
+          {/* Who Can Call Me */}
+          <div className="p-4 md:p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <PhoneIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  Who Can Call Me
+                </p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                  Control who can make voice/video calls
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {privacyOptions.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => handlePrivacyChange('whoCanCallMe', option.value)}
+                  className={clsx(
+                    'px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors',
+                    privacySettings.whoCanCallMe === option.value
+                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Privacy Settings */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+        <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <EyeIcon className="w-5 h-5" />
             Privacy
           </h3>
         </div>
-        
+
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {/* Last Seen */}
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <ClockIcon className="w-5 h-5 text-gray-400" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     Last Seen
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Control who can see your last seen time
                   </p>
                 </div>
               </div>
             </div>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {privacyOptions.map(option => (
                 <button
                   key={option.value}
                   onClick={() => handlePrivacyChange('lastSeen', option.value)}
                   className={clsx(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors',
                     privacySettings.lastSeen === option.value
                       ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
                       : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
@@ -249,27 +445,27 @@ const PrivacySettings = () => {
           </div>
 
           {/* Profile Photo */}
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <PhotoIcon className="w-5 h-5 text-gray-400" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     Profile Photo
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Control who can see your profile photo
                   </p>
                 </div>
               </div>
             </div>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {privacyOptions.map(option => (
                 <button
                   key={option.value}
                   onClick={() => handlePrivacyChange('profilePhoto', option.value)}
                   className={clsx(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors',
                     privacySettings.profilePhoto === option.value
                       ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
                       : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
@@ -282,15 +478,15 @@ const PrivacySettings = () => {
           </div>
 
           {/* Additional Privacy Options */}
-          <div className="p-6 space-y-4">
-            <label className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <DocumentTextIcon className="w-5 h-5 text-gray-400" />
+          <div className="p-4 md:p-6 space-y-4">
+            <label className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <DocumentTextIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     Read Receipts
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Show when you've read messages
                   </p>
                 </div>
@@ -300,18 +496,18 @@ const PrivacySettings = () => {
                 checked={privacySettings.readReceipts}
                 onChange={(e) => handleToggleChange('readReceipts')}
                 disabled={privacySettings.ghostMode}
-                className="toggle-switch disabled:opacity-50"
+                className="toggle-switch disabled:opacity-50 flex-shrink-0"
               />
             </label>
 
-            <label className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <UserGroupIcon className="w-5 h-5 text-gray-400" />
+            <label className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <UserGroupIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     Online Status
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Show when you're online
                   </p>
                 </div>
@@ -321,18 +517,18 @@ const PrivacySettings = () => {
                 checked={privacySettings.showOnlineStatus}
                 onChange={(e) => handleToggleChange('showOnlineStatus')}
                 disabled={privacySettings.ghostMode}
-                className="toggle-switch disabled:opacity-50"
+                className="toggle-switch disabled:opacity-50 flex-shrink-0"
               />
             </label>
 
-            <label className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <ClockIcon className="w-5 h-5 text-gray-400" />
+            <label className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <ClockIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     Last Seen
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Show your last seen time
                   </p>
                 </div>
@@ -342,18 +538,18 @@ const PrivacySettings = () => {
                 checked={privacySettings.showLastSeen}
                 onChange={(e) => handleToggleChange('showLastSeen')}
                 disabled={privacySettings.ghostMode}
-                className="toggle-switch disabled:opacity-50"
+                className="toggle-switch disabled:opacity-50 flex-shrink-0"
               />
             </label>
 
-            <label className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <PhotoIcon className="w-5 h-5 text-gray-400" />
+            <label className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <PhotoIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     Profile Photo
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Show your profile photo
                   </p>
                 </div>
@@ -362,7 +558,7 @@ const PrivacySettings = () => {
                 type="checkbox"
                 checked={privacySettings.showProfilePhoto}
                 onChange={(e) => handleToggleChange('showProfilePhoto')}
-                className="toggle-switch"
+                className="toggle-switch flex-shrink-0"
               />
             </label>
           </div>
@@ -371,8 +567,8 @@ const PrivacySettings = () => {
 
       {/* Security Settings */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+        <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <ShieldCheckIcon className="w-5 h-5" />
             Security
           </h3>
@@ -380,15 +576,15 @@ const PrivacySettings = () => {
 
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {/* Two-Factor Authentication */}
-          <div className="p-6">
-            <label className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <KeyIcon className="w-5 h-5 text-gray-400" />
+          <div className="p-4 md:p-6">
+            <label className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <KeyIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     Two-Factor Authentication
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Add an extra layer of security
                   </p>
                   {security.twoFactorAuth && (
@@ -402,21 +598,21 @@ const PrivacySettings = () => {
                 type="checkbox"
                 checked={security.twoFactorAuth}
                 onChange={() => handleSecurityToggle('twoFactorAuth')}
-                className="toggle-switch"
+                className="toggle-switch flex-shrink-0"
               />
             </label>
           </div>
 
           {/* Biometric Lock */}
-          <div className="p-6">
-            <label className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FingerPrintIcon className="w-5 h-5 text-gray-400" />
+          <div className="p-4 md:p-6">
+            <label className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <FingerPrintIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     Biometric Lock
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Use fingerprint or face to unlock
                   </p>
                 </div>
@@ -425,21 +621,21 @@ const PrivacySettings = () => {
                 type="checkbox"
                 checked={security.biometricLock}
                 onChange={() => handleSecurityToggle('biometricLock')}
-                className="toggle-switch"
+                className="toggle-switch flex-shrink-0"
               />
             </label>
           </div>
 
           {/* App Lock */}
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <LockClosedIcon className="w-5 h-5 text-gray-400" />
+          <div className="p-4 md:p-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3 flex-1">
+                <LockClosedIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                     App Lock
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                     Require authentication to open app
                   </p>
                 </div>
@@ -448,12 +644,12 @@ const PrivacySettings = () => {
                 type="checkbox"
                 checked={security.appLock}
                 onChange={() => handleSecurityToggle('appLock')}
-                className="toggle-switch"
+                className="toggle-switch flex-shrink-0"
               />
             </div>
-            
+
             {security.appLock && (
-              <div className="ml-8 mt-3">
+              <div className="ml-0 sm:ml-8 mt-3">
                 <label className="text-sm text-gray-700 dark:text-gray-300">
                   Auto-lock after
                 </label>
@@ -473,10 +669,10 @@ const PrivacySettings = () => {
           </div>
 
           {/* Change Password */}
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <button
               onClick={() => setShowPasswordModal(true)}
-              className="flex items-center gap-3 text-primary-600 hover:text-primary-700 dark:text-primary-400"
+              className="flex items-center gap-3 text-primary-600 hover:text-primary-700 dark:text-primary-400 text-sm md:text-base"
             >
               <KeyIcon className="w-5 h-5" />
               <span className="font-medium">Change Password</span>
@@ -487,24 +683,25 @@ const PrivacySettings = () => {
 
       {/* Blocked Users */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
               Blocked Users
             </h3>
             <Button
               size="sm"
               variant="secondary"
               onClick={() => setShowBlockModal(true)}
+              className="w-full sm:w-auto"
             >
               Block User
             </Button>
           </div>
         </div>
-        
-        <div className="p-6">
+
+        <div className="p-4 md:p-6">
           {blockedUsers.length === 0 ? (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+            <p className="text-center text-gray-500 dark:text-gray-400 py-8 text-sm">
               No blocked users
             </p>
           ) : (
@@ -512,15 +709,15 @@ const PrivacySettings = () => {
               {blockedUsers.map(userId => (
                 <div
                   key={userId}
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600" />
+                    <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">
                         User {userId}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Blocked on date
                       </p>
                     </div>
@@ -529,6 +726,7 @@ const PrivacySettings = () => {
                     size="sm"
                     variant="ghost"
                     onClick={() => handleUnblockUser(userId)}
+                    className="w-full sm:w-auto"
                   >
                     Unblock
                   </Button>

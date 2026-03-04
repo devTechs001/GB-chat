@@ -23,8 +23,8 @@ const useStoryStore = create((set, get) => ({
 
   fetchMyStory: async () => {
     try {
-      const { data } = await api.get('/stories/my-story')
-      set({ myStory: data.story })
+      const { data } = await api.get('/stories/mine')
+      set({ myStory: data.story || data })
     } catch (error) {
       // 404 means user has no story yet, which is normal
       if (error.response?.status !== 404) {

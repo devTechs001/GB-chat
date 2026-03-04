@@ -51,52 +51,71 @@ const useChatStore = create((set, get) => ({
   fetchMessages: async (chatId) => {
     try {
       const { data } = await api.get(`/messages/${chatId}`)
-      set({ messages: data.messages })
+      // Handle both array response and object with messages property
+      const messagesArray = Array.isArray(data) ? data : (data.messages || [])
+      set({ messages: messagesArray })
     } catch (error) {
       console.error('Failed to fetch messages:', error)
+      set({ messages: [] })
     }
   },
   
-  sendMessage: async (chatId, content, attachments = []) => {
+  sendMessage: async (chatId, content, attachments = [], replyTo = null) => {
     try {
       const formData = new FormData()
-      formData.append('content', content)
+      formData.append('text', typeof content === 'object' ? content.text : content)
       formData.append('chatId', chatId)
-      
+      formData.append('type', 'text')
+
+      // Add reply information if replying to a message
+      if (replyTo) {
+        formData.append('replyTo', JSON.stringify({
+          messageId: replyTo._id,
+          content: replyTo.content,
+          sender: replyTo.sender
+        }))
+      }
+
       attachments.forEach((file) => {
         formData.append('attachments', file)
       })
-      
-      const { data } = await api.post('/messages', formData, {
+
+      const { data } = await api.post(`/messages/${chatId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      
+
+      const newMessage = data.message || data
+
+      // Optimistically add message to store
       set((state) => ({
-        messages: [...state.messages, data.message],
+        messages: [...state.messages, newMessage],
         chats: state.chats.map(chat =>
           chat._id === chatId
-            ? { ...chat, lastMessage: data.message, updatedAt: new Date() }
+            ? { ...chat, lastMessage: newMessage, updatedAt: new Date() }
             : chat
         ),
       }))
-      
-      return data.message
+
+      console.log('[Store] Message added successfully:', newMessage._id)
+
+      return newMessage
     } catch (error) {
       toast.error('Failed to send message')
-      console.error(error)
+      console.error('Send message error:', error)
+      throw error
     }
   },
   
   receiveMessage: (message) => {
     const { activeChat } = get()
-    
+
     // Add message to messages if it's for the active chat
     if (activeChat?._id === message.chat) {
       set((state) => ({
         messages: [...state.messages, message],
       }))
     }
-    
+
     // Update chat list
     set((state) => ({
       chats: state.chats.map(chat =>
@@ -106,10 +125,48 @@ const useChatStore = create((set, get) => ({
       ),
       unreadCounts: {
         ...state.unreadCounts,
-        [message.chat]: (state.unreadCounts[message.chat] || 0) + 
+        [message.chat]: (state.unreadCounts[message.chat] || 0) +
           (activeChat?._id !== message.chat ? 1 : 0),
       },
     }))
+  },
+
+  // Update message status (for when messages are delivered/read)
+  updateMessageStatus: (messageId, status) => {
+    set((state) => ({
+      messages: state.messages.map(msg =>
+        msg._id === messageId ? { ...msg, status } : msg
+      ),
+    }))
+    console.log('[Store] Message status updated:', messageId, status)
+  },
+
+  // Mark messages as delivered in a chat
+  markMessagesAsDelivered: (chatId, messageIds) => {
+    set((state) => ({
+      messages: state.messages.map(msg =>
+        messageIds.includes(msg._id) && msg.chat === chatId
+          ? { ...msg, status: 'delivered' }
+          : msg
+      ),
+    }))
+  },
+
+  // Mark messages as read in a chat
+  markMessagesAsRead: (chatId, messageIds) => {
+    set((state) => ({
+      messages: state.messages.map(msg =>
+        messageIds.includes(msg._id) && msg.chat === chatId
+          ? { ...msg, status: 'read' }
+          : msg
+      ),
+      chats: state.chats.map(chat =>
+        chat._id === chatId
+          ? { ...chat, unreadCount: 0 }
+          : chat
+      ),
+    }))
+    console.log('[Store] Messages marked as read:', chatId, messageIds?.length)
   },
   
   deleteMessage: async (messageId) => {

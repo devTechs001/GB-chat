@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeftIcon,
@@ -6,39 +7,116 @@ import {
   VideoCameraIcon,
   EllipsisVerticalIcon,
   MagnifyingGlassIcon,
-  UserPlusIcon,
+  XMarkIcon,
+  BellIcon,
+  BellSlashIcon,
+  EyeIcon,
+  LockClosedIcon,
+  ArchiveBoxIcon,
+  StarIcon,
+  TrashIcon,
+  ChatBubbleLeftRightIcon,
+  ShieldCheckIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline'
+import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
 import Dropdown from '../common/Dropdown'
 import clsx from 'clsx'
 import useChatStore from '../../store/useChatStore'
+import useGBFeaturesStore from '../../store/useGBFeaturesStore'
+import ChatDisplaySettings from '../settings/ChatDisplaySettings'
 
-const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
+const GhostIconCustom = ({ className }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 2C7.58 2 4 5.58 4 10v14c0 1.1.9 2 2 2s2-.9 2-2c0 1.1.9 2 2 2s2-.9 2-2c0 1.1.9 2 2 2s2-.9 2-2V10c0-4.42-3.58-8-8-8z"/>
+  </svg>
+)
+
+const AirplaneIconCustom = ({ className }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+  </svg>
+)
+
+const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack }) => {
   const navigate = useNavigate()
   const { onlineUsers } = useChatStore()
+  const { gbFeatures, toggleQuickSetting } = useGBFeaturesStore()
   const [showSearch, setShowSearch] = useState(false)
+  const [showQuickSettings, setShowQuickSettings] = useState(false)
+  const [showDisplaySettings, setShowDisplaySettings] = useState(false)
   const isOnline = chat.isGroup ? false : onlineUsers.includes(chat.userId)
 
-  const menuOptions = [
-    { label: 'View Contact', action: 'view_contact' },
+  const handleBack = () => {
+    if (onBack) {
+      onBack()
+    } else {
+      // Fallback: navigate to chat list
+      navigate('/chats')
+    }
+  }
+
+  const quickSettings = [
+    {
+      id: 'dndMode',
+      label: 'DND Mode',
+      icon: BellSlashIcon,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100 dark:bg-purple-900/30'
+    },
+    {
+      id: 'ghostMode',
+      label: 'Ghost Mode',
+      icon: GhostIconCustom,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100 dark:bg-blue-900/30'
+    },
+    {
+      id: 'airplaneMode',
+      label: 'Airplane Mode',
+      icon: AirplaneIconCustom,
+      color: 'text-red-600',
+      bgColor: 'bg-red-100 dark:bg-red-900/30'
+    },
+    {
+      id: 'readReceipts',
+      label: 'Read Receipts',
+      icon: EyeIcon,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100 dark:bg-green-900/30'
+    },
+  ]
+
+  const menuOptions = chat.isGroup ? [
+    { label: 'Group Info', action: 'group_info' },
     { label: 'Media, Links, Docs', action: 'media' },
     { label: 'Search', action: 'search' },
     { label: 'Mute Notifications', action: 'mute' },
-    { label: 'Wallpaper', action: 'wallpaper' },
+    { label: 'Custom Wallpaper', action: 'wallpaper' },
+    { label: 'Star Messages', action: 'starred' },
     { label: 'Clear Chat', action: 'clear', danger: true },
-    { label: 'Block', action: 'block', danger: true },
+    { label: 'Report Group', action: 'report', danger: true },
+  ] : [
+    { label: 'Contact Info', action: 'view_contact' },
+    { label: 'Media, Links, Docs', action: 'media' },
+    { label: 'Search', action: 'search' },
+    { label: 'Mute Notifications', action: 'mute' },
+    { label: 'Custom Wallpaper', action: 'wallpaper' },
+    { label: 'Star Messages', action: 'starred' },
+    { label: 'Clear Chat', action: 'clear', danger: true },
+    { label: 'Block Contact', action: 'block', danger: true },
+    { label: 'Report Contact', action: 'report', danger: true },
   ]
 
   const handleMenuAction = (action) => {
     switch (action) {
       case 'view_contact':
+      case 'group_info':
         onInfoClick()
         break
       case 'search':
         setShowSearch(!showSearch)
-        break
-      case 'mute':
-        // Handle mute
         break
       case 'clear':
         if (confirm('Clear all messages in this chat?')) {
@@ -55,13 +133,11 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
     }
   }
 
-  const handleCall = (isVideo = false) => {
-    // Handle call initiation
-    console.log(`Starting ${isVideo ? 'video' : 'audio'} call with ${chat.name}`)
+  const handleQuickSetting = (settingId) => {
+    toggleQuickSetting(settingId)
   }
 
   if (selectedCount > 0) {
-    // Selection mode header
     return (
       <div className="flex items-center justify-between px-3 py-2 md:px-4 md:py-3 bg-primary-600 text-white">
         <div className="flex items-center gap-3">
@@ -74,15 +150,14 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
           <span className="font-medium">{selectedCount} selected</span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Selection actions */}
-          <button className="p-2 hover:bg-white/10 rounded-full">
-            <TrashIcon className="w-5 h-5" />
-          </button>
           <button className="p-2 hover:bg-white/10 rounded-full">
             <StarIcon className="w-5 h-5" />
           </button>
           <button className="p-2 hover:bg-white/10 rounded-full">
-            <ArrowUturnRightIcon className="w-5 h-5" />
+            <ArchiveBoxIcon className="w-5 h-5" />
+          </button>
+          <button className="p-2 hover:bg-white/10 rounded-full">
+            <TrashIcon className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -98,15 +173,14 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
         'border-b border-gray-200 dark:border-gray-700'
       )}>
         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-          {/* Back button - visible on mobile */}
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             className="p-1 -ml-1 md:hidden hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+            title="Back to chats"
           >
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
 
-          {/* Avatar and info */}
           <div
             onClick={onInfoClick}
             className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 cursor-pointer"
@@ -134,9 +208,26 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
           </div>
         </div>
 
-        {/* Action buttons */}
         <div className="flex items-center gap-1 md:gap-2">
-          {/* Search - Hidden on mobile, shown in menu */}
+          <button
+            onClick={() => setShowDisplaySettings(true)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full relative"
+            title="Display Settings"
+          >
+            <Cog6ToothIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          </button>
+
+          <button
+            onClick={() => setShowQuickSettings(!showQuickSettings)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full relative"
+            title="Quick Settings"
+          >
+            <BellIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            {gbFeatures?.messaging?.dndMode?.enabled && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-purple-600 rounded-full" />
+            )}
+          </button>
+
           <button
             onClick={() => setShowSearch(!showSearch)}
             className="hidden md:block p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
@@ -144,17 +235,16 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
             <MagnifyingGlassIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>
 
-          {/* Call buttons */}
           {!chat.isGroup && (
             <>
               <button
-                onClick={() => handleCall(false)}
+                onClick={() => {}}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
               >
                 <PhoneIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
               <button
-                onClick={() => handleCall(true)}
+                onClick={() => {}}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
               >
                 <VideoCameraIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -162,7 +252,6 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
             </>
           )}
 
-          {/* Menu */}
           <Dropdown
             trigger={
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
@@ -175,7 +264,60 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
         </div>
       </div>
 
-      {/* Search bar - Animated */}
+      <AnimatePresence>
+        {showQuickSettings && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+          >
+            <div className="px-3 py-3 md:px-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
+                  Quick Settings
+                </span>
+                <button
+                  onClick={() => setShowQuickSettings(false)}
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                >
+                  <XMarkIcon className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {quickSettings.map((setting) => {
+                  const Icon = setting.icon
+                  const isEnabled = setting.id === 'dndMode' 
+                    ? gbFeatures?.messaging?.dndMode?.enabled
+                    : setting.id === 'readReceipts'
+                    ? !gbFeatures?.privacy?.hideBlueTicks
+                    : gbFeatures?.privacy?.[setting.id] || false
+                  
+                  return (
+                    <button
+                      key={setting.id}
+                      onClick={() => handleQuickSetting(setting.id)}
+                      className={clsx(
+                        'flex flex-col items-center gap-1 p-2 rounded-lg transition-all',
+                        isEnabled
+                          ? `${setting.bgColor} ${setting.color}`
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                      )}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="text-[10px] font-medium">{setting.label}</span>
+                      {isEnabled && (
+                        <div className="w-1.5 h-1.5 bg-current rounded-full mt-0.5" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {showSearch && (
         <div className="px-3 py-2 md:px-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
           <div className="relative">
@@ -189,6 +331,13 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection }) => {
           </div>
         </div>
       )}
+
+      {/* Display Settings Modal */}
+      <AnimatePresence>
+        {showDisplaySettings && (
+          <ChatDisplaySettings onClose={() => setShowDisplaySettings(false)} />
+        )}
+      </AnimatePresence>
     </>
   )
 }

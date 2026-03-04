@@ -10,6 +10,7 @@ import {
   clearChat,
   deleteChat,
   getArchivedChats,
+  markChatAsRead,
 } from "../controllers/chatController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -20,6 +21,7 @@ router.get("/", getChats);
 router.post("/", getOrCreateChat);
 router.get("/archived", getArchivedChats);
 router.get("/:id", getChatById);
+router.post("/:id/read", markChatAsRead);
 router.put("/:id/archive", archiveChat);
 router.put("/:id/pin", pinChat);
 router.put("/:id/mute", muteChat);

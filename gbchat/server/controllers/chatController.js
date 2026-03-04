@@ -30,6 +30,36 @@ export const getChats = async (req, res, next) => {
   }
 };
 
+export const markChatAsRead = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    await Chat.findOneAndUpdate(
+      { _id: id, "participants.user": userId },
+      { $set: { "participants.$.unreadCount": 0 } }
+    );
+
+    // Also mark messages as read
+    await Message.updateMany(
+      {
+        chat: id,
+        sender: { $ne: userId },
+        "readBy.user": { $ne: userId },
+      },
+      {
+        $addToSet: {
+          readBy: { user: userId, readAt: new Date() },
+        },
+      }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getOrCreateChat = async (req, res, next) => {
   try {
     const { participantId } = req.body;

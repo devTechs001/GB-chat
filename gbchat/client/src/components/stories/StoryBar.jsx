@@ -61,7 +61,7 @@ const StoryBar = () => {
                   {myStory ? (
                     <>
                       <img
-                        src={myStory.media[0]?.thumbnail || myStory.media[0]?.url}
+                        src={myStory?.media?.[0]?.thumbnail || myStory?.media?.[0]?.url || ''}
                         alt="My story"
                         className="absolute inset-0 w-full h-full object-cover"
                       />

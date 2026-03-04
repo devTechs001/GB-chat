@@ -43,7 +43,9 @@ const ChatListItem = ({ chat, onClick }) => {
     }
 
     const { content, type, sender } = chat.lastMessage
-    const isMe = sender === user._id
+    // Handle sender as object or string ID
+    const senderId = sender?._id || sender
+    const isMe = senderId === user._id
 
     // Icon for different message types
     const getTypeIcon = () => {
@@ -81,7 +83,9 @@ const ChatListItem = ({ chat, onClick }) => {
         )}
         <span className="truncate">
           {getTypeIcon()}
-          {type === 'text' ? content : type}
+          {type === 'text'
+            ? (typeof content === 'string' ? content : content?.text || 'Message')
+            : type}
         </span>
       </span>
     )

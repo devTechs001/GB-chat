@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowUturnLeftIcon,
@@ -7,12 +7,66 @@ import {
   TrashIcon,
   DocumentDuplicateIcon,
   FaceSmileIcon,
+  ClockIcon,
+  BookmarkIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Tooltip from '../common/Tooltip'
 import clsx from 'clsx'
+import axios from 'axios'
+import toast from 'react-hot-toast'
 
-const MessageActions = ({ message, isMine, onReply, onReact, className }) => {
+const MessageActions = ({ message, isMine, onReply, onReact, className, chatId, onSchedule }) => {
+  const [isStarring, setIsStarring] = useState(false)
+  const [isPinning, setIsPinning] = useState(false)
+
+  const handleStar = async () => {
+    try {
+      setIsStarring(true)
+      const token = localStorage.getItem('token')
+      await axios.post(
+        '/api/gb-features/star',
+        { messageId: message._id, chatId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      toast.success(message.isStarred ? 'Message unstarred' : 'Message starred')
+    } catch (error) {
+      toast.error('Failed to star message')
+    } finally {
+      setIsStarring(false)
+    }
+  }
+
+  const handlePin = async () => {
+    try {
+      setIsPinning(true)
+      const token = localStorage.getItem('token')
+      await axios.post(
+        '/api/gb-features/pin',
+        { messageId: message._id, chatId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      toast.success('Message pinned')
+    } catch (error) {
+      toast.error('Failed to pin message')
+    } finally {
+      setIsPinning(false)
+    }
+  }
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content)
+      toast.success('Message copied')
+    } catch (error) {
+      toast.error('Failed to copy message')
+    }
+  }
+
+  const handleSchedule = () => {
+    onSchedule?.(message)
+  }
+
   const actions = [
     {
       icon: FaceSmileIcon,
@@ -27,15 +81,30 @@ const MessageActions = ({ message, isMine, onReply, onReact, className }) => {
       show: true,
     },
     {
+      icon: BookmarkIcon,
+      label: 'Pin',
+      onClick: handlePin,
+      show: true,
+      loading: isPinning,
+    },
+    {
       icon: message.isStarred ? StarSolidIcon : StarIcon,
       label: message.isStarred ? 'Unstar' : 'Star',
-      onClick: () => {/* Handle star */},
+      onClick: handleStar,
+      show: true,
+      loading: isStarring,
+      solid: message.isStarred,
+    },
+    {
+      icon: ClockIcon,
+      label: 'Schedule',
+      onClick: handleSchedule,
       show: true,
     },
     {
       icon: DocumentDuplicateIcon,
       label: 'Copy',
-      onClick: () => navigator.clipboard.writeText(message.content),
+      onClick: handleCopy,
       show: message.type === 'text',
     },
     {
@@ -69,11 +138,13 @@ const MessageActions = ({ message, isMine, onReply, onReact, className }) => {
           <Tooltip key={index} content={action.label} position="top">
             <button
               onClick={action.onClick}
+              disabled={action.loading}
               className={clsx(
                 'p-2 rounded-full transition-colors',
                 action.danger
                   ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400',
+                action.loading && 'opacity-50 cursor-wait'
               )}
             >
               <action.icon className="w-4 h-4" />

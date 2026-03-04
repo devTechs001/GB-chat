@@ -17,6 +17,16 @@ const useAuthStore = create(
         showLastSeen: true,
         showProfilePhoto: true,
         showStatus: true,
+        // GB WhatsApp Advanced Privacy
+        freezeLastSeen: false,       // Freeze last seen at a specific time
+        antiDeleteMessages: false,   // See deleted messages
+        hideBlueTicksFor: 'nobody',  // 'nobody', 'contacts', 'everyone'
+        hideSecondTick: false,       // Hide delivery receipts
+        dndMode: false,              // Do Not Disturb - no notifications
+        whoCanCallMe: 'everyone',    // 'everyone', 'contacts', 'nobody'
+        antiViewOnce: false,         // Disable view once media auto-delete
+        hideTyping: false,           // Don't show typing indicator
+        hideRecording: false,        // Don't show recording indicator
       },
 
       login: async (credentials) => {
@@ -181,18 +191,25 @@ const useAuthStore = create(
           set({ isLoading: false })
           return
         }
-        
+
         set({ isLoading: true })
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        
+
         try {
           const { data } = await api.get('/auth/me')
+          console.log('[Auth] checkAuth response:', data)
+
+          // Handle different API response formats
+          const userData = data.user || data.data || data
+
           set({
-            user: data.user,
+            user: userData,
             isAuthenticated: true,
             isLoading: false,
           })
+          console.log('[Auth] User set:', userData)
         } catch (error) {
+          console.error('[Auth] checkAuth error:', error)
           set({
             user: null,
             token: null,

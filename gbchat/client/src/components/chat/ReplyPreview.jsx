@@ -18,6 +18,11 @@ const ReplyPreview = ({ message, onCancel }) => {
   }
 
   const getMessagePreview = () => {
+    // Handle content that might be an object {text: "..."} or string
+    const contentText = typeof message.content === 'object' && message.content !== null
+      ? message.content.text || JSON.stringify(message.content)
+      : message.content;
+
     switch (message.type) {
       case 'image':
         return '📷 Photo'
@@ -32,7 +37,7 @@ const ReplyPreview = ({ message, onCancel }) => {
       case 'location':
         return '📍 Location'
       default:
-        return message.content
+        return contentText || 'Media message'
     }
   }
 
