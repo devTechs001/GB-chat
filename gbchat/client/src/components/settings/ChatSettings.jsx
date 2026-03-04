@@ -1,13 +1,17 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Switch } from '@headlessui/react'
 import {
   ArchiveBoxIcon,
   TrashIcon,
   ClockIcon,
   DocumentArrowDownIcon,
+  PhotoIcon,
+  PaintBrushIcon,
 } from '@heroicons/react/24/outline'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
+import WallpaperSelector from '../chat/WallpaperSelector'
+import { WALLPAPERS, DEFAULT_WALLPAPER } from '../chat/WallpaperSelector'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -25,9 +29,19 @@ const ChatSettings = () => {
     mediaQuality: 'auto', // auto, high, medium, low
   })
 
+  const [globalWallpaper, setGlobalWallpaper] = useState(null)
+  const [showWallpaperModal, setShowWallpaperModal] = useState(false)
   const [showClearModal, setShowClearModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
+
+  // Load global wallpaper on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('global-wallpaper')
+    if (saved) {
+      setGlobalWallpaper(saved)
+    }
+  }, [])
 
   const handleToggle = (key) => {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -37,6 +51,25 @@ const ChatSettings = () => {
   const handleMediaQualityChange = (quality) => {
     setSettings((prev) => ({ ...prev, mediaQuality: quality }))
     toast.success(`Media quality set to ${quality}`)
+  }
+
+  const handleGlobalWallpaperChange = (wallpaperUrl) => {
+    const wallpaper = wallpaperUrl || DEFAULT_WALLPAPER
+    setGlobalWallpaper(wallpaper)
+    localStorage.setItem('global-wallpaper', wallpaper)
+
+    // Dispatch event to update all chat areas
+    window.dispatchEvent(new CustomEvent('global-wallpaper-change', {
+      detail: { wallpaper }
+    }))
+
+    toast.success(wallpaperUrl ? 'Global wallpaper updated' : 'Wallpaper reset to default')
+  }
+
+  const getCurrentWallpaperName = () => {
+    if (!globalWallpaper) return 'WhatsApp Default'
+    const found = WALLPAPERS.find(w => w.url === globalWallpaper)
+    return found ? found.name : 'Custom'
   }
 
   const handleClearAllChats = async () => {
@@ -133,6 +166,57 @@ const ChatSettings = () => {
         <p className="text-gray-600 dark:text-gray-400">
           Customize your chat experience
         </p>
+      </div>
+
+      {/* Global Wallpaper */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <PaintBrushIcon className="w-6 h-6 text-primary-500" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Global Wallpaper
+          </h3>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Set a default wallpaper for all chats. Individual chat wallpapers will override this setting.
+        </p>
+
+        <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          {/* Preview */}
+          <div
+            className="w-20 h-20 rounded-lg border-2 border-gray-200 dark:border-gray-600 shadow-sm flex-shrink-0"
+            style={{
+              backgroundImage: `url('${globalWallpaper || DEFAULT_WALLPAPER}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+
+          <div className="flex-1">
+            <p className="font-medium text-gray-900 dark:text-white">
+              {getCurrentWallpaperName()}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Applied to all chats without custom wallpaper
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowWallpaperModal(true)}
+            >
+              Change
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleGlobalWallpaperChange(null)}
+            >
+              Reset
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Chat Behavior */}
@@ -293,6 +377,14 @@ const ChatSettings = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Wallpaper Selector Modal */}
+      <WallpaperSelector
+        isOpen={showWallpaperModal}
+        onClose={() => setShowWallpaperModal(false)}
+        onSelect={handleGlobalWallpaperChange}
+        currentWallpaper={globalWallpaper}
+      />
     </div>
   )
 }

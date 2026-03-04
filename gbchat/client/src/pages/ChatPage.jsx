@@ -23,7 +23,7 @@ const ChatPage = () => {
   const { initGBFeatures } = useGBFeaturesStore()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const [showChatList, setShowChatList] = useState(!isMobile)
-  const [useEnhanced, setUseEnhanced] = useState(true) // Toggle between chat lists
+  const [useEnhanced, setUseEnhanced] = useState(false) // Use regular ChatList with new features
   const [showPermissions, setShowPermissions] = useState(false)
   const [contacts, setContacts] = useState([])
   const [showStarred, setShowStarred] = useState(false)

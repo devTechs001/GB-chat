@@ -6,9 +6,11 @@ import ChatBubble from './ChatBubble'
 import ChatInput from './ChatInput'
 import TypingIndicator from './TypingIndicator'
 import ScheduledMessages from './ScheduledMessages'
+import ChatLockModal from './ChatLockModal'
 import useChatStore from '../../store/useChatStore'
 import useAuthStore from '../../store/useAuthStore'
 import useThemeStore from '../../store/useThemeStore'
+import api from '../../lib/api'
 import clsx from 'clsx'
 import { shallow } from 'zustand/shallow'
 
@@ -60,6 +62,96 @@ const ChatArea = ({ onInfoClick, onBack }) => {
   const [selectedMessages, setSelectedMessages] = useState([])
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [currentChatWallpaper, setCurrentChatWallpaper] = useState(null)
+  const [isChatLocked, setIsChatLocked] = useState(false)
+  const [showLockModal, setShowLockModal] = useState(false)
+
+  // Load per-chat wallpaper
+  useEffect(() => {
+    if (!activeChat?._id) {
+      setCurrentChatWallpaper(null)
+      return
+    }
+
+    const chatWallpapers = JSON.parse(localStorage.getItem('chat-wallpapers') || '{}')
+    const wallpaper = chatWallpapers[activeChat._id] || null
+
+    // If no per-chat wallpaper, use global wallpaper
+    const globalWallpaper = localStorage.getItem('global-wallpaper')
+    const finalWallpaper = wallpaper || globalWallpaper || null
+
+    setCurrentChatWallpaper(finalWallpaper)
+
+    console.log('[Wallpaper] Loaded for chat:', activeChat._id, {
+      perChat: wallpaper,
+      global: globalWallpaper,
+      final: finalWallpaper
+    })
+  }, [activeChat])
+
+  // Check chat lock status when active chat changes
+  useEffect(() => {
+    const checkLockStatus = async () => {
+      if (!activeChat?._id) {
+        setIsChatLocked(false)
+        setShowLockModal(false)
+        return
+      }
+
+      try {
+        const response = await api.get(`/chat-lock/status/${activeChat._id}`)
+        if (response.data.isLocked) {
+          setIsChatLocked(true)
+          setShowLockModal(true)
+        } else {
+          setIsChatLocked(false)
+          setShowLockModal(false)
+        }
+      } catch (error) {
+        // If error (e.g., chat not locked), assume not locked
+        setIsChatLocked(false)
+        setShowLockModal(false)
+      }
+    }
+
+    checkLockStatus()
+  }, [activeChat?._id])
+
+  // Listen for wallpaper changes (per-chat)
+  useEffect(() => {
+    const handleWallpaperChange = (event) => {
+      if (event.detail.chatId === activeChat?._id) {
+        setCurrentChatWallpaper(event.detail.wallpaper)
+      }
+    }
+
+    window.addEventListener('wallpaper-change', handleWallpaperChange)
+    return () => window.removeEventListener('wallpaper-change', handleWallpaperChange)
+  }, [activeChat])
+
+  // Listen for global wallpaper changes
+  useEffect(() => {
+    const handleGlobalWallpaperChange = (event) => {
+      // Check if current chat has a custom wallpaper
+      const chatWallpapers = JSON.parse(localStorage.getItem('chat-wallpapers') || '{}')
+      const hasCustomWallpaper = activeChat?._id && chatWallpapers[activeChat._id]
+
+      // Only apply global wallpaper if chat doesn't have custom one
+      if (!hasCustomWallpaper) {
+        setCurrentChatWallpaper(event.detail.wallpaper)
+        console.log('[Wallpaper] Global wallpaper applied:', event.detail.wallpaper)
+      }
+    }
+
+    window.addEventListener('global-wallpaper-change', handleGlobalWallpaperChange)
+    return () => window.removeEventListener('global-wallpaper-change', handleGlobalWallpaperChange)
+  }, [activeChat])
+
+  // Debug: Log wallpaper
+  useEffect(() => {
+    console.log('[Wallpaper] Chat wallpaper:', chatWallpaper)
+    console.log('[Wallpaper] Chat effect:', chatEffect)
+  }, [chatWallpaper, chatEffect])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -115,6 +207,11 @@ const ChatArea = ({ onInfoClick, onBack }) => {
   const handleLongPress = (messageId) => {
     setIsSelectionMode(true)
     setSelectedMessages([messageId])
+  }
+
+  const handleUnlock = () => {
+    setIsChatLocked(false)
+    setShowLockModal(false)
   }
 
   // Group messages by date
@@ -189,14 +286,21 @@ const ChatArea = ({ onInfoClick, onBack }) => {
           'scrollbar-thin scrollbar-thumb-gray-400'
         )}
         style={{
-          backgroundImage: chatWallpaper ? `url('${chatWallpaper}')` : `url('/chat-bg.png')`,
-          backgroundSize: 'cover',
+          backgroundImage: currentChatWallpaper
+            ? `url('${currentChatWallpaper}')`
+            : `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23dcfce7' fill-opacity='0.4'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3Cpath d='M30 30c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3Cpath d='M70 70c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3Cpath d='M30 70c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3Cpath d='M70 30c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: currentChatWallpaper ? 'cover' : 'auto',
           backgroundPosition: 'center',
+          backgroundColor: currentChatWallpaper ? 'transparent' : 'rgb(229, 231, 235)',
+          backgroundAttachment: 'scroll',
         }}
       >
+        {/* Wallpaper overlay for better contrast */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-white/50 to-white/30 dark:from-black/30 dark:via-black/50 dark:to-black/30 pointer-events-none z-0" />
+
         {/* Chat Effect Overlay */}
         {chatEffect && chatEffect !== 'none' && (
-          <div className="pointer-events-none fixed inset-0 z-10 overflow-hidden opacity-30">
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-20">
             {chatEffect === 'particles' && (
               <div className="absolute inset-0">
                 {[...Array(15)].map((_, i) => (
@@ -255,6 +359,9 @@ const ChatArea = ({ onInfoClick, onBack }) => {
             )}
           </div>
         )}
+
+        {/* Messages Container - Above wallpaper and effects */}
+        <div className="relative z-10">
         <AnimatePresence>
           {Object.entries(groupedMessages).map(([date, msgs]) => (
             <div key={date}>
@@ -319,6 +426,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
             </div>
           ))}
         </AnimatePresence>
+        </div>
 
         {/* Typing Indicator */}
         {typingUsers[activeChat._id]?.length > 0 && (
@@ -383,6 +491,16 @@ const ChatArea = ({ onInfoClick, onBack }) => {
         <ScheduledMessages
           chatId={activeChat._id}
           onClose={() => setShowScheduleModal(false)}
+        />
+      )}
+
+      {/* Chat Lock Modal - Shows when chat is locked */}
+      {isChatLocked && (
+        <ChatLockModal
+          isOpen={showLockModal}
+          onClose={() => setShowLockModal(false)}
+          chat={activeChat}
+          onUnlock={handleUnlock}
         />
       )}
     </div>

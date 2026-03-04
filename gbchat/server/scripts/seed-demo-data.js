@@ -13,7 +13,7 @@ import Contact from '../models/Contact.model.js';
 import Message from '../models/Message.js';
 import Chat from '../models/Chat.js';
 
-// Demo users
+// Demo users with lastSeen
 const demoUsers = [
     {
         fullName: 'John Doe',
@@ -25,6 +25,7 @@ const demoUsers = [
         avatar: 'https://i.pravatar.cc/150?img=1',
         about: 'Hey there! I am using GBChat',
         status: 'online',
+        lastSeen: new Date(Date.now() - 300000), // 5 minutes ago
         isDemo: true
     },
     {
@@ -37,6 +38,7 @@ const demoUsers = [
         avatar: 'https://i.pravatar.cc/150?img=5',
         about: 'Available',
         status: 'online',
+        lastSeen: new Date(Date.now() - 7200000), // 2 hours ago
         isDemo: true
     },
     {
@@ -49,6 +51,7 @@ const demoUsers = [
         avatar: 'https://i.pravatar.cc/150?img=3',
         about: 'Busy',
         status: 'busy',
+        lastSeen: new Date(Date.now() - 86400000), // 1 day ago
         isDemo: true
     },
     {
@@ -61,6 +64,7 @@ const demoUsers = [
         avatar: 'https://i.pravatar.cc/150?img=9',
         about: 'At work',
         status: 'away',
+        lastSeen: new Date(Date.now() - 172800000), // 2 days ago
         isDemo: true
     },
     {
@@ -73,6 +77,7 @@ const demoUsers = [
         avatar: 'https://i.pravatar.cc/150?img=8',
         about: 'We are here to help!',
         status: 'online',
+        lastSeen: new Date(Date.now() - 60000), // 1 minute ago
         isDemo: true,
         businessProfile: {
             businessName: 'GBChat Support',
@@ -97,18 +102,18 @@ const sampleContacts = [
     { name: 'Bank', phoneNumber: '+1111111120', labels: ['business'] }
 ];
 
-// Sample messages
+// Sample messages with status variations
 const sampleMessages = [
-    { type: 'text', content: 'Hey! How are you?' },
-    { type: 'text', content: 'I am doing great, thanks!' },
-    { type: 'text', content: 'Did you see the latest update?' },
-    { type: 'text', content: 'Yes! The new features are amazing!' },
-    { type: 'text', content: 'Especially the AI assistant' },
-    { type: 'text', content: 'When are we meeting?' },
-    { type: 'text', content: 'Let me check my calendar' },
-    { type: 'text', content: 'How about tomorrow at 3 PM?' },
-    { type: 'text', content: 'Perfect! See you then' },
-    { type: 'text', content: '👍' }
+    { type: 'text', content: 'Hey! How are you?', status: 'read' },
+    { type: 'text', content: 'I am doing great, thanks!', status: 'read' },
+    { type: 'text', content: 'Did you see the latest update?', status: 'delivered' },
+    { type: 'text', content: 'Yes! The new features are amazing!', status: 'delivered' },
+    { type: 'text', content: 'Especially the AI assistant', status: 'sent' },
+    { type: 'text', content: 'When are we meeting?', status: 'read' },
+    { type: 'text', content: 'Let me check my calendar', status: 'read' },
+    { type: 'text', content: 'How about tomorrow at 3 PM?', status: 'delivered' },
+    { type: 'text', content: 'Perfect! See you then', status: 'sent' },
+    { type: 'text', content: '👍', status: 'read' }
 ];
 
 // Connect to MongoDB
@@ -205,19 +210,29 @@ const seedChatsAndMessages = async (users) => {
                 chatsCreated++;
             }
             
-            // Add sample messages
+            // Add sample messages with varied timestamps and statuses
             const messages = [];
             const messageCount = Math.floor(Math.random() * 5) + 3; // 3-8 messages
 
             for (let k = 0; k < messageCount; k++) {
                 const sampleMsg = sampleMessages[k % sampleMessages.length];
+
+                // Create timestamp with seconds - spread messages over time
+                const hoursAgo = (messageCount - k) * 2;
+                const minutesAgo = (messageCount - k) * 15;
+                const secondsAgo = (messageCount - k) * 30;
+                const msgTime = new Date(Date.now() - (hoursAgo * 3600000) - (minutesAgo * 60000) - (secondsAgo * 1000));
+
                 messages.push({
                     chat: chat._id,
                     sender: k % 2 === 0 ? user1._id : user2._id,
                     type: sampleMsg.type,
                     content: { text: sampleMsg.content },
-                    status: 'read',
-                    createdAt: new Date(Date.now() - (messageCount - k) * 3600000) // Spread over hours
+                    status: sampleMsg.status || 'sent',
+                    deliveredAt: sampleMsg.status === 'read' || sampleMsg.status === 'delivered' ? msgTime : null,
+                    readAt: sampleMsg.status === 'read' ? msgTime : null,
+                    createdAt: msgTime,
+                    updatedAt: msgTime
                 });
             }
 

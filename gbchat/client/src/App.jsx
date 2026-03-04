@@ -8,6 +8,8 @@ import Loader from './components/common/Loader'
 import Splash from './components/common/Splash'
 import Onboard from './components/common/Onboard'
 import MainLayout from './components/layout/MainLayout'
+import ServiceWorkerRegistration from './components/common/ServiceWorkerRegistration'
+import InstallPrompt from './components/common/InstallPrompt'
 
 // Lazy load pages for better performance
 const AuthPage = React.lazy(() => import('./pages/AuthPage'))
@@ -132,39 +134,43 @@ function App() {
 
   // Main app routes
   return (
-    <AnimatePresence mode="wait">
-      <React.Suspense fallback={<Loader fullScreen />}>
-        <Routes>
-          {/* Public route */}
-          <Route
-            path="/auth"
-            element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />}
-          />
+    <>
+      <ServiceWorkerRegistration />
+      <InstallPrompt />
+      <AnimatePresence mode="wait">
+        <React.Suspense fallback={<Loader fullScreen />}>
+          <Routes>
+            {/* Public route */}
+            <Route
+              path="/auth"
+              element={isAuthenticated ? <Navigate to="/auth" replace /> : <AuthPage />}
+            />
 
-          {/* Protected routes */}
-          <Route
-            path="/"
-            element={isAuthenticated ? <MainLayout /> : <Navigate to="/auth" replace />}
-          >
-            <Route index element={<ChatPage />} />
-            <Route path="chats" element={<ChatPage />} />
-            <Route path="stories" element={<StoriesPage />} />
-            <Route path="channels" element={<ChannelsPage />} />
-            <Route path="groups" element={<GroupsPage />} />
-            <Route path="calls" element={<CallsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="profile/:userId" element={<ProfilePage />} />
-          </Route>
+            {/* Protected routes */}
+            <Route
+              path="/"
+              element={isAuthenticated ? <MainLayout /> : <Navigate to="/auth" replace />}
+            >
+              <Route index element={<ChatPage />} />
+              <Route path="chats" element={<ChatPage />} />
+              <Route path="stories" element={<StoriesPage />} />
+              <Route path="channels" element={<ChannelsPage />} />
+              <Route path="groups" element={<GroupsPage />} />
+              <Route path="calls" element={<CallsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="profile/:userId" element={<ProfilePage />} />
+            </Route>
 
-          {/* Public legal pages */}
-          <Route path="/terms" element={<TermsAndConditions />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
+            {/* Public legal pages */}
+            <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
 
-          {/* 404 */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </React.Suspense>
-    </AnimatePresence>
+            {/* 404 */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </React.Suspense>
+      </AnimatePresence>
+    </>
   )
 }
 

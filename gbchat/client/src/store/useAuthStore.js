@@ -36,17 +36,19 @@ const useAuthStore = create(
           const { data } = await api.post('/auth/login', credentials)
           console.log('Login response received:', data) // Debug log
 
-          let { user, token, refreshToken } = data
+          // Backend returns user data directly (not wrapped in 'user' property)
+          let user = data.user || data
+          let token = data.token
 
           // Persist tokens to localStorage for other parts of the app
           if (token) localStorage.setItem('token', token)
-          if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
 
           // If backend returned only token, fetch user profile
           if (!user && token) {
             try {
               const res = await api.get('/auth/me')
-              user = res.data.user
+              // /auth/me returns user directly (not wrapped)
+              user = res.data
             } catch (err) {
               console.error('Failed to fetch user after login:', err)
             }
@@ -199,8 +201,8 @@ const useAuthStore = create(
           const { data } = await api.get('/auth/me')
           console.log('[Auth] checkAuth response:', data)
 
-          // Handle different API response formats
-          const userData = data.user || data.data || data
+          // /auth/me returns user directly (not wrapped)
+          const userData = data
 
           set({
             user: userData,

@@ -14,7 +14,11 @@ export const getChats = async (req, res, next) => {
       .populate("participants.user", "fullName avatar status lastSeen about")
       .populate({
         path: "lastMessage",
-        populate: { path: "sender", select: "fullName avatar" },
+        populate: {
+          path: "sender",
+          select: "fullName avatar _id"
+        },
+        select: "content type status createdAt sender readBy deliveredAt"
       })
       .sort({ updatedAt: -1 });
 

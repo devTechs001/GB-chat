@@ -18,4 +18,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
+          'utils': ['axios', 'date-fns', 'clsx'],
+          'ui': ['framer-motion', '@heroicons/react', '@headlessui/react'],
+        }
+      }
+    }
+  }
 });

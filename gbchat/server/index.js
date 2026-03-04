@@ -25,6 +25,7 @@ import callRoutes from "./routes/callRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import privacyRoutes from "./routes/privacyRoutes.js";
 import gbFeaturesRoutes from "./routes/gbFeaturesRoutes.js";
+import chatLockRoutes from "./routes/chatLockRoutes.js";
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use("/api/calls", callRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/privacy", privacyRoutes);
 app.use("/api/gb-features", gbFeaturesRoutes);
+app.use("/api/chat-lock", chatLockRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

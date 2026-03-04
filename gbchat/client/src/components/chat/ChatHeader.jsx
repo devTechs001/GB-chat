@@ -18,6 +18,7 @@ import {
   ChatBubbleLeftRightIcon,
   ShieldCheckIcon,
   Cog6ToothIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
@@ -26,6 +27,12 @@ import clsx from 'clsx'
 import useChatStore from '../../store/useChatStore'
 import useGBFeaturesStore from '../../store/useGBFeaturesStore'
 import ChatDisplaySettings from '../settings/ChatDisplaySettings'
+import WallpaperSelector from './WallpaperSelector'
+import MediaGallery from './MediaGallery'
+import StarredMessagesModal from './StarredMessagesModal'
+import ChatLockSettings from './ChatLockSettings'
+import api from '../../lib/api'
+import toast from 'react-hot-toast'
 
 const GhostIconCustom = ({ className }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -46,6 +53,10 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
   const [showSearch, setShowSearch] = useState(false)
   const [showQuickSettings, setShowQuickSettings] = useState(false)
   const [showDisplaySettings, setShowDisplaySettings] = useState(false)
+  const [showWallpaperSelector, setShowWallpaperSelector] = useState(false)
+  const [showMediaGallery, setShowMediaGallery] = useState(false)
+  const [showStarredModal, setShowStarredModal] = useState(false)
+  const [showLockSettings, setShowLockSettings] = useState(false)
   const isOnline = chat.isGroup ? false : onlineUsers.includes(chat.userId)
 
   const handleBack = () => {
@@ -55,6 +66,22 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
       // Fallback: navigate to chat list
       navigate('/chats')
     }
+  }
+
+  const handleWallpaperChange = (wallpaperUrl) => {
+    // Store wallpaper per chat in localStorage
+    const chatWallpapers = JSON.parse(localStorage.getItem('chat-wallpapers') || '{}')
+    if (wallpaperUrl) {
+      chatWallpapers[chat._id] = wallpaperUrl
+    } else {
+      delete chatWallpapers[chat._id]
+    }
+    localStorage.setItem('chat-wallpapers', JSON.stringify(chatWallpapers))
+
+    // Dispatch custom event to update ChatArea
+    window.dispatchEvent(new CustomEvent('wallpaper-change', {
+      detail: { chatId: chat._id, wallpaper: wallpaperUrl }
+    }))
   }
 
   const quickSettings = [
@@ -90,44 +117,103 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
 
   const menuOptions = chat.isGroup ? [
     { label: 'Group Info', action: 'group_info' },
+    { label: 'Wallpaper', action: 'wallpaper' },
     { label: 'Media, Links, Docs', action: 'media' },
     { label: 'Search', action: 'search' },
     { label: 'Mute Notifications', action: 'mute' },
-    { label: 'Custom Wallpaper', action: 'wallpaper' },
     { label: 'Star Messages', action: 'starred' },
+    { label: 'Chat Lock', action: 'lock_settings' },
     { label: 'Clear Chat', action: 'clear', danger: true },
     { label: 'Report Group', action: 'report', danger: true },
   ] : [
     { label: 'Contact Info', action: 'view_contact' },
+    { label: 'Wallpaper', action: 'wallpaper' },
     { label: 'Media, Links, Docs', action: 'media' },
     { label: 'Search', action: 'search' },
     { label: 'Mute Notifications', action: 'mute' },
-    { label: 'Custom Wallpaper', action: 'wallpaper' },
     { label: 'Star Messages', action: 'starred' },
+    { label: 'Chat Lock', action: 'lock_settings' },
     { label: 'Clear Chat', action: 'clear', danger: true },
     { label: 'Block Contact', action: 'block', danger: true },
     { label: 'Report Contact', action: 'report', danger: true },
   ]
 
-  const handleMenuAction = (action) => {
+  const handleMenuAction = async (action) => {
     switch (action) {
       case 'view_contact':
       case 'group_info':
         onInfoClick()
         break
+
+      case 'wallpaper':
+        setShowWallpaperSelector(true)
+        break
+
       case 'search':
         setShowSearch(!showSearch)
         break
+
+      case 'media':
+        // Open media gallery
+        setShowMediaGallery(true)
+        break
+
+      case 'mute':
+        // Toggle mute for this chat
+        try {
+          const response = await api.post(`/chats/${chat._id}/mute`)
+          toast.success(chat.isMuted ? 'Chat unmuted' : 'Chat muted')
+        } catch (error) {
+          toast.error('Failed to update mute status')
+        }
+        break
+
+      case 'starred':
+        // Show starred messages for this chat
+        setShowStarredModal(true)
+        break
+
+      case 'lock_settings':
+        setShowLockSettings(true)
+        break
+
       case 'clear':
-        if (confirm('Clear all messages in this chat?')) {
-          // Handle clear chat
+        if (confirm('Clear all messages in this chat? This cannot be undone.')) {
+          try {
+            await api.delete(`/chats/${chat._id}/messages`)
+            toast.success('Chat cleared')
+            // Reload messages or navigate back
+            window.location.reload()
+          } catch (error) {
+            toast.error('Failed to clear chat')
+          }
         }
         break
+
       case 'block':
-        if (confirm('Block this contact?')) {
-          // Handle block
+        if (confirm('Block this contact? They won\'t be able to message you.')) {
+          try {
+            await api.post(`/users/block/${chat.userId}`)
+            toast.success('Contact blocked')
+            // Navigate back to chat list
+            setTimeout(() => onBack?.(), 1000)
+          } catch (error) {
+            toast.error('Failed to block contact')
+          }
         }
         break
+
+      case 'report':
+        if (confirm('Report this chat? This will send the chat history to moderators.')) {
+          try {
+            await api.post(`/chats/${chat._id}/report`)
+            toast.success('Chat reported')
+          } catch (error) {
+            toast.error('Failed to report chat')
+          }
+        }
+        break
+
       default:
         break
     }
@@ -338,6 +424,35 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
           <ChatDisplaySettings onClose={() => setShowDisplaySettings(false)} />
         )}
       </AnimatePresence>
+
+      {/* Wallpaper Selector Modal */}
+      <WallpaperSelector
+        isOpen={showWallpaperSelector}
+        onClose={() => setShowWallpaperSelector(false)}
+        onSelect={handleWallpaperChange}
+        currentWallpaper={null}
+      />
+
+      {/* Media Gallery Modal */}
+      <MediaGallery
+        isOpen={showMediaGallery}
+        onClose={() => setShowMediaGallery(false)}
+        chatId={chat._id}
+      />
+
+      {/* Starred Messages Modal */}
+      <StarredMessagesModal
+        isOpen={showStarredModal}
+        onClose={() => setShowStarredModal(false)}
+        chatId={chat._id}
+      />
+
+      {/* Chat Lock Settings Modal */}
+      <ChatLockSettings
+        isOpen={showLockSettings}
+        onClose={() => setShowLockSettings(false)}
+        chat={chat}
+      />
     </>
   )
 }
