@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PlusIcon, ClockIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, ClockIcon, EyeIcon, ChartBarIcon, StarIcon } from '@heroicons/react/24/outline'
 import StoryCard from '../components/stories/StoryCard'
+import StoryCardEnhanced from '../components/stories/StoryCardEnhanced'
 import StoryViewer from '../components/stories/StoryViewer'
 import StoryCreator from '../components/stories/StoryCreator'
+import StoryHighlights from '../components/stories/StoryHighlights'
+import StoryAnalytics from '../components/stories/StoryAnalytics'
 import useStoryStore from '../store/useStoryStore'
 import useAuthStore from '../store/useAuthStore'
 import Button from '../components/common/Button'
@@ -16,10 +19,19 @@ const StoriesPage = () => {
   const [showCreator, setShowCreator] = useState(false)
   const [filter, setFilter] = useState('all') // all, unread, contacts
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [showAnalytics, setShowAnalytics] = useState(false)
+  const [selectedStoryForAnalytics, setSelectedStoryForAnalytics] = useState(null)
+  const [highlights, setHighlights] = useState([])
+  const [showHighlights, setShowHighlights] = useState(true)
 
   useEffect(() => {
     fetchStories()
     fetchMyStory()
+    // Load highlights from localStorage or API
+    const savedHighlights = localStorage.getItem('storyHighlights')
+    if (savedHighlights) {
+      setHighlights(JSON.parse(savedHighlights))
+    }
   }, [])
 
   const filteredStories = stories.filter((story) => {
@@ -53,6 +65,32 @@ const StoriesPage = () => {
       setViewingStory(stories[currentIdx - 1])
       setCurrentIndex(0)
     }
+  }
+
+  const handleAddHighlight = (highlightData) => {
+    const newHighlight = {
+      _id: Date.now().toString(),
+      ...highlightData,
+      storyCount: 0,
+      stories: [],
+    }
+    const updatedHighlights = [...highlights, newHighlight]
+    setHighlights(updatedHighlights)
+    localStorage.setItem('storyHighlights', JSON.stringify(updatedHighlights))
+  }
+
+  const handleEditHighlight = (highlightData) => {
+    const updatedHighlights = highlights.map(h =>
+      h._id === highlightData._id ? { ...h, ...highlightData } : h
+    )
+    setHighlights(updatedHighlights)
+    localStorage.setItem('storyHighlights', JSON.stringify(updatedHighlights))
+  }
+
+  const handleDeleteHighlight = (highlightData) => {
+    const updatedHighlights = highlights.filter(h => h._id !== highlightData._id)
+    setHighlights(updatedHighlights)
+    localStorage.setItem('storyHighlights', JSON.stringify(updatedHighlights))
   }
 
   return (
@@ -109,12 +147,25 @@ const StoriesPage = () => {
       {/* My Story Section */}
       {myStory && (
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 p-4 md:p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            ✨ My Story
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              ✨ My Story
+            </h2>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<ChartBarIcon className="w-4 h-4" />}
+              onClick={() => {
+                setSelectedStoryForAnalytics(myStory)
+                setShowAnalytics(true)
+              }}
+            >
+              Analytics
+            </Button>
+          </div>
           <div className="flex items-center gap-4">
-            <StoryCard
-              story={{ ...myStory, user }}
+            <StoryCardEnhanced
+              story={{ ...myStory, user, currentUserId: user._id }}
               onClick={() => handleStoryClick(myStory, -1)}
               isOwn
             />
@@ -132,6 +183,16 @@ const StoriesPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Story Highlights Section */}
+      {showHighlights && (
+        <StoryHighlights
+          highlights={highlights}
+          onAddHighlight={handleAddHighlight}
+          onEditHighlight={handleEditHighlight}
+          onDeleteHighlight={handleDeleteHighlight}
+        />
       )}
 
       {/* Stories Grid */}
@@ -177,9 +238,10 @@ const StoriesPage = () => {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <StoryCard
+                  <StoryCardEnhanced
                     story={story}
                     onClick={() => handleStoryClick(story, index)}
+                    isCloseFriend={user.closeFriends?.includes(story.user._id)}
                   />
                 </motion.div>
               ))}
@@ -209,6 +271,17 @@ const StoriesPage = () => {
           onNext={handleNext}
           onPrev={handlePrev}
           onIndexChange={setCurrentIndex}
+        />
+      )}
+
+      {/* Story Analytics Modal */}
+      {showAnalytics && selectedStoryForAnalytics && (
+        <StoryAnalytics
+          story={selectedStoryForAnalytics}
+          onClose={() => {
+            setShowAnalytics(false)
+            setSelectedStoryForAnalytics(null)
+          }}
         />
       )}
     </div>

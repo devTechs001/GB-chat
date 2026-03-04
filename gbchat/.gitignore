@@ -51,6 +51,12 @@ lerna-debug.log*
 .env.staging
 .env.staging.local
 
+# Deployment environment files (keep templates, ignore filled versions)
+.env.netlify
+.env.render
+!.env.netlify.example
+!.env.render.example
+
 # Server environment files
 server/.env
 server/.env.local

@@ -10,16 +10,23 @@ import {
   EllipsisHorizontalIcon,
   LockClosedIcon,
   ShieldCheckIcon,
+  ChartBarIcon,
+  CalendarIcon,
 } from '@heroicons/react/24/solid'
 import Button from '../components/common/Button'
 import CreateGroup from '../components/groups/CreateGroup'
 import GroupInfo from '../components/groups/GroupInfo'
+import GroupPolls from '../components/groups/GroupPolls'
+import GroupEvents from '../components/groups/GroupEvents'
 import useChatStore from '../store/useChatStore'
 
 const GroupsPage = () => {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('groups') // groups, polls, events
+  const [groupPolls, setGroupPolls] = useState([])
+  const [groupEvents, setGroupEvents] = useState([])
 
   const { chats, fetchChats } = useChatStore()
 
@@ -39,6 +46,28 @@ const GroupsPage = () => {
   const handleGroupClick = (group) => {
     setSelectedGroup(group)
     setIsGroupInfoOpen(true)
+  }
+
+  const handleCreatePoll = (pollData) => {
+    console.log('Creating poll:', pollData)
+    // API call to create poll
+    setGroupPolls([...groupPolls, { ...pollData, _id: Date.now().toString() }])
+  }
+
+  const handleVote = (pollId, optionId) => {
+    console.log('Voting:', pollId, optionId)
+    // API call to vote
+  }
+
+  const handleCreateEvent = (eventData) => {
+    console.log('Creating event:', eventData)
+    // API call to create event
+    setGroupEvents([...groupEvents, { ...eventData, _id: Date.now().toString(), rsvps: [] }])
+  }
+
+  const handleRSVP = (eventId, status) => {
+    console.log('RSVP:', eventId, status)
+    // API call to RSVP
   }
 
   return (
@@ -68,83 +97,135 @@ const GroupsPage = () => {
         </Button>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="px-4 py-2 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl">
+        <div className="flex gap-2">
+          {[
+            { id: 'groups', label: 'Groups', icon: UserGroupIcon },
+            { id: 'polls', label: 'Polls', icon: ChartBarIcon },
+            { id: 'events', label: 'Events', icon: CalendarIcon },
+          ].map((tab) => {
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={
+                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ' +
+                  (activeTab === tab.id
+                    ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')
+                }
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Search */}
       <div className="p-4">
         <div className="relative">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search groups..."
+            placeholder={activeTab === 'groups' ? 'Search groups...' : `Search ${activeTab}...`}
             className="w-full pl-10 pr-4 py-2.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:outline-none text-gray-900 dark:text-white transition-all"
           />
         </div>
       </div>
 
-      {/* Groups List */}
+      {/* Content Area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {groups.length > 0 ? (
-            groups.map((group) => (
-              <motion.div
-                key={group._id}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 hover:bg-primary-50/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-200 group"
-                onClick={() => handleGroupClick(group)}
-              >
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 relative">
-                    <img
-                      src={group.avatar}
-                      alt={group.name}
-                      className="w-12 h-12 rounded-full object-cover ring-2 ring-primary-500/20 group-hover:ring-primary-500/40 transition-all"
-                    />
-                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
-                  </div>
-
-                  <div className="ml-3 flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {group.name}
-                      </h3>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {group.lastMessageAt ? new Date(group.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </span>
+        {activeTab === 'groups' && (
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {groups.length > 0 ? (
+              groups.map((group) => (
+                <motion.div
+                  key={group._id}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 hover:bg-primary-50/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-200 group"
+                  onClick={() => handleGroupClick(group)}
+                >
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 relative">
+                      <img
+                        src={group.avatar}
+                        alt={group.name}
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-primary-500/20 group-hover:ring-primary-500/40 transition-all"
+                      />
+                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                        {group.members?.length || 0} members • {group.lastMessage?.content || 'No messages yet'}
-                      </p>
-                      {group.unreadCount > 0 && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-full shadow-sm shadow-primary-500/30 animate-pulse">
-                          {group.unreadCount}
+                    <div className="ml-3 flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {group.name}
+                        </h3>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {group.lastMessageAt ? new Date(group.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
-                      )}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {group.members?.length || 0} members • {group.lastMessage?.content || 'No messages yet'}
+                        </p>
+                        {group.unreadCount > 0 && (
+                          <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-full shadow-sm shadow-primary-500/30 animate-pulse">
+                            {group.unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 p-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-primary-500/20 to-primary-600/10 rounded-full flex items-center justify-center mb-4">
+                  <UserGroupIcon className="w-8 h-8 text-primary-400" />
                 </div>
-              </motion.div>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center h-64 p-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-500/20 to-primary-600/10 rounded-full flex items-center justify-center mb-4">
-                <UserGroupIcon className="w-8 h-8 text-primary-400" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No groups yet</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-4">
+                  Create a group to start chatting with multiple people
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={() => setIsCreateGroupOpen(true)}
+                >
+                  <PlusIcon className="w-4 h-4 mr-1" />
+                  Create Group
+                </Button>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No groups yet</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-center mb-4">
-                Create a group to start chatting with multiple people
-              </p>
-              <Button
-                variant="primary"
-                onClick={() => setIsCreateGroupOpen(true)}
-              >
-                <PlusIcon className="w-4 h-4 mr-1" />
-                Create Group
-              </Button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'polls' && (
+          <div className="p-4">
+            <GroupPolls
+              groupId="current-group"
+              polls={groupPolls}
+              onCreatePoll={handleCreatePoll}
+              onVote={handleVote}
+            />
+          </div>
+        )}
+
+        {activeTab === 'events' && (
+          <div className="p-4">
+            <GroupEvents
+              groupId="current-group"
+              events={groupEvents}
+              onCreateEvent={handleCreateEvent}
+              onRSVP={handleRSVP}
+            />
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}

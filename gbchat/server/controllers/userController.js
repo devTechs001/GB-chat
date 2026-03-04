@@ -82,22 +82,21 @@ export const uploadAvatar = async (req, res, next) => {
       });
     }
 
-    let avatarUrl;
-
-    // Try Cloudinary, fallback to local storage
+    // Upload to Cloudinary so all users can see the profile image
     try {
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: "gbchat/avatars",
         width: 500,
         height: 500,
-        crop: "fill",
-        gravity: "face",
+        crop: "limit", // Preserve full image without aggressive cropping
+        quality: 'auto',
+        fetch_format: 'auto',
       });
       avatarUrl = result.secure_url;
       console.log('✓ Uploaded to Cloudinary:', avatarUrl);
     } catch (cloudinaryError) {
+      // Fallback to local storage if Cloudinary fails
       console.log('Cloudinary failed, using local file:', cloudinaryError.message);
-      // Fallback: use local file path
       avatarUrl = `/uploads/avatars/${req.file.filename}`;
       console.log('✓ Using local avatar:', avatarUrl);
     }

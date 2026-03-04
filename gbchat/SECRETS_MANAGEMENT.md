@@ -112,9 +112,9 @@ JWT_SECRET=your-secret-key-here
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 
 # .env (NEVER COMMIT)
-MONGODB_URI=mongodb+srv://user:actualpassword@cluster.mongodb.net/gbchat
-JWT_SECRET=actual-32-character-random-secret
-CLOUDINARY_CLOUD_NAME=dxxxx123
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/gbchat
+JWT_SECRET=<your-32-character-random-secret>
+CLOUDINARY_CLOUD_NAME=<your-cloud-name>
 ```
 
 ### 3. Render.yaml - Use sync: false for Secrets

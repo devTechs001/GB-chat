@@ -11,6 +11,7 @@ import {
   EyeIcon,
   ArchiveBoxIcon,
   ChatBubbleLeftRightIcon,
+  ChatBubbleLeftIcon,
   ShieldCheckIcon,
   TrashIcon,
   DocumentArrowDownIcon,
