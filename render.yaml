@@ -39,16 +39,16 @@ services:
       mountPath: /opt/render/project/src/uploads
       sizeGB: 1
 
-  # Frontend Client
+  # Frontend Client (Static Site)
   - type: web
     name: gbchat-client
     env: static
     region: oregon
     plan: starter
     branch: main
-    rootDir: gbchat/client
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    rootDir: .
+    buildCommand: cd gbchat/client && npm install && npm run build
+    staticPublishPath: ./gbchat/client/dist
     envVars:
       - key: VITE_API_URL
         sync: false
