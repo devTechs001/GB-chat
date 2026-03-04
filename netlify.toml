@@ -1,0 +1,4 @@
+# Root-level Netlify config
+# Points Netlify to the gbchat subdirectory where the full config lives
+[build]
+  base = "gbchat"
