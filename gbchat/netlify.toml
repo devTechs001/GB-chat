@@ -13,26 +13,25 @@
 # VITE_API_URL = "https://your-backend.onrender.com/api"
 # VITE_SOCKET_URL = "https://your-backend.onrender.com"
 
-# SPA Redirect for React Router
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
-
-# API Proxy to Render backend
+# API Proxy to Render backend (must be before SPA catch-all)
 [[redirects]]
   from = "/api/*"
   to = "https://gbchat-enterprise.onrender.com/api/:splat"
   status = 200
   force = true
 
-# WebSocket Proxy
+# WebSocket Proxy (must be before SPA catch-all)
 [[redirects]]
   from = "/socket.io/*"
   to = "https://gbchat-enterprise.onrender.com/socket.io/:splat"
   status = 200
   force = true
+
+# SPA Redirect for React Router (catch-all must be last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 # Security Headers
 [[headers]]
