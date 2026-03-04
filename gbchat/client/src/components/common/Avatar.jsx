@@ -42,7 +42,7 @@ const Avatar = ({
           onClick={onClick}
           className={clsx(
             sizes[size],
-            'rounded-full object-cover w-full h-full',
+            'rounded-full object-cover',
             onClick && 'cursor-pointer hover:opacity-90'
           )}
           style={{ objectFit: 'cover' }}
