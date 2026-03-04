@@ -16,6 +16,13 @@ import {
   DocumentArrowDownIcon,
   MagnifyingGlassIcon,
   SwatchIcon,
+  EnvelopeIcon,
+  MapPinIcon,
+  CalendarIcon,
+  UserIcon,
+  BriefcaseIcon,
+  GlobeAltIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
@@ -23,7 +30,7 @@ import clsx from 'clsx'
 import useGBFeaturesStore from '../../store/useGBFeaturesStore'
 import useAuthStore from '../../store/useAuthStore'
 import toast from 'react-hot-toast'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 
 const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
   const { user } = useAuthStore()
@@ -44,9 +51,14 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
   const displayAvatar = otherParticipant?.user?.avatar || chat.avatar
   const phoneNumber = otherParticipant?.user?.phone || chat.phoneNumber
   const about = otherParticipant?.user?.about || chat.about
+  const bio = otherParticipant?.user?.bio
   const status = otherParticipant?.user?.status
   const lastSeen = otherParticipant?.user?.lastSeen
   const email = otherParticipant?.user?.email
+  const username = otherParticipant?.user?.username
+  const location = otherParticipant?.user?.location
+  const createdAt = otherParticipant?.user?.createdAt
+  const isVerified = otherParticipant?.user?.isVerified
   const isOnline = status === 'online'
 
   // Format last seen
@@ -187,9 +199,19 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
               className="w-24 h-24 mb-4"
               status={isOnline ? 'online' : 'offline'}
             />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              {displayName}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                {displayName}
+              </h3>
+              {isVerified && (
+                <ShieldCheckIcon className="w-5 h-5 text-blue-500" />
+              )}
+            </div>
+            {username && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                @{username}
+              </p>
+            )}
             {isOnline ? (
               <p className="text-sm text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -204,9 +226,10 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
                 Last seen recently
               </p>
             )}
-            {about && (
+            {/* Bio/About */}
+            {(bio || about) && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 text-center max-w-[250px]">
-                {about}
+                {bio || about}
               </p>
             )}
             {phoneNumber && !chat.isGroup && (
@@ -270,6 +293,17 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
                     Contact Information
                   </h4>
                   <div className="space-y-3">
+                    {/* Username */}
+                    {username && (
+                      <div className="flex items-center gap-3">
+                        <UserIcon className="w-5 h-5 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Username</p>
+                          <p className="text-sm text-gray-900 dark:text-white">@{username}</p>
+                        </div>
+                      </div>
+                    )}
+                    {/* Phone */}
                     {phoneNumber && (
                       <div className="flex items-center gap-3">
                         <PhoneIcon className="w-5 h-5 text-gray-400" />
@@ -279,6 +313,7 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
                         </div>
                       </div>
                     )}
+                    {/* Email */}
                     {email && (
                       <div className="flex items-center gap-3">
                         <EnvelopeIcon className="w-5 h-5 text-gray-400" />
@@ -288,12 +323,35 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
                         </div>
                       </div>
                     )}
-                    {about && (
+                    {/* Bio/About */}
+                    {(bio || about) && (
                       <div className="flex items-start gap-3">
                         <ChatBubbleLeftIcon className="w-5 h-5 text-gray-400 mt-0.5" />
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400">About</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{about}</p>
+                          <p className="text-sm text-gray-900 dark:text-white">{bio || about}</p>
+                        </div>
+                      </div>
+                    )}
+                    {/* Location */}
+                    {location && (
+                      <div className="flex items-start gap-3">
+                        <MapPinIcon className="w-5 h-5 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Location</p>
+                          <p className="text-sm text-gray-900 dark:text-white">{location}</p>
+                        </div>
+                      </div>
+                    )}
+                    {/* Joined Date */}
+                    {createdAt && (
+                      <div className="flex items-center gap-3">
+                        <CalendarIcon className="w-5 h-5 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Joined</p>
+                          <p className="text-sm text-gray-900 dark:text-white">
+                            {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
+                          </p>
                         </div>
                       </div>
                     )}
