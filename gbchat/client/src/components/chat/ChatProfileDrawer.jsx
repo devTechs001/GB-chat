@@ -21,13 +21,42 @@ import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
 import clsx from 'clsx'
 import useGBFeaturesStore from '../../store/useGBFeaturesStore'
+import useAuthStore from '../../store/useAuthStore'
 import toast from 'react-hot-toast'
+import { format } from 'date-fns'
 
 const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
+  const { user } = useAuthStore()
   const { gbFeatures, updateChatSpecificFeatures } = useGBFeaturesStore()
   const [activeTab, setActiveTab] = useState('overview')
 
   if (!chat) return null
+
+  // Get the other participant's info (not the current user)
+  const participants = chat.participants || []
+  const otherParticipant = participants.find(p => {
+    const pId = p.user?._id || p.user
+    return pId !== user?._id
+  })
+
+  // Use participant data if available
+  const displayName = otherParticipant?.user?.fullName || chat.name || 'Unknown'
+  const displayAvatar = otherParticipant?.user?.avatar || chat.avatar
+  const phoneNumber = otherParticipant?.user?.phone || chat.phoneNumber
+  const about = otherParticipant?.user?.about || chat.about
+  const status = otherParticipant?.user?.status
+  const lastSeen = otherParticipant?.user?.lastSeen
+  const isOnline = status === 'online'
+
+  // Format last seen
+  const formatLastSeen = (lastSeenAt) => {
+    if (!lastSeenAt) return ''
+    const date = new Date(lastSeenAt)
+    if (format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
+      return 'Today at ' + format(date, 'HH:mm:ss')
+    }
+    return format(date, 'MMM dd, yyyy HH:mm:ss')
+  }
 
   // Chat-specific settings
   const chatSettings = [
@@ -151,17 +180,39 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col items-center">
             <Avatar
-              src={chat.avatar}
-              alt={chat.name}
+              src={displayAvatar}
+              alt={displayName}
               size="xl"
               className="w-24 h-24 mb-4"
+              status={isOnline ? 'online' : 'offline'}
             />
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              {chat.name}
+              {displayName}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {chat.isGroup ? `${chat.memberCount} members` : chat.phoneNumber}
-            </p>
+            {isOnline ? (
+              <p className="text-sm text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                Online
+              </p>
+            ) : lastSeen ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Last seen {formatLastSeen(lastSeen)}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Last seen recently
+              </p>
+            )}
+            {about && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 text-center max-w-[250px]">
+                {about}
+              </p>
+            )}
+            {phoneNumber && !chat.isGroup && (
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                {phoneNumber}
+              </p>
+            )}
 
             {/* Action Buttons */}
             {!chat.isGroup && (
