@@ -2,9 +2,8 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration/
 
 [build]
-  command = "npm install && npm run build"
-  publish = "dist"
-  base = "client"
+  command = "cd client && npm install && npm run build"
+  publish = "client/dist"
 
 [build.environment]
   NODE_VERSION = "18"
