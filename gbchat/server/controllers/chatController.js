@@ -11,7 +11,7 @@ export const getChats = async (req, res, next) => {
       "participants.user": userId,
       isActive: true,
     })
-      .populate("participants.user", "fullName avatar status lastSeen about")
+      .populate("participants.user", "fullName avatar status lastSeen about email phone username location isVerified createdAt bio")
       .populate({
         path: "lastMessage",
         populate: {
@@ -74,7 +74,7 @@ export const getOrCreateChat = async (req, res, next) => {
       type: "private",
       "participants.user": { $all: [userId, participantId] },
     })
-      .populate("participants.user", "fullName avatar status lastSeen about")
+      .populate("participants.user", "fullName avatar status lastSeen about email phone username location isVerified createdAt bio")
       .populate({
         path: "lastMessage",
         populate: { path: "sender", select: "fullName avatar" },
@@ -95,7 +95,7 @@ export const getOrCreateChat = async (req, res, next) => {
 
       chat = await Chat.findById(chat._id).populate(
         "participants.user",
-        "fullName avatar status lastSeen about"
+        "fullName avatar status lastSeen about email phone username location isVerified createdAt bio"
       );
     }
 
@@ -108,7 +108,7 @@ export const getOrCreateChat = async (req, res, next) => {
 export const getChatById = async (req, res, next) => {
   try {
     const chat = await Chat.findById(req.params.id)
-      .populate("participants.user", "fullName avatar status lastSeen about")
+      .populate("participants.user", "fullName avatar status lastSeen about email phone username location isVerified createdAt bio")
       .populate({
         path: "pinnedMessages",
         populate: { path: "sender", select: "fullName avatar" },
@@ -237,7 +237,7 @@ export const getArchivedChats = async (req, res, next) => {
     const chats = await Chat.find({
       _id: { $in: user.archivedChats },
     })
-      .populate("participants.user", "fullName avatar status lastSeen")
+      .populate("participants.user", "fullName avatar status lastSeen about email phone username location isVerified createdAt bio")
       .populate({
         path: "lastMessage",
         populate: { path: "sender", select: "fullName" },
