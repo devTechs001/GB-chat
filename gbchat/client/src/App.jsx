@@ -91,13 +91,19 @@ function App() {
 
   // Connect socket when user is authenticated
   useEffect(() => {
-    if (user) {
-      connect(user._id)
+    if (user && user._id) {
+      console.log('[App] Connecting socket for user:', user._id)
+      // Small delay to ensure server is ready
+      const timer = setTimeout(() => {
+        connect(user._id)
+      }, 500)
+      return () => clearTimeout(timer)
     } else {
+      console.log('[App] Disconnecting socket - no user')
       disconnect()
     }
     return () => disconnect()
-  }, [user])
+  }, [user, connect, disconnect])
 
   // Apply theme to document
   useEffect(() => {

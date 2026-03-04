@@ -16,8 +16,11 @@ export const initializeSocket = (server) => {
     cors: {
       origin: process.env.CLIENT_URL || "http://localhost:5173",
       credentials: true,
+      methods: ["GET", "POST"],
     },
     pingTimeout: 60000,
+    pingInterval: 25000,
+    transports: ['websocket', 'polling'], // Allow both transports
   });
 
   // Auth middleware
@@ -25,21 +28,30 @@ export const initializeSocket = (server) => {
     try {
       const token =
         socket.handshake.auth.token ||
+        socket.handshake.query.token ||
         socket.handshake.headers.cookie
           ?.split(";")
           .find((c) => c.trim().startsWith("gbchat_token="))
           ?.split("=")[1];
 
-      if (!token) return next(new Error("Authentication error"));
+      if (!token) {
+        console.log('[Socket] No token provided')
+        return next(new Error("Authentication error"));
+      }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.userId);
-      if (!user) return next(new Error("User not found"));
+      if (!user) {
+        console.log('[Socket] User not found:', decoded.userId)
+        return next(new Error("User not found"));
+      }
 
       socket.userId = user._id.toString();
       socket.user = user;
+      console.log('[Socket] Authenticated user:', user.fullName, '(', socket.userId, ')')
       next();
     } catch (error) {
+      console.error('[Socket] Auth error:', error.message)
       next(new Error("Authentication error"));
     }
   });

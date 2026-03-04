@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { LockClosedIcon, LockOpenIcon, KeyIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { LockClosedIcon, LockOpenIcon, KeyIcon, ClockIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'

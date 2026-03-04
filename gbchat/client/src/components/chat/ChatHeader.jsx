@@ -24,6 +24,7 @@ import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
 import Dropdown from '../common/Dropdown'
 import clsx from 'clsx'
+import { format, isToday, isYesterday, subDays } from 'date-fns'
 import useChatStore from '../../store/useChatStore'
 import useGBFeaturesStore from '../../store/useGBFeaturesStore'
 import ChatDisplaySettings from '../settings/ChatDisplaySettings'
@@ -58,6 +59,31 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
   const [showStarredModal, setShowStarredModal] = useState(false)
   const [showLockSettings, setShowLockSettings] = useState(false)
   const isOnline = chat.isGroup ? false : onlineUsers.includes(chat.userId)
+
+  // Format last seen time with detailed information
+  const formatLastSeen = (lastSeenAt) => {
+    if (!lastSeenAt) return ''
+    const lastSeen = new Date(lastSeenAt)
+    const now = new Date()
+    const diffMs = now - lastSeen
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) {
+      // Show time with seconds for today
+      return `today at ${format(lastSeen, 'HH:mm:ss')}`
+    }
+    if (diffDays < 7) {
+      // Show day name and time
+      const dayName = format(lastSeen, 'EEEE')
+      return `${dayName} at ${format(lastSeen, 'HH:mm:ss')}`
+    }
+    // Show full date and time
+    return format(lastSeen, 'dd/MM/yyyy HH:mm:ss')
+  }
 
   const handleBack = () => {
     if (onBack) {
@@ -281,13 +307,20 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
               <h3 className="font-medium text-gray-900 dark:text-white truncate text-sm md:text-base">
                 {chat.name}
               </h3>
-              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 {chat.isGroup ? (
-                  `${chat.memberCount} members`
+                  <span>{chat.memberCount} members</span>
                 ) : isOnline ? (
-                  'Online'
+                  <span className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    Online
+                  </span>
+                ) : chat.lastSeen ? (
+                  <span title={`Last seen: ${new Date(chat.lastSeen).toLocaleString()}`}>
+                    Last seen {formatLastSeen(chat.lastSeen)}
+                  </span>
                 ) : (
-                  'Last seen recently'
+                  <span>Last seen recently</span>
                 )}
               </p>
             </div>
