@@ -1,4 +1,4 @@
-# Client .gitignore - React/Vite Frontend
+# Server .gitignore - Node.js Backend
 
 # Dependencies
 node_modules/
@@ -9,11 +9,6 @@ node_modules/
 coverage/
 *.lcov
 .nyc_output
-
-# Production builds
-dist/
-build/
-dist-ssr/
 
 # Logs
 logs/
@@ -26,7 +21,7 @@ pnpm-debug.log*
 # ============================================
 # ENVIRONMENT VARIABLES & SECRETS - CRITICAL
 # ============================================
-# NEVER commit files with API keys or secrets
+# NEVER commit these files - they contain sensitive data
 
 .env
 .env.local
@@ -36,7 +31,6 @@ pnpm-debug.log*
 .env.test.local
 .env.production
 .env.production.local
-.env.staging
 .env.*.local
 
 # Backup env files
@@ -47,18 +41,29 @@ pnpm-debug.log*
 # ============================================
 # CREDENTIALS & API KEYS
 # ============================================
-# Firebase config
-firebase-config.js
+# Cloudinary
+cloudinary-config.json
+.cloudinary.*
+
+# Firebase
 firebase-*.json
-serviceAccount.json
+service-account*.json
+*-firebase-adminsdk*.json
 
 # Google
 google-*.json
-google-config.js
+google-credentials.json
+oauth-*.json
 
-# Analytics
-analytics-config.js
-ga-tracking.json
+# AWS
+.aws/credentials
+aws-*.json
+
+# Stripe
+stripe-keys.json
+
+# Twilio
+twilio-config.json
 
 # ============================================
 # PRIVATE KEYS & CERTIFICATES
@@ -67,27 +72,40 @@ ga-tracking.json
 *.key
 *.p12
 *.pfx
+id_rsa
+id_rsa.*
+*.ppk
 *.crt
 *.cer
+*.der
+
+# ============================================
+# DATABASE FILES
+# ============================================
+*.sqlite
+*.sqlite3
+*.db
+data.db
+dump/
+
+# ============================================
+# UPLOADS & USER CONTENT
+# ============================================
+uploads/
+public/uploads/
+temp/
+tmp/
+avatars/
+media/
+files/
 
 # ============================================
 # CACHE & TEMP
 # ============================================
 .cache/
-.parcel-cache/
-.vite/
 .eslintcache
 *.swp
 *.swo
 *~
 .DS_Store
 Thumbs.db
-
-# Editor
-.vscode/*
-!.vscode/extensions.json
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
