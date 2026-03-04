@@ -290,6 +290,16 @@ const useAuthStore = create(
 
         return get().updatePrivacySettings(newSettings)
       },
+
+      // Update user data from real-time events (socket)
+      updateUserData: (userData) => {
+        set((state) => ({
+          user: {
+            ...state.user,
+            ...userData,
+          },
+        }))
+      },
     }),
     {
       name: 'auth-storage',

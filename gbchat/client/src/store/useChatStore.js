@@ -234,7 +234,32 @@ const useChatStore = create((set, get) => ({
   setSearchQuery: (query) => {
     set({ searchQuery: query })
   },
-  
+
+  // Update contact information (for real-time profile updates)
+  updateContact: (userId, userData) => {
+    set((state) => ({
+      chats: state.chats.map(chat => {
+        // Check if the user is a participant in this chat
+        const participant = chat.participants?.find(p =>
+          (p.user?._id || p.user) === userId
+        )
+
+        if (participant) {
+          // Update the participant's user data
+          return {
+            ...chat,
+            participants: chat.participants.map(p =>
+              (p.user?._id || p.user) === userId
+                ? { ...p, user: { ...p.user, ...userData } }
+                : p
+            ),
+          }
+        }
+        return chat
+      }),
+    }))
+  },
+
   // Clear store
   clearChat: () => {
     set({

@@ -48,14 +48,14 @@ const ContactCard = ({ contact, onClick, onMessage, onCall, onVideoCall }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-medium text-gray-900 dark:text-white truncate">
-            {contact.name}
+            {contact.fullName || contact.name}
           </p>
           {contact.isFavorite && (
             <StarSolidIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" />
           )}
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-          {contact.status || contact.phone || contact.email}
+          {contact.about || contact.status || contact.phoneNumber || contact.phone || contact.email}
         </p>
       </div>
 

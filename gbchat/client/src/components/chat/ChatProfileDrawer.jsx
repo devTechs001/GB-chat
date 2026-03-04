@@ -39,13 +39,14 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
     return pId !== user?._id
   })
 
-  // Use participant data if available
+  // Use participant data if available, fallback to chat data
   const displayName = otherParticipant?.user?.fullName || chat.name || 'Unknown'
   const displayAvatar = otherParticipant?.user?.avatar || chat.avatar
   const phoneNumber = otherParticipant?.user?.phone || chat.phoneNumber
   const about = otherParticipant?.user?.about || chat.about
   const status = otherParticipant?.user?.status
   const lastSeen = otherParticipant?.user?.lastSeen
+  const email = otherParticipant?.user?.email
   const isOnline = status === 'online'
 
   // Format last seen
@@ -262,6 +263,44 @@ const ChatProfileDrawer = ({ isOpen, onClose, chat }) => {
         <div className="flex-1 overflow-y-auto p-4">
           {activeTab === 'overview' && (
             <div className="space-y-4">
+              {/* Contact Information Section */}
+              {!chat.isGroup && (
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                    Contact Information
+                  </h4>
+                  <div className="space-y-3">
+                    {phoneNumber && (
+                      <div className="flex items-center gap-3">
+                        <PhoneIcon className="w-5 h-5 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
+                          <p className="text-sm text-gray-900 dark:text-white">{phoneNumber}</p>
+                        </div>
+                      </div>
+                    )}
+                    {email && (
+                      <div className="flex items-center gap-3">
+                        <EnvelopeIcon className="w-5 h-5 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+                          <p className="text-sm text-gray-900 dark:text-white">{email}</p>
+                        </div>
+                      </div>
+                    )}
+                    {about && (
+                      <div className="flex items-start gap-3">
+                        <ChatBubbleLeftIcon className="w-5 h-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">About</p>
+                          <p className="text-sm text-gray-900 dark:text-white">{about}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Quick Actions */}
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">

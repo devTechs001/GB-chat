@@ -11,14 +11,14 @@ const useSocket = () => {
   const socketRef = useRef(null)
   const reconnectAttempts = useRef(0)
   const maxReconnectAttempts = 5
-  const { user, token } = useAuthStore()
+  const { user, token, updateUserData } = useAuthStore()
   const {
     receiveMessage,
     setTyping,
     setOnlineUsers,
     updateMessageStatus,
+    updateContact,
   } = useChatStore()
-  const { addNotification } = useNotificationStore()
 
   const connect = useCallback((userId) => {
     if (!userId) {
@@ -89,6 +89,19 @@ const useSocket = () => {
 
     socketRef.current.on('error', (error) => {
       console.error('[Socket] Error:', error)
+    })
+
+    // Real-time profile update event
+    socketRef.current.on('user:profileUpdated', (profileData) => {
+      console.log('[Socket] User profile updated:', profileData)
+
+      // Update auth store if it's the current user
+      if (profileData.userId === user?._id) {
+        updateUserData(profileData)
+      }
+
+      // Update contact in chat store
+      updateContact(profileData.userId, profileData)
     })
 
     // Chat events

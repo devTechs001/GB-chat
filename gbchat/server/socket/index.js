@@ -8,8 +8,11 @@ import { typingHandler } from "./handlers/typingHandler.js";
 import { callHandler } from "./handlers/callHandler.js";
 
 const onlineUsers = new Map();
+let ioInstance = null; // Store IO instance for external access
 
 export const getOnlineUsers = () => onlineUsers;
+
+export const getIO = () => ioInstance;
 
 export const initializeSocket = (server) => {
   const io = new Server(server, {
@@ -22,6 +25,9 @@ export const initializeSocket = (server) => {
     pingInterval: 25000,
     transports: ['websocket', 'polling'], // Allow both transports
   });
+
+  // Store IO instance
+  ioInstance = io;
 
   // Auth middleware
   io.use(async (socket, next) => {

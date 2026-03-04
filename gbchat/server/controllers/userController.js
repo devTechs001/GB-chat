@@ -60,10 +60,27 @@ export const uploadAvatar = async (req, res, next) => {
   try {
     if (!req.file) {
       console.error('No file in request');
-      return res.status(400).json({ message: "No file provided" });
+      return res.status(400).json({ message: "No file provided. Please select an image file." });
     }
 
     console.log('Uploading avatar:', req.file.path, req.file.size, req.file.mimetype);
+
+    // Validate file size
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (req.file.size > maxSize) {
+      return res.status(400).json({
+        message: "Image size should be less than 5MB. Please choose a smaller file."
+      });
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp'];
+    const ext = req.file.mimetype.split('/')[1];
+    if (!allowedTypes.includes(req.file.mimetype) && !['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) {
+      return res.status(400).json({
+        message: "Unsupported file type. Please use JPG, PNG, GIF, WEBP, SVG, or BMP."
+      });
+    }
 
     let avatarUrl;
 
@@ -97,6 +114,12 @@ export const uploadAvatar = async (req, res, next) => {
   } catch (error) {
     console.error('Avatar upload error:', error.message);
     console.error('Stack:', error.stack);
+
+    // Handle multer errors
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: "File size too large. Maximum size is 5MB." });
+    }
+
     next(error);
   }
 };

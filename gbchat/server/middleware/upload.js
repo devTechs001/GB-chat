@@ -6,6 +6,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Allowed image types for avatar uploads
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",      // .jpg, .jpeg
+  "image/png",       // .png
+  "image/gif",       // .gif
+  "image/webp",      // .webp
+  "image/svg+xml",   // .svg
+  "image/bmp",       // .bmp
+];
+
 // Memory storage for most uploads
 const memoryStorage = multer.memoryStorage();
 
@@ -22,12 +32,26 @@ const diskStorage = multer.diskStorage({
   }
 });
 
+// Image file filter - only allows image types
+const imageFileFilter = (req, file, cb) => {
+  if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const supportedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
+
+    if (supportedExts.includes(ext)) {
+      // File extension is okay but MIME type might be wrong
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${ext}. Supported formats: JPG, PNG, GIF, WEBP, SVG, BMP`), false);
+    }
+  }
+};
+
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
+    ...ALLOWED_IMAGE_TYPES,
     "video/mp4",
     "video/webm",
     "audio/mpeg",
@@ -55,9 +79,12 @@ export const upload = multer({
   limits: { fileSize: 64 * 1024 * 1024 }, // 64MB
 });
 
-// Disk upload specifically for avatars
+// Disk upload specifically for avatars with image-only filter
 export const uploadAvatarDisk = multer({
   storage: diskStorage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB for avatars
+  fileFilter: imageFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB for avatars
+    files: 1, // Only allow single file
+  },
 });

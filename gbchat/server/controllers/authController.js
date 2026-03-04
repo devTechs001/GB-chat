@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import { generateToken } from "../utils/generateToken.js";
 import crypto from "crypto";
 import phoneVerificationService from "../services/phoneVerificationService.js";
+import { getIO } from "../socket/index.js";
 
 export const register = async (req, res, next) => {
   try {
@@ -196,6 +197,19 @@ export const updateProfile = async (req, res, next) => {
     const user = await User.findByIdAndUpdate(req.user._id, updateData, {
       new: true,
     });
+
+    // Emit real-time profile update to all connected clients
+    const io = getIO();
+    if (io) {
+      io.emit('user:profileUpdated', {
+        userId: user._id,
+        fullName: user.fullName,
+        about: user.about,
+        phone: user.phone,
+        avatar: user.avatar,
+        status: user.status,
+      });
+    }
 
     res.json(user);
   } catch (error) {

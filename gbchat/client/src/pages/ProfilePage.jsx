@@ -144,9 +144,10 @@ const ProfilePage = () => {
             </p>
           )}
 
-          {profile.bio && (
+          {/* About/Bio - Display user's bio or about field */}
+          {(profile.about || profile.bio) && (
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-md">
-              {profile.bio}
+              {profile.about || profile.bio}
             </p>
           )}
 

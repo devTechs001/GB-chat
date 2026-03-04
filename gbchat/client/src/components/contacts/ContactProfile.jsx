@@ -89,22 +89,36 @@ const ContactProfile = ({ contact, isOpen, onClose, onEdit }) => {
         <div className="text-center pt-8 pb-6">
           <Avatar
             src={contact.avatar}
-            alt={contact.name}
+            alt={contact.fullName || contact.name}
             size="xl"
             status={contact.isOnline ? 'online' : 'offline'}
             className="mx-auto mb-4"
           />
           <div className="flex items-center justify-center gap-2 mb-2">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {contact.name}
+              {contact.fullName || contact.name}
             </h2>
             {isFavorite && (
               <StarSolidIcon className="w-6 h-6 text-yellow-500" />
             )}
           </div>
+          {/* Real-time status indicator */}
           {contact.status && (
-            <p className="text-gray-500 dark:text-gray-400">
-              {contact.status}
+            <p className={`text-sm ${contact.status === 'online' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+              {contact.status === 'online' ? (
+                <span className="flex items-center justify-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  Online
+                </span>
+              ) : (
+                contact.status
+              )}
+            </p>
+          )}
+          {/* About/Bio */}
+          {(contact.about || contact.bio) && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 max-w-xs mx-auto">
+              {contact.about || contact.bio}
             </p>
           )}
         </div>
@@ -144,18 +158,20 @@ const ContactProfile = ({ contact, isOpen, onClose, onEdit }) => {
             Contact Information
           </h3>
 
-          {contact.phone && (
+          {/* Real User Info - Phone */}
+          {(contact.phone || contact.phoneNumber) && (
             <div className="flex items-center gap-3">
               <PhoneIcon className="w-5 h-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Phone
                 </p>
-                <p className="text-gray-900 dark:text-white">{contact.phone}</p>
+                <p className="text-gray-900 dark:text-white">{contact.phone || contact.phoneNumber}</p>
               </div>
             </div>
           )}
 
+          {/* Real User Info - Email */}
           {contact.email && (
             <div className="flex items-center gap-3">
               <EnvelopeIcon className="w-5 h-5 text-gray-400" />
@@ -168,6 +184,22 @@ const ContactProfile = ({ contact, isOpen, onClose, onEdit }) => {
             </div>
           )}
 
+          {/* Real User Info - About/Bio */}
+          {(contact.about || contact.bio) && (
+            <div className="flex items-start gap-3">
+              <ChatBubbleLeftIcon className="w-5 h-5 text-gray-400 mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  About
+                </p>
+                <p className="text-gray-900 dark:text-white">
+                  {contact.about || contact.bio}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Real User Info - Location */}
           {contact.location && (
             <div className="flex items-center gap-3">
               <MapPinIcon className="w-5 h-5 text-gray-400" />
@@ -182,6 +214,24 @@ const ContactProfile = ({ contact, isOpen, onClose, onEdit }) => {
             </div>
           )}
 
+          {/* Last Seen (for registered users) */}
+          {contact.lastSeen && (
+            <div className="flex items-center gap-3">
+              <CalendarIcon className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Last Seen
+                </p>
+                <p className="text-gray-900 dark:text-white">
+                  {formatDistanceToNow(new Date(contact.lastSeen), {
+                    addSuffix: true,
+                  })}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Added Date */}
           {contact.addedAt && (
             <div className="flex items-center gap-3">
               <CalendarIcon className="w-5 h-5 text-gray-400" />
