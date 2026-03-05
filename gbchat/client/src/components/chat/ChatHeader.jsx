@@ -28,6 +28,7 @@ import { format, isToday, isYesterday, subDays } from 'date-fns'
 import useChatStore from '../../store/useChatStore'
 import useGBFeaturesStore from '../../store/useGBFeaturesStore'
 import useAuthStore from '../../store/useAuthStore'
+import CallInterface from '../calls/CallInterface'
 import ChatDisplaySettings from '../settings/ChatDisplaySettings'
 import WallpaperSelector from './WallpaperSelector'
 import MediaGallery from './MediaGallery'
@@ -60,6 +61,8 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
   const [showMediaGallery, setShowMediaGallery] = useState(false)
   const [showStarredModal, setShowStarredModal] = useState(false)
   const [showLockSettings, setShowLockSettings] = useState(false)
+  const [showCallInterface, setShowCallInterface] = useState(false)
+  const [callType, setCallType] = useState('audio') // 'audio' or 'video'
 
   // Get the other participant's info (not the current user)
   const participants = chat.participants || []
@@ -260,6 +263,15 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
     }
   }
 
+  const handleStartCall = (isVideo = false) => {
+    setCallType(isVideo ? 'video' : 'audio')
+    setShowCallInterface(true)
+  }
+
+  const handleEndCall = () => {
+    setShowCallInterface(false)
+  }
+
   const handleQuickSetting = (settingId) => {
     toggleQuickSetting(settingId)
   }
@@ -372,14 +384,16 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
           {!chat.isGroup && (
             <>
               <button
-                onClick={() => {}}
+                onClick={() => handleStartCall(false)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+                title="Audio Call"
               >
                 <PhoneIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
               <button
-                onClick={() => {}}
+                onClick={() => handleStartCall(true)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+                title="Video Call"
               >
                 <VideoCameraIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
@@ -501,6 +515,19 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
         onClose={() => setShowLockSettings(false)}
         chat={chat}
       />
+
+      {/* Call Interface Modal */}
+      {showCallInterface && (
+        <CallInterface
+          callData={{
+            type: callType,
+            currentUser: user,
+            participants: [otherParticipant?.user || { name: displayName, avatar: displayAvatar }],
+            isGroup: false,
+          }}
+          onEnd={handleEndCall}
+        />
+      )}
     </>
   )
 }

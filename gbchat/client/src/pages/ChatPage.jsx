@@ -185,8 +185,8 @@ const ChatPage = () => {
         </div>
       </div>
 
-      {/* Floating Action Button */}
-      <FeatureFAB onAction={handleFABAction} />
+      {/* Floating Action Button - Only show in chat list, not in chat area */}
+      {!activeChat && <FeatureFAB onAction={handleFABAction} />}
 
       {/* Contact Permissions Modal */}
       <ContactPermissions

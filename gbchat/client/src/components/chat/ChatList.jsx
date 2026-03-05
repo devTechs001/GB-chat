@@ -4,12 +4,14 @@ import { MagnifyingGlassIcon, PlusIcon, FunnelIcon } from '@heroicons/react/24/o
 import useChatStore from '../../store/useChatStore'
 import ChatListItem from './ChatListItem'
 import Button from '../common/Button'
+import NewChatModal from './NewChatModal'
 import clsx from 'clsx'
 
 const ChatList = ({ onChatSelect, className }) => {
   const { chats, searchQuery, setSearchQuery, isLoading } = useChatStore()
   const [filter, setFilter] = useState('all') // all, unread, groups, archived
   const [sortBy, setSortBy] = useState('date') // date, name, unread
+  const [showNewChatModal, setShowNewChatModal] = useState(false)
 
   const filteredChats = useMemo(() => {
     let filtered = [...chats]
@@ -40,13 +42,14 @@ const ChatList = ({ onChatSelect, className }) => {
 
     // Apply search
     if (searchQuery) {
-      filtered = filtered.filter(chat =>
-        chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (typeof chat.lastMessage?.content === 'string'
+      filtered = filtered.filter(chat => {
+        const name = (chat.name || chat.title || '').toLowerCase()
+        const lastMessage = typeof chat.lastMessage?.content === 'string'
           ? chat.lastMessage.content
-          : chat.lastMessage?.content?.text
-        )?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+          : chat.lastMessage?.content?.text || ''
+        return name.includes(searchQuery.toLowerCase()) ||
+          lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+      })
     }
 
     return filtered
@@ -104,12 +107,14 @@ const ChatList = ({ onChatSelect, className }) => {
               icon={<PlusIcon className="w-5 h-5" />}
               className="md:hidden"
               aria-label="New Chat"
+              onClick={() => setShowNewChatModal(true)}
             />
             <Button
               variant="primary"
               size="sm"
               icon={<PlusIcon className="w-4 h-4" />}
               className="hidden md:flex"
+              onClick={() => setShowNewChatModal(true)}
             >
               New Chat
             </Button>
@@ -188,6 +193,9 @@ const ChatList = ({ onChatSelect, className }) => {
           </AnimatePresence>
         )}
       </div>
+
+      {/* New Chat Modal */}
+      <NewChatModal isOpen={showNewChatModal} onClose={() => setShowNewChatModal(false)} />
     </div>
   )
 }

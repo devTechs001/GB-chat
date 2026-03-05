@@ -150,9 +150,31 @@ const ChatBubble = ({
 
       case 'audio':
         return (
-          <div className="flex items-center gap-2">
-            <MicrophoneIcon className="w-5 h-5" />
-            <audio src={message.media[0]?.url} controls className="max-w-[200px]" />
+          <div className="min-w-[280px] max-w-[320px]">
+            <div className="flex items-center gap-3 bg-gradient-to-r from-green-500/10 to-transparent dark:from-green-500/20 rounded-2xl p-3 pr-4">
+              <button className="flex-shrink-0 w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-colors shadow-md">
+                <MicrophoneIcon className="w-5 h-5" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <audio
+                  src={message.media[0]?.url}
+                  controls
+                  className="w-full h-8 [&::-webkit-media-controls-panel]:bg-green-500 [&::-webkit-media-controls-current-time-display]:text-gray-700 [&::-webkit-media-controls-time-remaining-display]:text-gray-700"
+                  style={{
+                    '--media-control-background': '#22c55e',
+                    '--media-control-foreground': 'white',
+                  }}
+                />
+                {message.duration && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {Math.floor(message.duration / 60)}:{String(message.duration % 60).padStart(2, '0')}
+                  </p>
+                )}
+              </div>
+            </div>
+            {contentText && (
+              <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{contentText}</p>
+            )}
           </div>
         )
 

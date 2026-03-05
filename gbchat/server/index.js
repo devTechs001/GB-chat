@@ -26,6 +26,17 @@ import contactRoutes from "./routes/contactRoutes.js";
 import privacyRoutes from "./routes/privacyRoutes.js";
 import gbFeaturesRoutes from "./routes/gbFeaturesRoutes.js";
 import chatLockRoutes from "./routes/chatLockRoutes.js";
+import deviceRoutes from "./routes/deviceRoutes.js";
+
+// Settings routes
+import appearanceRoutes from "./routes/appearanceRoutes.js";
+import chatSettingsRoutes from "./routes/chatSettingsRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import storageRoutes from "./routes/storageRoutes.js";
+import accountRoutes from "./routes/accountRoutes.js";
+import chatDisplayRoutes from "./routes/chatDisplayRoutes.js";
+import emojiRoutes from "./routes/emojiRoutes.js";
+import translationRoutes from "./routes/translationRoutes.js";
 
 dotenv.config();
 
@@ -63,6 +74,17 @@ app.use("/api/contacts", contactRoutes);
 app.use("/api/privacy", privacyRoutes);
 app.use("/api/gb-features", gbFeaturesRoutes);
 app.use("/api/chat-lock", chatLockRoutes);
+app.use("/api/devices", deviceRoutes);
+
+// Settings routes
+app.use("/api/appearance", appearanceRoutes);
+app.use("/api/chat-settings", chatSettingsRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/storage", storageRoutes);
+app.use("/api/account", accountRoutes);
+app.use("/api/chat-display", chatDisplayRoutes);
+app.use("/api/emoji", emojiRoutes);
+app.use("/api/translations", translationRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

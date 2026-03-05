@@ -10,6 +10,8 @@ import Onboard from './components/common/Onboard'
 import MainLayout from './components/layout/MainLayout'
 import ServiceWorkerRegistration from './components/common/ServiceWorkerRegistration'
 import InstallPrompt from './components/common/InstallPrompt'
+import AppLock from './components/auth/AppLock'
+import AppUpdateChecker from './components/common/AppUpdateChecker'
 
 // Lazy load pages for better performance
 const AuthPage = React.lazy(() => import('./pages/AuthPage'))
@@ -33,6 +35,8 @@ function App() {
   const [showSplash, setShowSplash] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [showAppLock, setShowAppLock] = useState(false)
+  const [appLockEnabled, setAppLockEnabled] = useState(false)
 
   // Initialize app on mount
   useEffect(() => {
@@ -58,6 +62,13 @@ function App() {
 
       // Verify auth status
       await checkAuth()
+
+      // Check if app lock is enabled
+      const appLockType = localStorage.getItem('app-lock-type')
+      if (appLockType) {
+        setAppLockEnabled(true)
+        setShowAppLock(true)
+      }
 
       // Determine what to show
       if (hasValidToken) {
@@ -88,6 +99,22 @@ function App() {
     localStorage.setItem('hasCompletedOnboarding', 'true')
     setShowOnboarding(false)
   }
+
+  // Show app lock when user returns to the app
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && appLockEnabled) {
+        // Check if lock is set
+        const appLockType = localStorage.getItem('app-lock-type')
+        if (appLockType) {
+          setShowAppLock(true)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [appLockEnabled])
 
   // Connect socket when user is authenticated
   useEffect(() => {
@@ -143,6 +170,19 @@ function App() {
     <>
       <ServiceWorkerRegistration />
       <InstallPrompt />
+      <AppUpdateChecker />
+
+      {/* App Lock Screen */}
+      {appLockEnabled && showAppLock && (
+        <AppLock
+          onUnlock={() => setShowAppLock(false)}
+          onClose={() => {
+            setAppLockEnabled(false)
+            setShowAppLock(false)
+          }}
+        />
+      )}
+
       <AnimatePresence mode="wait">
         <React.Suspense fallback={<Loader fullScreen />}>
           <Routes>

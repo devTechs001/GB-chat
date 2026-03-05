@@ -9,8 +9,10 @@ import {
   BookmarkIcon,
   ClockIcon,
   SparklesIcon,
+  DevicePhoneMobileIcon,
 } from '@heroicons/react/24/outline'
 import { useNavigate } from 'react-router-dom'
+import LinkedDevices from '../common/LinkedDevices'
 
 const actions = [
   {
@@ -50,6 +52,12 @@ const actions = [
     color: 'bg-pink-500 hover:bg-pink-600',
   },
   {
+    id: 'link-device',
+    label: 'Link Device',
+    icon: DevicePhoneMobileIcon,
+    color: 'bg-cyan-500 hover:bg-cyan-600',
+  },
+  {
     id: 'gb-features',
     label: 'GB Features',
     icon: SparklesIcon,
@@ -60,10 +68,13 @@ const actions = [
 const FeatureFAB = ({ onAction }) => {
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
+  const [showLinkedDevices, setShowLinkedDevices] = useState(false)
 
   const handleAction = (actionId) => {
     if (actionId === 'gb-features') {
       navigate('/settings?section=gb-features')
+    } else if (actionId === 'link-device') {
+      setShowLinkedDevices(true)
     } else {
       onAction?.(actionId)
     }
@@ -106,6 +117,11 @@ const FeatureFAB = ({ onAction }) => {
           <PlusIcon className="w-7 h-7" />
         </motion.div>
       </motion.button>
+
+      {/* Linked Devices Modal */}
+      {showLinkedDevices && (
+        <LinkedDevices isOpen={showLinkedDevices} onClose={() => setShowLinkedDevices(false)} />
+      )}
     </div>
   )
 }

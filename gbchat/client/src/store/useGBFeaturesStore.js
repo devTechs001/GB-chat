@@ -43,12 +43,27 @@ const defaultFeatures = {
     enterToSend: true,
     doubleTapToReply: false,
     maximumCallQuality: 'HD',
+    appLock: false, // NEW: App lock feature
   },
   theme: {
     bubbleStyle: 'modern',
     fontSize: 14,
     theme: 'default',
     messageAnimation: 'slide',
+  },
+  performance: {
+    // NEW: Performance features
+    cacheCleaner: true,
+    autoCleanCache: false,
+    autoCleanInterval: 7, // days
+    lowDataMode: false,
+    dataSaver: false,
+  },
+  updates: {
+    // NEW: Update features
+    autoCheckUpdates: true,
+    autoDownloadUpdates: false,
+    notifyBetaUpdates: true,
   },
 }
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { EyeIcon, EyeSlashIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
 import Input from '../common/Input'
@@ -144,7 +145,8 @@ const RegisterForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Full Name Input */}
       <Input
         label="Full Name"
         type="text"
@@ -156,13 +158,17 @@ const RegisterForm = () => {
         autoComplete="name"
       />
 
-      {/* Registration Method Toggle */}
-      <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 p-1 bg-gray-50 dark:bg-gray-700">
+      {/* Registration Method Toggle - Enhanced */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex rounded-xl border border-gray-300 dark:border-gray-600 p-1.5 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600"
+      >
         <button
           type="button"
-          className={`flex-1 py-2 px-4 text-sm font-medium rounded-md ${
+          className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-300 ${
             registrationMethod === 'email'
-              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-md scale-105'
               : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
           onClick={() => setRegistrationMethod('email')}
@@ -174,9 +180,9 @@ const RegisterForm = () => {
         </button>
         <button
           type="button"
-          className={`flex-1 py-2 px-4 text-sm font-medium rounded-md ${
+          className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-300 ${
             registrationMethod === 'phone'
-              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-md scale-105'
               : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
           onClick={() => setRegistrationMethod('phone')}
@@ -186,7 +192,7 @@ const RegisterForm = () => {
             Phone
           </div>
         </button>
-      </div>
+      </motion.div>
 
       {/* Email or Phone Input */}
       {registrationMethod === 'email' ? (
@@ -320,6 +326,7 @@ const RegisterForm = () => {
         fullWidth
         loading={isLoading}
         disabled={isLoading}
+        className="py-3 text-base font-semibold bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 shadow-lg hover:shadow-xl transition-all duration-300"
       >
         Create Account
       </Button>
@@ -329,7 +336,7 @@ const RegisterForm = () => {
         <button
           type="button"
           onClick={() => navigate('/auth')}
-          className="text-primary-600 hover:underline"
+          className="text-primary-600 hover:underline font-medium"
         >
           Sign in
         </button>

@@ -251,6 +251,14 @@ const apiService = {
     getDevices: () => api.get('/settings/devices'),
     removeDevice: (deviceId) => api.delete(`/settings/devices/${deviceId}`),
   },
+
+  // Translations
+  translations: {
+    getText: (text, targetLang, sourceLang) => api.post('/translations/translate-text', { text, targetLang, sourceLang }),
+    getMessage: (messageId, text, targetLang, sourceLang) => api.post('/messages/translate', { messageId, text, targetLang, sourceLang }),
+    getLanguages: () => api.get('/translations/languages'),
+    detect: (text) => api.post('/translations/detect', { text }),
+  },
 }
 
 // Export both the instance and service methods

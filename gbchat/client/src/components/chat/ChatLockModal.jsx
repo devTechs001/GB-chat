@@ -43,10 +43,28 @@ const ChatLockModal = ({ isOpen, onClose, chat, onUnlock }) => {
 
   const fetchLockStatus = async () => {
     try {
-      const { data } = await api.get(`/chat-lock/status/${chat._id}`)
-      setLockStatus(data)
+      // Try API first
+      try {
+        const { data } = await api.get(`/chat-lock/status/${chat._id}`)
+        setLockStatus(data)
+      } catch (apiError) {
+        // Fallback to local storage
+        const localLock = localStorage.getItem(`chat-lock-${chat._id}`)
+        if (localLock) {
+          const parsed = JSON.parse(localLock)
+          setLockStatus({
+            isLocked: true,
+            hasPin: parsed.hasPin,
+            biometricEnabled: parsed.biometricEnabled || false,
+            autoLockTimeout: parsed.autoLockTimeout || 300000
+          })
+        } else {
+          setLockStatus({ isLocked: false, hasPin: false })
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch lock status:', error)
+      setLockStatus({ isLocked: false, hasPin: false })
     }
   }
 
@@ -89,7 +107,7 @@ const ChatLockModal = ({ isOpen, onClose, chat, onUnlock }) => {
 
   const handleUnlock = async () => {
     const pinString = pin.join('')
-    
+
     if (pinString.length !== 6) {
       setError('Please enter complete PIN')
       return
@@ -99,14 +117,41 @@ const ChatLockModal = ({ isOpen, onClose, chat, onUnlock }) => {
     setError('')
 
     try {
-      const { data } = await api.post('/chat-lock/unlock', {
-        chatId: chat._id,
-        pin: pinString
-      })
+      // Try API first
+      try {
+        const { data } = await api.post('/chat-lock/unlock', {
+          chatId: chat._id,
+          pin: pinString
+        })
 
-      toast.success('Chat unlocked!')
-      onUnlock?.(data.chatLock)
-      onClose()
+        toast.success('Chat unlocked!')
+        onUnlock?.(data.chatLock)
+        onClose()
+      } catch (apiError) {
+        // Fallback to local verification
+        const localLock = localStorage.getItem(`chat-lock-${chat._id}`)
+        if (localLock) {
+          const parsed = JSON.parse(localLock)
+          if (parsed.pin === pinString) {
+            toast.success('Chat unlocked!')
+            localStorage.removeItem(`chat-lock-${chat._id}`)
+            onUnlock?.({ isLocked: false })
+            onClose()
+          } else {
+            const newAttempts = attemptsRemaining - 1
+            setAttemptsRemaining(newAttempts)
+            if (newAttempts === 0) {
+              setError('Too many failed attempts. Chat remains locked.')
+            } else {
+              setError(`Incorrect PIN. ${newAttempts} attempts remaining.`)
+            }
+            setPin(['', '', '', '', '', ''])
+            inputRefs.current[0]?.focus()
+          }
+        } else {
+          setError('Lock configuration not found')
+        }
+      }
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to unlock'
       setError(message)

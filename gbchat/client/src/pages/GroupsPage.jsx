@@ -7,45 +7,65 @@ import {
   ChatBubbleLeftIcon,
   PhoneIcon,
   VideoCameraIcon,
-  EllipsisHorizontalIcon,
   LockClosedIcon,
   ShieldCheckIcon,
   ChartBarIcon,
   CalendarIcon,
-} from '@heroicons/react/24/solid'
+  UsersIcon,
+  BellIcon,
+} from '@heroicons/react/24/outline'
+import { PlusIcon as PlusIconSolid } from '@heroicons/react/24/solid'
 import Button from '../components/common/Button'
 import CreateGroup from '../components/groups/CreateGroup'
 import GroupInfo from '../components/groups/GroupInfo'
 import GroupPolls from '../components/groups/GroupPolls'
 import GroupEvents from '../components/groups/GroupEvents'
 import useChatStore from '../store/useChatStore'
+import Avatar from '../components/common/Avatar'
+import clsx from 'clsx'
+import { formatDistanceToNow } from 'date-fns'
 
 const GroupsPage = () => {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState('groups') // groups, polls, events
-  const [groupPolls, setGroupPolls] = useState([])
-  const [groupEvents, setGroupEvents] = useState([])
+  const [activeTab, setActiveTab] = useState('groups')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filter, setFilter] = useState('all')
 
-  const { chats, fetchChats } = useChatStore()
+  const { groups, fetchChats, chats } = useChatStore()
 
-  // Filter to get only group chats
-  const groups = chats.filter(chat => chat.isGroup)
+  // Get groups from chats or use sample data
+  const groupsList = groups.length > 0 ? groups : chats.filter(chat => chat.isGroup)
 
   useEffect(() => {
     fetchChats()
   }, [])
 
-  const handleCreateGroupSuccess = (newGroup) => {
-    // Refresh the chats to include the new group
-    fetchChats()
-    setIsCreateGroupOpen(false)
-  }
+  const filteredGroups = groupsList.filter(group => {
+    if (searchQuery && !group.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false
+    }
+    if (filter === 'admin' && group.members?.find(m => m._id === 'user1')?.role !== 'admin') {
+      return false
+    }
+    if (filter === 'unread' && !group.unreadCount) {
+      return false
+    }
+    return true
+  })
 
   const handleGroupClick = (group) => {
     setSelectedGroup(group)
     setIsGroupInfoOpen(true)
+  }
+
+  const formatTime = (dateString) => {
+    return formatDistanceToNow(new Date(dateString), { addSuffix: true })
+  }
+
+  const getMemberAvatars = (members) => {
+    return (members || []).slice(0, 4).map(m => m.avatar || m.name.charAt(0))
   }
 
   const handleCreatePoll = (pollData) => {

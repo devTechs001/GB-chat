@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import EmojiPicker from '../common/EmojiPicker'
 import VoiceRecorder from './VoiceRecorder'
+import InputTranslator from './InputTranslator'
 import Button from '../common/Button'
 import clsx from 'clsx'
 import useSocket from '../../hooks/useSocket'
@@ -156,14 +157,20 @@ const ChatInput = ({ onSendMessage, replyTo, chatId }) => {
             )}
             style={{ minHeight: '40px' }}
           />
-          
-          {/* Emoji picker button */}
-          <button
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="absolute right-2 bottom-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
-          >
-            <FaceSmileIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
+
+          {/* Translator and emoji buttons */}
+          <div className="absolute right-2 bottom-2 flex items-center gap-1">
+            <InputTranslator
+              onTranslate={(translated) => setMessage(translated)}
+              inputValue={message}
+            />
+            <button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
+            >
+              <FaceSmileIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            </button>
+          </div>
         </div>
 
         {/* Send button or voice recorder */}

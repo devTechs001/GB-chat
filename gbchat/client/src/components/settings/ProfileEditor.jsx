@@ -7,11 +7,16 @@ import {
   CheckIcon,
   ExclamationTriangleIcon,
   ArrowPathIcon,
+  SparklesIcon,
+  ScissorsIcon,
+  AdjustmentsHorizontalIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
+import AvatarCreator from '../enhanced/AvatarCreator'
 import useAuthStore from '../../store/useAuthStore'
 import toast from 'react-hot-toast'
 
@@ -36,12 +41,26 @@ const ProfileEditor = () => {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showAvatarCreator, setShowAvatarCreator] = useState(false)
+  const [showAdvancedEditor, setShowAdvancedEditor] = useState(false)
+  const [avatarConfig, setAvatarConfig] = useState(null)
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
     about: '',
   })
   const [isEditing, setIsEditing] = useState(false)
+
+  // Advanced editing tools state
+  const [editTools, setEditTools] = useState({
+    brightness: 100,
+    contrast: 100,
+    saturation: 100,
+    blur: 0,
+    rotate: 0,
+    flipH: false,
+    flipV: false,
+  })
 
   // Initialize form data from user
   React.useEffect(() => {
@@ -170,6 +189,93 @@ const ProfileEditor = () => {
     }
   }, [])
 
+  // Handle avatar creator save
+  const handleAvatarCreatorSave = async (file, config) => {
+    setIsUploading(true)
+    try {
+      const result = await updateAvatar(file)
+      if (result.success) {
+        setAvatarConfig(config)
+        toast.success('Custom avatar created and saved!')
+        setShowAvatarCreator(false)
+      } else {
+        toast.error('Failed to save custom avatar')
+      }
+    } catch (error) {
+      toast.error('Failed to save custom avatar')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // Handle advanced editor tools
+  const handleToolChange = (tool, value) => {
+    setEditTools(prev => ({ ...prev, [tool]: value }))
+  }
+
+  const handleResetTools = () => {
+    setEditTools({
+      brightness: 100,
+      contrast: 100,
+      saturation: 100,
+      blur: 0,
+      rotate: 0,
+      flipH: false,
+      flipV: false,
+    })
+  }
+
+  const handleApplyEdits = async () => {
+    if (!previewUrl) return
+
+    try {
+      // Create canvas to apply filters
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+        img.src = previewUrl
+      })
+
+      canvas.width = img.width
+      canvas.height = img.height
+
+      // Apply transformations
+      ctx.save()
+      ctx.translate(canvas.width / 2, canvas.height / 2)
+      ctx.rotate((editTools.rotate * Math.PI) / 180)
+      ctx.scale(editTools.flipH ? -1 : 1, editTools.flipV ? -1 : 1)
+      ctx.translate(-canvas.width / 2, -canvas.height / 2)
+
+      // Apply filters
+      ctx.filter = `
+        brightness(${editTools.brightness}%)
+        contrast(${editTools.contrast}%)
+        saturate(${editTools.saturation}%)
+        blur(${editTools.blur}px)
+      `
+
+      ctx.drawImage(img, 0, 0)
+      ctx.restore()
+
+      // Convert to blob
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+      const file = new File([blob], 'edited-avatar.png', { type: 'image/png' })
+
+      const result = await updateAvatar(file)
+      if (result.success) {
+        toast.success('Photo edits applied successfully!')
+        setShowAdvancedEditor(false)
+        handleCloseModal()
+      }
+    } catch (error) {
+      toast.error('Failed to apply edits')
+    }
+  }
+
   // Handle profile form changes
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -290,6 +396,30 @@ const ProfileEditor = () => {
                   {user?.avatar ? 'Change Photo' : 'Upload Photo'}
                 </div>
               </label>
+
+              {/* Custom Avatar Creator Button */}
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<SparklesIcon className="w-4 h-4 md:w-5 md:h-5" />}
+                onClick={() => setShowAvatarCreator(true)}
+                disabled={isUploading}
+              >
+                Create Avatar
+              </Button>
+
+              {/* Advanced Editor Button */}
+              {user?.avatar && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<AdjustmentsHorizontalIcon className="w-4 h-4 md:w-5 md:h-5" />}
+                  onClick={() => setShowAdvancedEditor(true)}
+                  disabled={isUploading}
+                >
+                  Edit Photo
+                </Button>
+              )}
 
               {user?.avatar && (
                 <Button
@@ -506,6 +636,203 @@ const ProfileEditor = () => {
             <p className="text-xs text-blue-700 dark:text-blue-300">
               <strong>Tip:</strong> For best results, use a square image at least 200x200 pixels.
             </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Avatar Creator Modal */}
+      {showAvatarCreator && (
+        <AvatarCreator
+          onClose={() => setShowAvatarCreator(false)}
+          onSave={handleAvatarCreatorSave}
+          initialAvatar={avatarConfig}
+        />
+      )}
+
+      {/* Advanced Photo Editor Modal */}
+      <Modal
+        isOpen={showAdvancedEditor}
+        onClose={() => setShowAdvancedEditor(false)}
+        size="lg"
+      >
+        <div className="p-4 md:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Photo Editor
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Adjust and enhance your profile photo
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAdvancedEditor(false)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Preview */}
+            <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+              <div
+                className="relative w-48 h-48 rounded-lg overflow-hidden ring-4 ring-gray-200 dark:ring-gray-700"
+                style={{
+                  transform: `rotate(${editTools.rotate}deg) scaleX(${editTools.flipH ? -1 : 1}) scaleY(${editTools.flipV ? -1 : 1})`,
+                  filter: `brightness(${editTools.brightness}%) contrast(${editTools.contrast}%) saturate(${editTools.saturation}%) blur(${editTools.blur}px)`,
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <PhotoIcon className="w-16 h-16 text-gray-400" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tools */}
+            <div className="space-y-4">
+              {/* Brightness */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Brightness: {editTools.brightness}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={editTools.brightness}
+                  onChange={(e) => handleToolChange('brightness', parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Contrast */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Contrast: {editTools.contrast}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={editTools.contrast}
+                  onChange={(e) => handleToolChange('contrast', parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Saturation */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Saturation: {editTools.saturation}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={editTools.saturation}
+                  onChange={(e) => handleToolChange('saturation', parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Blur */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Blur: {editTools.blur}px
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  value={editTools.blur}
+                  onChange={(e) => handleToolChange('blur', parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Rotate */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Rotate: {editTools.rotate}°
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleToolChange('rotate', editTools.rotate - 90)}
+                  >
+                    -90°
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleToolChange('rotate', 0)}
+                  >
+                    0°
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleToolChange('rotate', editTools.rotate + 90)}
+                  >
+                    +90°
+                  </Button>
+                </div>
+              </div>
+
+              {/* Flip */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Flip
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={editTools.flipH ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={() => handleToolChange('flipH', !editTools.flipH)}
+                  >
+                    Horizontal
+                  </Button>
+                  <Button
+                    variant={editTools.flipV ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={() => handleToolChange('flipV', !editTools.flipV)}
+                  >
+                    Vertical
+                  </Button>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={handleResetTools}
+                  icon={<ArrowPathIcon className="w-5 h-5" />}
+                >
+                  Reset
+                </Button>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={handleApplyEdits}
+                  icon={<CheckIcon className="w-5 h-5" />}
+                >
+                  Apply Changes
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </Modal>

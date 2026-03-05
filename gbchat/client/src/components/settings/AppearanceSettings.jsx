@@ -28,6 +28,12 @@ const AppearanceSettings = () => {
   } = useThemeStore()
 
   const [selectedWallpaper, setSelectedWallpaper] = useState(null)
+  const [autoCacheClean, setAutoCacheClean] = useState(false)
+  const [autoUpdate, setAutoUpdate] = useState(false)
+  const [updateEmail, setUpdateEmail] = useState('')
+  const [messageStatusStyle, setMessageStatusStyle] = useState('default')
+  const [wallpaperBlur, setWallpaperBlur] = useState(0)
+  const [wallpaperOpacity, setWallpaperOpacity] = useState(50)
 
   const allThemes = getAvailableThemes()
 
@@ -39,10 +45,20 @@ const AppearanceSettings = () => {
   ]
 
   const bubbleStyles = [
-    { id: 'modern', name: 'Modern', preview: 'rounded-2xl' },
-    { id: 'classic', name: 'Classic', preview: 'rounded-lg' },
-    { id: 'minimal', name: 'Minimal', preview: 'rounded-md' },
-    { id: 'rounded', name: 'Bubble', preview: 'rounded-3xl' },
+    { id: 'modern', name: 'Modern', preview: 'rounded-2xl', description: 'Clean rounded corners' },
+    { id: 'classic', name: 'Classic', preview: 'rounded-lg', description: 'Subtle rounding' },
+    { id: 'minimal', name: 'Minimal', preview: 'rounded-md', description: 'Slight rounding' },
+    { id: 'rounded', name: 'Bubble', preview: 'rounded-3xl', description: 'Fully rounded' },
+    { id: 'sharp', name: 'Sharp', preview: 'rounded-none', description: 'No rounding' },
+    { id: 'organic', name: 'Organic', preview: 'rounded-2xl', description: 'Natural curves' },
+  ]
+
+  const messageStatusStyles = [
+    { id: 'default', name: 'Default', icon: '✓✓' },
+    { id: 'minimal', name: 'Minimal', icon: '✓' },
+    { id: 'dots', name: 'Dots', icon: '●●' },
+    { id: 'bars', name: 'Bars', icon: '▌▌' },
+    { id: 'circles', name: 'Circles', icon: '⦿⦿' },
   ]
 
   const chatEffects = [
@@ -337,7 +353,7 @@ const AppearanceSettings = () => {
               className="toggle-switch"
             />
           </label>
-          
+
           <label className="flex items-center justify-between">
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
@@ -352,7 +368,7 @@ const AppearanceSettings = () => {
               className="toggle-switch"
             />
           </label>
-          
+
           <label className="flex items-center justify-between">
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
@@ -367,6 +383,174 @@ const AppearanceSettings = () => {
               className="toggle-switch"
             />
           </label>
+        </div>
+      </div>
+
+      {/* Wallpaper Customization */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          🖼️ Wallpaper Customization
+        </h3>
+        <div className="space-y-6">
+          {/* Wallpaper Opacity */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Wallpaper Opacity
+              </label>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{wallpaperOpacity}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={wallpaperOpacity}
+              onChange={(e) => setWallpaperOpacity(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+
+          {/* Wallpaper Blur */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Wallpaper Blur
+              </label>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{wallpaperBlur}px</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="20"
+              value={wallpaperBlur}
+              onChange={(e) => setWallpaperBlur(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Message Status Style */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          📬 Message Status Styles
+        </h3>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          {messageStatusStyles.map((style) => (
+            <button
+              key={style.id}
+              onClick={() => setMessageStatusStyle(style.id)}
+              className={clsx(
+                'p-4 rounded-xl border-2 transition-all text-center',
+                messageStatusStyle === style.id
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+              )}
+            >
+              <p className="text-2xl mb-1">{style.icon}</p>
+              <p className="text-xs font-medium text-gray-900 dark:text-white">{style.name}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Auto Cache Cleaner */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          🗑️ Auto Cache Cleaner
+        </h3>
+        <div className="space-y-4">
+          <label className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <ArrowPathIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">Auto Cache Cleaner</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Automatically clear cache every {autoCacheClean ? '24 hours' : 'week'}
+                </p>
+              </div>
+            </div>
+            <div
+              onClick={() => setAutoCacheClean(!autoCacheClean)}
+              className={clsx(
+                'w-14 h-7 rounded-full transition-colors cursor-pointer relative',
+                autoCacheClean ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+              )}
+            >
+              <div
+                className={clsx(
+                  'w-5 h-5 bg-white rounded-full shadow-md transform transition-transform absolute top-1',
+                  autoCacheClean ? 'translate-x-8' : 'translate-x-1'
+                )}
+              />
+            </div>
+          </label>
+
+          {autoCacheClean && (
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+              <p className="text-sm text-green-800 dark:text-green-300">
+                ✅ Auto cache cleaner is enabled. Cache will be cleared automatically to free up space.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Auto Update Settings */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          🔄 Auto Update Settings
+        </h3>
+        <div className="space-y-4">
+          <label className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                <ArrowPathIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">Auto Update</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Automatically update GBChat when new versions are available
+                </p>
+              </div>
+            </div>
+            <div
+              onClick={() => setAutoUpdate(!autoUpdate)}
+              className={clsx(
+                'w-14 h-7 rounded-full transition-colors cursor-pointer relative',
+                autoUpdate ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+              )}
+            >
+              <div
+                className={clsx(
+                  'w-5 h-5 bg-white rounded-full shadow-md transform transition-transform absolute top-1',
+                  autoUpdate ? 'translate-x-8' : 'translate-x-1'
+                )}
+              />
+            </div>
+          </label>
+
+          {autoUpdate && (
+            <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Email for update notifications
+                </span>
+                <input
+                  type="email"
+                  value={updateEmail}
+                  onChange={(e) => setUpdateEmail(e.target.value)}
+                  placeholder="your-email@gmail.com"
+                  className="mt-1 w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                />
+              </label>
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                🔔 You'll receive email notifications at {updateEmail || 'your email'} when new updates are available
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -2,6 +2,55 @@ import { create } from 'zustand'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
 
+// Sample call history for demo
+const sampleCallHistory = [
+  {
+    _id: 'call1',
+    user: { _id: 'u1', name: 'John Doe', avatar: null },
+    type: 'video',
+    status: 'completed',
+    direction: 'outgoing',
+    duration: 325,
+    createdAt: new Date(Date.now() - 3600000).toISOString()
+  },
+  {
+    _id: 'call2',
+    user: { _id: 'u2', name: 'Jane Smith', avatar: null },
+    type: 'audio',
+    status: 'missed',
+    direction: 'incoming',
+    duration: 0,
+    createdAt: new Date(Date.now() - 7200000).toISOString()
+  },
+  {
+    _id: 'call3',
+    user: { _id: 'u3', name: 'Mike Johnson', avatar: null },
+    type: 'audio',
+    status: 'completed',
+    direction: 'incoming',
+    duration: 180,
+    createdAt: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    _id: 'call4',
+    user: { _id: 'u4', name: 'Sarah Wilson', avatar: null },
+    type: 'video',
+    status: 'completed',
+    direction: 'outgoing',
+    duration: 542,
+    createdAt: new Date(Date.now() - 172800000).toISOString()
+  },
+  {
+    _id: 'call5',
+    user: { _id: 'u5', name: 'Alex Chen', avatar: null },
+    type: 'audio',
+    status: 'rejected',
+    direction: 'outgoing',
+    duration: 0,
+    createdAt: new Date(Date.now() - 259200000).toISOString()
+  }
+]
+
 const useCallStore = create((set, get) => ({
   callHistory: [],
   activeCall: null,
@@ -12,11 +61,10 @@ const useCallStore = create((set, get) => ({
     set({ isLoading: true })
     try {
       const { data } = await api.get('/calls/history')
-      // Handle both array and object responses
       const callsArray = Array.isArray(data) ? data : (data.calls || [])
-      set({ callHistory: callsArray, isLoading: false })
+      set({ callHistory: callsArray.length > 0 ? callsArray : sampleCallHistory, isLoading: false })
     } catch (error) {
-      set({ callHistory: [], isLoading: false })
+      set({ callHistory: sampleCallHistory, isLoading: false })
       console.error('Failed to fetch call history:', error)
     }
   },

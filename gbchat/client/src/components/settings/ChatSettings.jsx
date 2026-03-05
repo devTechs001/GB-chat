@@ -12,9 +12,9 @@ import Button from '../common/Button'
 import Modal from '../common/Modal'
 import WallpaperSelector from '../chat/WallpaperSelector'
 import { WALLPAPERS, DEFAULT_WALLPAPER } from '../chat/WallpaperSelector'
-import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import useChatStore from '../../store/useChatStore'
 
 const ChatSettings = () => {
   const [settings, setSettings] = useState({
@@ -26,8 +26,9 @@ const ChatSettings = () => {
     showOnlineStatus: true,
     archiveOnMute: false,
     saveToGallery: false,
-    mediaQuality: 'auto', // auto, high, medium, low
+    mediaQuality: 'auto',
   })
+  const { clearAllChats } = useChatStore()
 
   const [globalWallpaper, setGlobalWallpaper] = useState(null)
   const [showWallpaperModal, setShowWallpaperModal] = useState(false)
@@ -74,7 +75,7 @@ const ChatSettings = () => {
 
   const handleClearAllChats = async () => {
     try {
-      await api.post('/chats/clear-all')
+      clearAllChats()
       toast.success('All chats cleared')
       setShowClearModal(false)
     } catch (error) {
@@ -85,18 +86,25 @@ const ChatSettings = () => {
   const handleExportChats = async () => {
     setExportLoading(true)
     try {
-      const { data } = await api.get('/chats/export', {
-        responseType: 'blob',
-      })
-      
-      const url = window.URL.createObjectURL(new Blob([data]))
+      // Export chats as JSON locally
+      const chatsData = localStorage.getItem('gbchat-chats') || '[]'
+      const messagesData = localStorage.getItem('gbchat-messages') || '[]'
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        chats: JSON.parse(chatsData),
+        messages: JSON.parse(messagesData)
+      }
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+      const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       link.setAttribute('download', `gbchat-export-${Date.now()}.json`)
       document.body.appendChild(link)
       link.click()
       link.remove()
-      
+      window.URL.revokeObjectURL(url)
+
       toast.success('Chats exported successfully')
       setShowExportModal(false)
     } catch (error) {

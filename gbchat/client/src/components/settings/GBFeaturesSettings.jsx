@@ -1016,6 +1016,56 @@ const AdvancedSettings = ({ features, onToggle, onUpdate }) => {
 
   return (
     <div className="space-y-3">
+      {/* App Lock - Special Feature */}
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg p-4 border-2 border-purple-200 dark:border-purple-800 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg">
+              <Lock className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-white">
+                App Lock
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Secure app with pattern or PIN
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const currentLock = localStorage.getItem('app-lock-type')
+              if (currentLock) {
+                localStorage.removeItem('app-lock-type')
+                localStorage.removeItem('app-lock-pattern')
+                localStorage.removeItem('app-lock-pin')
+                toast.success('App lock disabled')
+              } else {
+                // Open lock setup modal
+                const event = new CustomEvent('open-app-lock-setup')
+                window.dispatchEvent(event)
+                toast.info('Setting up app lock...')
+              }
+            }}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              localStorage.getItem('app-lock-type') ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                localStorage.getItem('app-lock-type') ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        {localStorage.getItem('app-lock-type') && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
+            <Check className="w-4 h-4" />
+            <span>App lock is enabled ({localStorage.getItem('app-lock-type')})</span>
+          </div>
+        )}
+      </div>
+
       {[
         {
           key: 'copySentMessages',

@@ -9,11 +9,15 @@ import {
   EllipsisVerticalIcon,
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
+  DocumentArrowDownIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline'
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
+import { HeartIcon as HeartSolidIcon, CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
+import api from '../../lib/api'
+import toast from 'react-hot-toast'
 
 const StoryViewer = ({
   story,
@@ -27,14 +31,19 @@ const StoryViewer = ({
   const [isPaused, setIsPaused] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
   const [isLiked, setIsLiked] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
   const [showReply, setShowReply] = useState(false)
   const [replyText, setReplyText] = useState('')
+  const [showMenu, setShowMenu] = useState(false)
   const videoRef = useRef(null)
   const progressInterval = useRef(null)
 
   const currentStoryItem = story?.media?.[currentIndex]
   const isVideo = currentStoryItem?.type === 'video'
   const duration = isVideo ? 15000 : 5000 // 15s for video, 5s for image
+  const allowSaving = story?.settings?.allowSaving !== false
+  const allowSharing = story?.settings?.allowSharing !== false
+  const allowReplies = story?.settings?.allowReplies !== false
 
   // Handle case when story or media is undefined
   if (!story || !story.media || story.media.length === 0) {
@@ -86,6 +95,62 @@ const StoryViewer = ({
       console.log('Sending reply:', replyText)
       setReplyText('')
       setShowReply(false)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!allowSaving) {
+      toast.error('Saving is not allowed for this story')
+      return
+    }
+
+    try {
+      // Mark story as saved
+      await api.post(`/stories/${story._id}/save`, {
+        mediaIndex: currentIndex,
+      })
+      setIsSaved(true)
+
+      // Download the media
+      const mediaUrl = currentStoryItem.url
+      const response = await fetch(mediaUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `story_${story.user.name}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      toast.success('Story saved to device')
+    } catch (error) {
+      console.error('Save error:', error)
+      toast.error('Failed to save story')
+    }
+  }
+
+  const handleShare = async () => {
+    if (!allowSharing) {
+      toast.error('Sharing is not allowed for this story')
+      return
+    }
+
+    try {
+      // Share using Web Share API if available
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Check out this story',
+          url: currentStoryItem.url,
+        })
+      } else {
+        // Fallback: copy link to clipboard
+        await navigator.clipboard.writeText(currentStoryItem.url)
+        toast.success('Link copied to clipboard')
+      }
+    } catch (error) {
+      console.error('Share error:', error)
     }
   }
 
@@ -245,13 +310,14 @@ const StoryViewer = ({
                 </button>
               </motion.div>
             ) : (
-              <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center justify-center gap-3">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     setIsLiked(!isLiked)
                   }}
                   className="p-3 hover:bg-white/10 rounded-full"
+                  title="React"
                 >
                   {isLiked ? (
                     <HeartSolidIcon className="w-6 h-6 text-red-500" />
@@ -259,24 +325,48 @@ const StoryViewer = ({
                     <HeartIcon className="w-6 h-6 text-white" />
                   )}
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowReply(true)
-                  }}
-                  className="px-6 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white hover:bg-white/20"
-                >
-                  Reply
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    // Share story
-                  }}
-                  className="p-3 hover:bg-white/10 rounded-full"
-                >
-                  <PaperAirplaneIcon className="w-6 h-6 text-white" />
-                </button>
+
+                {allowReplies && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowReply(true)
+                    }}
+                    className="px-6 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white hover:bg-white/20"
+                  >
+                    Reply
+                  </button>
+                )}
+
+                {allowSaving && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSave()
+                    }}
+                    className="p-3 hover:bg-white/10 rounded-full relative"
+                    title="Save story"
+                  >
+                    {isSaved ? (
+                      <CheckCircleSolidIcon className="w-6 h-6 text-green-500" />
+                    ) : (
+                      <DocumentArrowDownIcon className="w-6 h-6 text-white" />
+                    )}
+                  </button>
+                )}
+
+                {allowSharing && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleShare()
+                    }}
+                    className="p-3 hover:bg-white/10 rounded-full"
+                    title="Share story"
+                  >
+                    <PaperAirplaneIcon className="w-6 h-6 text-white" />
+                  </button>
+                )}
               </div>
             )}
           </div>

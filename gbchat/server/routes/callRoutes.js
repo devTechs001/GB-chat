@@ -1,28 +1,42 @@
 // server/routes/callRoutes.js
 import express from "express";
 import { protect } from "../middleware/auth.js";
-import Call from "../models/Call.js";
+import {
+  getCallHistory,
+  initiateCall,
+  acceptCall,
+  rejectCall,
+  endCall,
+  addParticipantToCall,
+  getCallDetails,
+  getActiveCalls,
+  cancelCall,
+  getCallStats,
+} from "../controllers/callController.js";
 
 const router = express.Router();
 router.use(protect);
 
-router.get("/history", async (req, res, next) => {
-  try {
-    const calls = await Call.find({
-      $or: [
-        { caller: req.user._id },
-        { "participants.user": req.user._id },
-      ],
-    })
-      .populate("caller", "fullName avatar")
-      .populate("participants.user", "fullName avatar")
-      .sort({ createdAt: -1 })
-      .limit(50);
+// Get call history
+router.get("/history", getCallHistory);
 
-    res.json(calls);
-  } catch (error) {
-    next(error);
-  }
-});
+// Get active calls
+router.get("/active", getActiveCalls);
+
+// Get call statistics
+router.get("/stats", getCallStats);
+
+// Get call details
+router.get("/:callId", getCallDetails);
+
+// Initiate a call
+router.post("/initiate", initiateCall);
+
+// Call actions
+router.post("/:callId/accept", acceptCall);
+router.post("/:callId/reject", rejectCall);
+router.post("/:callId/end", endCall);
+router.post("/:callId/cancel", cancelCall);
+router.post("/:callId/add-participant", addParticipantToCall);
 
 export default router;

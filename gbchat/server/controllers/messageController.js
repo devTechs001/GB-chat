@@ -430,3 +430,153 @@ export const getScheduledMessages = async (req, res, next) => {
     next(error);
   }
 };
+
+export const cancelScheduledMessage = async (req, res, next) => {
+  try {
+    const { messageId } = req.body;
+
+    const message = await Message.findOneAndUpdate(
+      {
+        _id: messageId,
+        sender: req.user._id,
+        isScheduled: true,
+      },
+      {
+        isScheduled: false,
+        scheduledAt: null,
+      }
+    );
+
+    if (!message) {
+      return res.status(404).json({ message: "Scheduled message not found" });
+    }
+
+    res.json({ message: "Scheduled message cancelled" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendVoiceMessage = async (req, res, next) => {
+  try {
+    const { chatId } = req.params;
+    const { duration } = req.body;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+    const isParticipant = chat.participants.some(
+      (p) => p.user.toString() === req.user._id.toString()
+    );
+    if (!isParticipant)
+      return res.status(403).json({ message: "Not a participant" });
+
+    let mediaData = {};
+    if (req.file) {
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+      const resourceType = "audio";
+      const result = await cloudinary.uploader.upload(dataURI, {
+        resource_type: resourceType,
+        folder: "gbchat/voice",
+      });
+
+      mediaData = {
+        url: result.secure_url,
+        filename: req.file.originalname,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+        duration: duration || result.duration,
+      };
+    }
+
+    const message = await Message.create({
+      chat: chatId,
+      sender: req.user._id,
+      type: "voice",
+      content: {
+        media: mediaData,
+      },
+    });
+
+    const populated = await Message.findById(message._id)
+      .populate("sender", "fullName avatar");
+
+    // Update chat's last message
+    chat.lastMessage = message._id;
+    chat.unreadCounts.forEach((uc) => {
+      if (uc.user.toString() !== req.user._id.toString()) {
+        uc.count += 1;
+      }
+    });
+    await chat.save();
+
+    // Emit socket event
+    const io = req.app.get("io");
+    chat.participants.forEach((p) => {
+      if (p.user.toString() !== req.user._id.toString()) {
+        io.to(p.user.toString()).emit("newMessage", {
+          message: populated,
+          chatId,
+        });
+      }
+    });
+
+    res.status(201).json(populated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeReaction = async (req, res, next) => {
+  try {
+    const { messageId, emoji } = req.params;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    message.reactions = message.reactions.filter(
+      (r) => r.user.toString() !== req.user._id.toString() || r.emoji !== emoji
+    );
+
+    await message.save();
+
+    const populated = await Message.findById(messageId)
+      .populate("reactions.user", "fullName avatar");
+
+    const io = req.app.get("io");
+    const chat = await Chat.findById(message.chat);
+    chat.participants.forEach((p) => {
+      io.to(p.user.toString()).emit("messageReaction", {
+        messageId,
+        chatId: message.chat,
+        reactions: populated.reactions,
+      });
+    });
+
+    res.json(populated.reactions);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMessageReactions = async (req, res, next) => {
+  try {
+    const { messageId } = req.params;
+
+    const message = await Message.findById(messageId)
+      .populate("reactions.user", "fullName avatar email");
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    res.json({
+      success: true,
+      data: message.reactions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -6,6 +6,7 @@ import { chatHandler } from "./handlers/chatHandler.js";
 import { presenceHandler } from "./handlers/presenceHandler.js";
 import { typingHandler } from "./handlers/typingHandler.js";
 import { callHandler } from "./handlers/callHandler.js";
+import { deviceHandler } from "./handlers/deviceHandler.js";
 
 const onlineUsers = new Map();
 let ioInstance = null; // Store IO instance for external access
@@ -83,6 +84,7 @@ export const initializeSocket = (server) => {
     presenceHandler(io, socket, onlineUsers);
     typingHandler(io, socket);
     callHandler(io, socket, onlineUsers);
+    deviceHandler(io, socket, onlineUsers);
 
     // Join chat rooms
     socket.on("joinChat", (chatId) => {

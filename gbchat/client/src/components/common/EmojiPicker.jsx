@@ -4,6 +4,7 @@ import data from '@emoji-mart/data'
 import { motion, AnimatePresence } from 'framer-motion'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import useThemeStore from '../../store/useThemeStore'
+import clsx from 'clsx'
 
 const EmojiPicker = ({ onSelect, onClose, position = 'bottom' }) => {
   const { theme } = useThemeStore()
@@ -31,9 +32,14 @@ const EmojiPicker = ({ onSelect, onClose, position = 'bottom' }) => {
         initial={{ opacity: 0, scale: 0.95, y: position === 'top' ? 10 : -10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: position === 'top' ? 10 : -10 }}
-        className="absolute z-50 shadow-2xl rounded-lg overflow-hidden"
+        className={clsx(
+          'absolute z-50 shadow-2xl rounded-xl overflow-hidden',
+          'bg-white dark:bg-gray-800',
+          'border border-gray-200 dark:border-gray-700'
+        )}
         style={{
           [position]: 'calc(100% + 8px)',
+          right: position === 'top' ? '0' : 'auto',
         }}
       >
         {/* Close button for mobile */}
@@ -44,17 +50,20 @@ const EmojiPicker = ({ onSelect, onClose, position = 'bottom' }) => {
           <XMarkIcon className="w-5 h-5" />
         </button>
 
-        <Picker
-          data={data}
-          onEmojiSelect={handleEmojiSelect}
-          theme={theme === 'dark' ? 'dark' : 'light'}
-          previewPosition="none"
-          skinTonePosition="search"
-          maxFrequentRows={2}
-          perLine={8}
-          emojiSize={24}
-          emojiButtonSize={36}
-        />
+        <div className="p-2">
+          <Picker
+            data={data}
+            onEmojiSelect={handleEmojiSelect}
+            theme={theme === 'dark' ? 'dark' : 'light'}
+            previewPosition="none"
+            skinTonePosition="search"
+            maxFrequentRows={2}
+            perLine={8}
+            emojiSize={20}
+            emojiButtonSize={32}
+            className="emoji-picker-custom"
+          />
+        </div>
       </motion.div>
     </AnimatePresence>
   )

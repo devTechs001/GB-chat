@@ -7,6 +7,8 @@ import {
   logout,
   getMe,
   updateProfile,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
@@ -23,5 +25,7 @@ router.post("/phone-verify/confirm", authLimiter, verifyPhoneNumber);
 router.post("/logout", protect, logout);
 router.get("/me", protect, getMe);
 router.put("/profile", protect, updateProfile);
+router.post("/forgot-password", authLimiter, forgotPassword);
+router.post("/reset-password", authLimiter, resetPassword);
 
 export default router;

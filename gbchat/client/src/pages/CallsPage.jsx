@@ -14,6 +14,7 @@ import Avatar from '../components/common/Avatar'
 import Button from '../components/common/Button'
 import SearchBar from '../components/common/SearchBar'
 import CallInterface from '../components/calls/CallInterface'
+import NewCallModal from '../components/calls/NewCallModal'
 import useCallStore from '../store/useCallStore'
 import clsx from 'clsx'
 
@@ -22,6 +23,7 @@ const CallsPage = () => {
   const [filter, setFilter] = useState('all') // all, missed, incoming, outgoing
   const [searchQuery, setSearchQuery] = useState('')
   const [showCallInterface, setShowCallInterface] = useState(false)
+  const [showNewCallModal, setShowNewCallModal] = useState(false)
 
   useEffect(() => {
     fetchCallHistory()
@@ -89,7 +91,7 @@ const CallsPage = () => {
           <Button
             variant="ghost"
             icon={<PhoneIcon className="w-5 h-5" />}
-            onClick={() => {}}
+            onClick={() => setShowNewCallModal(true)}
             className="hidden md:flex bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-400 rounded-xl"
           >
             New Call
@@ -181,7 +183,9 @@ const CallsPage = () => {
         <CallInterface callData={activeCall} onEnd={() => setShowCallInterface(false)} />
       )}
 
-      <button onClick={() => {}}
+      <NewCallModal isOpen={showNewCallModal} onClose={() => setShowNewCallModal(false)} />
+
+      <button onClick={() => setShowNewCallModal(true)}
         className="md:hidden fixed bottom-20 right-4 p-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-2xl shadow-xl shadow-primary-500/30 hover:shadow-primary-500/50 transition-all z-20">
         <PhoneIcon className="w-6 h-6" />
       </button>

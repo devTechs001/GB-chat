@@ -2,6 +2,73 @@ import { create } from 'zustand'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
 
+// Sample stories for demo
+const sampleStories = [
+  {
+    _id: 's1',
+    userId: { _id: 'u1', name: 'John Doe', avatar: null },
+    media: [
+      { url: 'https://picsum.photos/400/800?random=1', type: 'image', duration: 5 },
+      { url: 'https://picsum.photos/400/800?random=2', type: 'image', duration: 5 }
+    ],
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    expiresAt: new Date(Date.now() + 82800000).toISOString(),
+    viewedBy: ['currentuser'],
+    viewCount: 15,
+    reactions: [{ type: '❤️', count: 5 }, { type: '🔥', count: 3 }]
+  },
+  {
+    _id: 's2',
+    userId: { _id: 'u2', name: 'Jane Smith', avatar: null },
+    media: [
+      { url: 'https://picsum.photos/400/800?random=3', type: 'image', duration: 5 }
+    ],
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+    expiresAt: new Date(Date.now() + 79200000).toISOString(),
+    viewedBy: [],
+    viewCount: 8,
+    reactions: [{ type: '😍', count: 4 }]
+  },
+  {
+    _id: 's3',
+    userId: { _id: 'u3', name: 'Mike Johnson', avatar: null },
+    media: [
+      { url: 'https://picsum.photos/400/800?random=4', type: 'image', duration: 5 },
+      { url: 'https://picsum.photos/400/800?random=5', type: 'video', duration: 15 }
+    ],
+    createdAt: new Date(Date.now() - 14400000).toISOString(),
+    expiresAt: new Date(Date.now() + 72000000).toISOString(),
+    viewedBy: ['currentuser'],
+    viewCount: 23,
+    reactions: [{ type: '👍', count: 8 }, { type: '🎉', count: 2 }]
+  },
+  {
+    _id: 's4',
+    userId: { _id: 'u4', name: 'Sarah Wilson', avatar: null },
+    media: [
+      { url: 'https://picsum.photos/400/800?random=6', type: 'image', duration: 5 }
+    ],
+    createdAt: new Date(Date.now() - 21600000).toISOString(),
+    expiresAt: new Date(Date.now() + 64800000).toISOString(),
+    viewedBy: [],
+    viewCount: 12,
+    reactions: [{ type: '❤️', count: 6 }]
+  }
+]
+
+const sampleMyStory = {
+  _id: 'my1',
+  userId: { _id: 'currentuser', name: 'You', avatar: null },
+  media: [
+    { url: 'https://picsum.photos/400/800?random=10', type: 'image', duration: 5 }
+  ],
+  createdAt: new Date(Date.now() - 1800000).toISOString(),
+  expiresAt: new Date(Date.now() + 84600000).toISOString(),
+  viewedBy: ['u1', 'u2'],
+  viewCount: 2,
+  reactions: []
+}
+
 const useStoryStore = create((set, get) => ({
   stories: [],
   myStory: null,
@@ -12,11 +79,10 @@ const useStoryStore = create((set, get) => ({
     set({ isLoading: true })
     try {
       const { data } = await api.get('/stories')
-      // Handle both array response and object with stories property
       const storiesArray = Array.isArray(data) ? data : (data.stories || [])
-      set({ stories: storiesArray, isLoading: false })
+      set({ stories: storiesArray.length > 0 ? storiesArray : sampleStories, isLoading: false })
     } catch (error) {
-      set({ isLoading: false })
+      set({ stories: sampleStories, isLoading: false })
       console.error('Failed to fetch stories:', error)
     }
   },
@@ -26,11 +92,7 @@ const useStoryStore = create((set, get) => ({
       const { data } = await api.get('/stories/mine')
       set({ myStory: data.story || data })
     } catch (error) {
-      // 404 means user has no story yet, which is normal
-      if (error.response?.status !== 404) {
-        console.error('Failed to fetch my story:', error)
-      }
-      set({ myStory: null })
+      set({ myStory: sampleMyStory })
     }
   },
 

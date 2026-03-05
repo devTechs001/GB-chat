@@ -23,5 +23,8 @@
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.0"
+  },
+  "dependencies": {
+    "nodemailer": "^8.0.1"
   }
 }

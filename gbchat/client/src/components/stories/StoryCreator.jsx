@@ -7,6 +7,10 @@ import {
   FaceSmileIcon,
   PaintBrushIcon,
   ArrowPathIcon,
+  EyeSlashIcon,
+  ShareIcon,
+  DocumentArrowDownIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
@@ -23,6 +27,13 @@ const StoryCreator = ({ onClose, onSuccess }) => {
   const [backgroundColor, setBackgroundColor] = useState('#000000')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [settings, setSettings] = useState({
+    allowSaving: true, // Allow viewers to save
+    allowSharing: true, // Allow viewers to share
+    allowReplies: true, // Allow replies
+    privacy: 'contacts', // everyone, contacts, selected
+  })
   const fileInputRef = useRef(null)
   const videoRef = useRef(null)
 
@@ -81,6 +92,7 @@ const StoryCreator = ({ onClose, onSuccess }) => {
       formData.append('caption', caption)
       formData.append('textColor', textColor)
       formData.append('backgroundColor', backgroundColor)
+      formData.append('settings', JSON.stringify(settings))
 
       const { data } = await api.post('/stories', formData, {
         headers: {
@@ -268,6 +280,116 @@ const StoryCreator = ({ onClose, onSuccess }) => {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Story Settings */}
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400"
+          >
+            <EyeSlashIcon className="w-4 h-4" />
+            Story Settings
+          </button>
+
+          <AnimatePresence>
+            {showSettings && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-4 space-y-3">
+                  {/* Privacy */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Privacy
+                    </label>
+                    <select
+                      value={settings.privacy}
+                      onChange={(e) => setSettings({ ...settings, privacy: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="everyone">Everyone</option>
+                      <option value="contacts">Contacts Only</option>
+                      <option value="selected">Selected Contacts</option>
+                    </select>
+                  </div>
+
+                  {/* Toggle Settings */}
+                  <div className="space-y-2">
+                    <label className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <DocumentArrowDownIcon className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Allow viewers to save</span>
+                      </div>
+                      <div
+                        onClick={() => setSettings({ ...settings, allowSaving: !settings.allowSaving })}
+                        className={clsx(
+                          'w-10 h-5 rounded-full transition-colors cursor-pointer',
+                          settings.allowSaving ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+                        )}
+                      >
+                        <div
+                          className={clsx(
+                            'w-4 h-4 bg-white rounded-full shadow-md transform transition-transform mt-0.5',
+                            settings.allowSaving ? 'translate-x-5 ml-0.5' : 'translate-x-0.5 ml-0.5'
+                          )}
+                        />
+                      </div>
+                    </label>
+
+                    <label className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShareIcon className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Allow viewers to share</span>
+                      </div>
+                      <div
+                        onClick={() => setSettings({ ...settings, allowSharing: !settings.allowSharing })}
+                        className={clsx(
+                          'w-10 h-5 rounded-full transition-colors cursor-pointer',
+                          settings.allowSharing ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+                        )}
+                      >
+                        <div
+                          className={clsx(
+                            'w-4 h-4 bg-white rounded-full shadow-md transform transition-transform mt-0.5',
+                            settings.allowSharing ? 'translate-x-5 ml-0.5' : 'translate-x-0.5 ml-0.5'
+                          )}
+                        />
+                      </div>
+                    </label>
+
+                    <label className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ChatBubbleLeftRightIcon className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Allow replies</span>
+                      </div>
+                      <div
+                        onClick={() => setSettings({ ...settings, allowReplies: !settings.allowReplies })}
+                        className={clsx(
+                          'w-10 h-5 rounded-full transition-colors cursor-pointer',
+                          settings.allowReplies ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+                        )}
+                      >
+                        <div
+                          className={clsx(
+                            'w-4 h-4 bg-white rounded-full shadow-md transform transition-transform mt-0.5',
+                            settings.allowReplies ? 'translate-x-5 ml-0.5' : 'translate-x-0.5 ml-0.5'
+                          )}
+                        />
+                      </div>
+                    </label>
+                  </div>
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400 pt-2">
+                    Stories automatically disappear after 24 hours
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Actions */}

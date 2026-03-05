@@ -18,6 +18,7 @@ import AppearanceSettings from '../components/settings/AppearanceSettings'
 import ChatSettings from '../components/settings/ChatSettings'
 import StorageSettings from '../components/settings/StorageSettings'
 import AboutSection from '../components/settings/AboutSection'
+import HelpCenter from '../components/settings/HelpCenter'
 import GBFeaturesSettings from '../components/settings/GBFeaturesSettings'
 import clsx from 'clsx'
 
@@ -32,7 +33,7 @@ const SettingsPage = () => {
     { id: 'chats', label: 'Chats', icon: ChatBubbleLeftRightIcon, component: ChatSettings },
     { id: 'storage', label: 'Storage', icon: CloudArrowUpIcon, component: StorageSettings },
     { id: 'gb-features', label: 'GB Features', icon: SparklesIcon, component: GBFeaturesSettings },
-    { id: 'help', label: 'Help', icon: QuestionMarkCircleIcon, component: () => <div>Help Section</div> },
+    { id: 'help', label: 'Help', icon: QuestionMarkCircleIcon, component: HelpCenter },
     { id: 'about', label: 'About', icon: InformationCircleIcon, component: AboutSection },
   ]
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import {
   ChartBarIcon,
   PhotoIcon,
@@ -6,6 +7,7 @@ import {
   DocumentIcon,
   MicrophoneIcon,
   TrashIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
@@ -13,6 +15,7 @@ import { formatFileSize } from '../../lib/formatters'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import CacheCleaner from './CacheCleaner'
 
 const StorageSettings = () => {
   const [storageData, setStorageData] = useState({
@@ -30,6 +33,7 @@ const StorageSettings = () => {
   const [loading, setLoading] = useState(true)
   const [showClearModal, setShowClearModal] = useState(false)
   const [selectedType, setSelectedType] = useState(null)
+  const [showCacheCleaner, setShowCacheCleaner] = useState(false)
 
   useEffect(() => {
     fetchStorageData()
@@ -104,14 +108,34 @@ const StorageSettings = () => {
   return (
     <div className="max-w-2xl space-y-8">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Storage & Data
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Manage your storage usage and data
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Storage & Data
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage your storage usage and data
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCacheCleaner(!showCacheCleaner)}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+        >
+          <SparklesIcon className="w-5 h-5" />
+          <span className="hidden sm:inline">Cache Cleaner</span>
+        </button>
       </div>
+
+      {/* Cache Cleaner Section */}
+      {showCacheCleaner && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+        >
+          <CacheCleaner />
+        </motion.div>
+      )}
 
       {/* Storage Overview */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
@@ -148,8 +172,8 @@ const StorageSettings = () => {
         <div className="space-y-3">
           {storageTypes.map((item) => {
             const Icon = item.icon
-            const size = storageData.breakdown[item.type] || 0
-            const percentage = (size / storageData.used) * 100 || 0
+            const size = storageData.breakdown?.[item.type] || 0
+            const percentage = storageData.used > 0 ? (size / storageData.used) * 100 : 0
 
             return (
               <div key={item.type} className="flex items-center gap-4">

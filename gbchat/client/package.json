@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "start": "vite preview --host 0.0.0.0 --port $PORT",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "optimize": "node scripts/optimize.js",
+    "optimize:all": "node scripts/optimize.js all",
+    "optimize:clean": "node scripts/optimize.js clean",
+    "optimize:analyze": "node scripts/optimize.js analyze",
+    "optimize:report": "node scripts/optimize.js report"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.1.2",
