@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "start": "echo 'Static site - no server needed'",
     "build": "cd gbchat/client && npm install && npm run build",
     "install:client": "cd gbchat/client && npm install",
     "install:server": "cd gbchat/server && npm install"
