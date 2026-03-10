@@ -37,6 +37,7 @@ import accountRoutes from "./routes/accountRoutes.js";
 import chatDisplayRoutes from "./routes/chatDisplayRoutes.js";
 import emojiRoutes from "./routes/emojiRoutes.js";
 import translationRoutes from "./routes/translationRoutes.js";
+import gbSettingsRoutes from "./routes/gbSettingsRoutes.js";
 
 dotenv.config();
 
@@ -85,6 +86,7 @@ app.use("/api/account", accountRoutes);
 app.use("/api/chat-display", chatDisplayRoutes);
 app.use("/api/emoji", emojiRoutes);
 app.use("/api/translations", translationRoutes);
+app.use("/api/gb-settings", gbSettingsRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

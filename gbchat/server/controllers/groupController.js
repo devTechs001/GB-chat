@@ -268,3 +268,426 @@ export const updateGroupSettings = async (req, res, next) => {
     next(error);
   }
 };
+
+// ============================================================================
+// Poll Controllers
+// ============================================================================
+
+export const createPoll = async (req, res, next) => {
+  try {
+    const { question, options, allowMultipleVotes, anonymous, durationHours } = req.body;
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const poll = {
+      _id: crypto.randomBytes(16).toString("hex"),
+      question,
+      options: options.map(opt => ({
+        _id: crypto.randomBytes(8).toString("hex"),
+        text: opt.text,
+        votes: 0
+      })),
+      createdBy: req.user._id,
+      createdAt: new Date(),
+      allowMultipleVotes: allowMultipleVotes || false,
+      anonymous: anonymous || false,
+      active: true,
+    };
+
+    if (durationHours) {
+      poll.expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+    }
+
+    if (!chat.groupInfo.polls) chat.groupInfo.polls = [];
+    chat.groupInfo.polls.push(poll);
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("pollCreated", { chatId: chat._id, poll });
+    });
+
+    res.status(201).json(poll);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPolls = async (req, res, next) => {
+  try {
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const polls = chat.groupInfo.polls || [];
+    res.json(polls);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const voteOnPoll = async (req, res, next) => {
+  try {
+    const { pollId } = req.params;
+    const { optionIds } = req.body;
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const poll = chat.groupInfo.polls?.find(p => p._id === pollId);
+    if (!poll || !poll.active) {
+      return res.status(404).json({ message: "Poll not found or inactive" });
+    }
+
+    if (!poll.votes) poll.votes = [];
+    const existingVote = poll.votes.find(v => v.user.toString() === req.user._id.toString());
+
+    if (existingVote) {
+      return res.status(400).json({ message: "Already voted" });
+    }
+
+    const optionsToVote = Array.isArray(optionIds) ? optionIds : [optionIds];
+    const maxVotes = poll.allowMultipleVotes ? poll.options.length : 1;
+
+    if (optionsToVote.length > maxVotes) {
+      return res.status(400).json({ message: `Maximum ${maxVotes} vote(s) allowed` });
+    }
+
+    optionsToVote.forEach(optionId => {
+      const option = poll.options.find(o => o._id === optionId);
+      if (option) option.votes += 1;
+    });
+
+    poll.votes.push({
+      user: req.user._id,
+      options: optionsToVote,
+      votedAt: new Date()
+    });
+
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("pollUpdated", { chatId: chat._id, poll });
+    });
+
+    res.json({ message: "Vote recorded", poll });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const endPoll = async (req, res, next) => {
+  try {
+    const { pollId } = req.params;
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const poll = chat.groupInfo.polls?.find(p => p._id === pollId);
+    if (!poll) {
+      return res.status(404).json({ message: "Poll not found" });
+    }
+
+    const requester = chat.participants.find(p => p.user.toString() === req.user._id.toString());
+    const isCreator = poll.createdBy.toString() === req.user._id.toString();
+
+    if (!isCreator && requester?.role !== "admin") {
+      return res.status(403).json({ message: "Only poll creator or admin can end poll" });
+    }
+
+    poll.active = false;
+    poll.endedAt = new Date();
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("pollEnded", { chatId: chat._id, pollId });
+    });
+
+    res.json({ message: "Poll ended", poll });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================================================
+// Event Controllers
+// ============================================================================
+
+export const createEvent = async (req, res, next) => {
+  try {
+    const { title, description, date, location, isOnline, onlineLink, sendReminder } = req.body;
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const event = {
+      _id: crypto.randomBytes(16).toString("hex"),
+      title,
+      description: description || "",
+      date: new Date(date),
+      location: location || "",
+      isOnline: isOnline || false,
+      onlineLink: onlineLink || "",
+      createdBy: req.user._id,
+      createdAt: new Date(),
+      rsvps: [],
+      sendReminder: sendReminder || false,
+    };
+
+    if (!chat.groupInfo.events) chat.groupInfo.events = [];
+    chat.groupInfo.events.push(event);
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("eventCreated", { chatId: chat._id, event });
+    });
+
+    res.status(201).json(event);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getEvents = async (req, res, next) => {
+  try {
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const events = chat.groupInfo.events || [];
+    res.json(events);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rsvpEvent = async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const { status } = req.body; // 'going', 'maybe', 'not-going'
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const event = chat.groupInfo.events?.find(e => e._id === eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (!event.rsvps) event.rsvps = [];
+    const existingRsvp = event.rsvps.find(r => r.user.toString() === req.user._id.toString());
+
+    if (existingRsvp) {
+      existingRsvp.status = status;
+      existingRsvp.updatedAt = new Date();
+    } else {
+      event.rsvps.push({
+        user: req.user._id,
+        status,
+        createdAt: new Date()
+      });
+    }
+
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("eventUpdated", { chatId: chat._id, event });
+    });
+
+    res.json({ message: "RSVP recorded", event });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteEvent = async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const event = chat.groupInfo.events?.find(e => e._id === eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    const requester = chat.participants.find(p => p.user.toString() === req.user._id.toString());
+    const isCreator = event.createdBy.toString() === req.user._id.toString();
+
+    if (!isCreator && requester?.role !== "admin") {
+      return res.status(403).json({ message: "Only event creator or admin can delete" });
+    }
+
+    chat.groupInfo.events = chat.groupInfo.events.filter(e => e._id !== eventId);
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("eventDeleted", { chatId: chat._id, eventId });
+    });
+
+    res.json({ message: "Event deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================================================
+// Announcement Controllers
+// ============================================================================
+
+export const createAnnouncement = async (req, res, next) => {
+  try {
+    const { title, content, isPinned, attachments, targetAudience } = req.body;
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const requester = chat.participants.find(p => p.user.toString() === req.user._id.toString());
+    if (requester?.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can create announcements" });
+    }
+
+    const announcement = {
+      _id: crypto.randomBytes(16).toString("hex"),
+      title,
+      content,
+      isPinned: isPinned || false,
+      attachments: attachments || [],
+      targetAudience: targetAudience || "all",
+      createdBy: req.user._id,
+      createdAt: new Date(),
+      likes: 0,
+      comments: [],
+    };
+
+    if (!chat.groupInfo.announcements) chat.groupInfo.announcements = [];
+    chat.groupInfo.announcements.unshift(announcement);
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("announcementCreated", { chatId: chat._id, announcement });
+    });
+
+    res.status(201).json(announcement);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAnnouncements = async (req, res, next) => {
+  try {
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const announcements = chat.groupInfo.announcements || [];
+    res.json(announcements);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const pinAnnouncement = async (req, res, next) => {
+  try {
+    const { announcementId } = req.params;
+    const { pinned } = req.body;
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const announcement = chat.groupInfo.announcements?.find(a => a._id === announcementId);
+    if (!announcement) {
+      return res.status(404).json({ message: "Announcement not found" });
+    }
+
+    const requester = chat.participants.find(p => p.user.toString() === req.user._id.toString());
+    if (requester?.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can pin announcements" });
+    }
+
+    if (pinned) {
+      chat.groupInfo.announcements.forEach(a => {
+        if (a.isPinned && a._id !== announcementId) a.isPinned = false;
+      });
+      announcement.isPinned = true;
+    } else {
+      announcement.isPinned = false;
+    }
+
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("announcementUpdated", { chatId: chat._id, announcement });
+    });
+
+    res.json({ message: "Announcement updated", announcement });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAnnouncement = async (req, res, next) => {
+  try {
+    const { announcementId } = req.params;
+    const chat = await Chat.findById(req.params.id);
+
+    if (!chat || chat.type !== "group") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const announcement = chat.groupInfo.announcements?.find(a => a._id === announcementId);
+    if (!announcement) {
+      return res.status(404).json({ message: "Announcement not found" });
+    }
+
+    const requester = chat.participants.find(p => p.user.toString() === req.user._id.toString());
+    const isCreator = announcement.createdBy.toString() === req.user._id.toString();
+
+    if (!isCreator && requester?.role !== "admin") {
+      return res.status(403).json({ message: "Only creator or admin can delete" });
+    }
+
+    chat.groupInfo.announcements = chat.groupInfo.announcements.filter(a => a._id !== announcementId);
+    await chat.save();
+
+    const io = req.app.get("io");
+    chat.participants.forEach(p => {
+      io.to(p.user.toString()).emit("announcementDeleted", { chatId: chat._id, announcementId });
+    });
+
+    res.json({ message: "Announcement deleted" });
+  } catch (error) {
+    next(error);
+  }
+};

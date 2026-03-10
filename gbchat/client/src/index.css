@@ -7,9 +7,28 @@
     @apply box-border;
   }
 
+  html {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
   body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
     @apply antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
   }
 
   /* Safe area for notched devices */
@@ -21,17 +40,27 @@
   ::-webkit-scrollbar {
     @apply w-2;
   }
-  
+
   ::-webkit-scrollbar-track {
     @apply bg-gray-100 dark:bg-gray-800;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     @apply bg-gray-400 dark:bg-gray-600 rounded-full;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-500 dark:bg-gray-500;
+  }
+
+  /* Prevent pull-to-refresh on mobile */
+  body {
+    overscroll-behavior: none;
+  }
+
+  /* Prevent touch actions that cause refresh/zoom */
+  html, body, #root {
+    touch-action: manipulation;
   }
 }
 

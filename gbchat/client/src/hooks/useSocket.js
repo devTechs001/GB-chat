@@ -11,7 +11,9 @@ const useSocket = () => {
   const socketRef = useRef(null)
   const reconnectAttempts = useRef(0)
   const maxReconnectAttempts = 5
-  const { user, token, updateUserData } = useAuthStore()
+  const { user, updateUserData } = useAuthStore()
+  // Get token directly from localStorage for socket auth
+  const token = localStorage.getItem('token')
   const {
     receiveMessage,
     setTyping,

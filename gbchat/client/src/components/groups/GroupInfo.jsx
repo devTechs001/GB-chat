@@ -117,7 +117,7 @@ const GroupInfo = ({ group, isOpen, onClose, onUpdate }) => {
             </p>
           )}
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-            Created {formatDistanceToNow(new Date(group.createdAt), { addSuffix: true })}
+            Created {group.createdAt ? formatDistanceToNow(new Date(group.createdAt), { addSuffix: true }) : 'recently'}
           </p>
         </div>
 
