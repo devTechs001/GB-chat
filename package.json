@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node gbchat/server/index.js",
-    "build": "cd gbchat/client && npm install && npm run build",
+    "build": "cd gbchat/server && npm install && cd ../client && npm install && npm run build",
     "install:client": "cd gbchat/client && npm install",
     "install:server": "cd gbchat/server && npm install"
   }
