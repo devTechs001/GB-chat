@@ -7,7 +7,7 @@ services:
     plan: starter
     branch: main
     rootDir: gbchat/server
-    buildCommand: npm install
+    buildCommand: npm ci --production=false
     startCommand: node index.js
     envVars:
       - key: NODE_ENV
