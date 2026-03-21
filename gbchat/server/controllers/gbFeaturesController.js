@@ -69,37 +69,56 @@ export const updateGBFeatures = async (req, res) => {
 export const toggleFeature = async (req, res) => {
   try {
     const { feature, section } = req.body;
-    
+
     if (!feature || !section) {
       return res.status(400).json({
         success: false,
         message: 'Feature and section are required'
       });
     }
-    
+
     let features = await GBFeatures.findOne({ userId: req.user._id });
-    
+
     if (!features) {
       features = new GBFeatures({ userId: req.user._id });
     }
+
+    // Handle nested structure (e.g., privacy.hideOnlineStatus)
+    const featureParts = feature.split('.');
+    let currentValue = features[section];
     
-    // Toggle the feature
-    if (features[section] && typeof features[section][feature] === 'boolean') {
-      features[section][feature] = !features[section][feature];
+    // Navigate to nested property
+    for (let i = 0; i < featureParts.length - 1; i++) {
+      if (currentValue && currentValue[featureParts[i]]) {
+        currentValue = currentValue[featureParts[i]];
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid feature path'
+        });
+      }
+    }
+    
+    const lastPart = featureParts[featureParts.length - 1];
+    
+    // Toggle the boolean value
+    if (typeof currentValue[lastPart] === 'boolean') {
+      currentValue[lastPart] = !currentValue[lastPart];
       await features.save();
-      
+
       res.json({
         success: true,
-        message: `Feature ${feature} ${features[section][feature] ? 'enabled' : 'disabled'}`,
+        message: `Feature ${feature} ${currentValue[lastPart] ? 'enabled' : 'disabled'}`,
         data: features
       });
     } else {
       res.status(400).json({
         success: false,
-        message: 'Invalid feature or section'
+        message: 'Feature is not a boolean toggle'
       });
     }
   } catch (error) {
+    console.error('Toggle feature error:', error);
     res.status(500).json({
       success: false,
       message: 'Error toggling feature',

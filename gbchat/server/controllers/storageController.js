@@ -12,112 +12,139 @@ const __dirname = path.dirname(__filename);
 // @desc    Get storage usage
 // @route   GET /api/storage/usage
 // @access  Private
-export const getStorageUsage = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+export const getStorageUsage = async (req, res) => {
+  try {
+    const userId = req.user._id;
 
-  // Find all chats the user is part of
-  const chats = await Chat.find({ 'participants.user': userId });
-  const chatIds = chats.map(chat => chat._id);
-
-  // Find all messages
-  const messages = await Message.find({ 
-    chat: { $in: chatIds },
-    deletedFor: { $nin: [userId] }
-  });
-
-  // Calculate storage by type
-  let imagesSize = 0;
-  let videosSize = 0;
-  let documentsSize = 0;
-  let audioSize = 0;
-  let otherSize = 0;
-
-  const uploadsDir = path.join(__dirname, '../uploads');
-  
-  // Calculate sizes (in a real app, you'd get actual file sizes from storage)
-  messages.forEach(msg => {
-    if (msg.media && msg.media.url) {
-      const mediaType = msg.media.type || 'other';
-      // Estimate size based on type (in bytes)
-      const estimatedSize = msg.media.size || (
-        mediaType.startsWith('image') ? 500 * 1024 : // 500KB for images
-        mediaType.startsWith('video') ? 5 * 1024 * 1024 : // 5MB for videos
-        mediaType.startsWith('audio') ? 1 * 1024 * 1024 : // 1MB for audio
-        mediaType === 'document' ? 2 * 1024 * 1024 : // 2MB for documents
-        100 * 1024 // 100KB for other
-      );
-
-      if (mediaType.startsWith('image')) {
-        imagesSize += estimatedSize;
-      } else if (mediaType.startsWith('video')) {
-        videosSize += estimatedSize;
-      } else if (mediaType.startsWith('audio')) {
-        audioSize += estimatedSize;
-      } else if (mediaType === 'document') {
-        documentsSize += estimatedSize;
-      } else {
-        otherSize += estimatedSize;
-      }
+    // Find all chats the user is part of
+    const chats = await Chat.find({ 'participants.user': userId });
+    
+    if (!chats || chats.length === 0) {
+      return res.json({
+        totalUsed: 0,
+        totalStorage: 5 * 1024 * 1024 * 1024,
+        percentageUsed: 0,
+        imagesSize: 0,
+        videosSize: 0,
+        documentsSize: 0,
+        audioSize: 0,
+        otherSize: 0,
+        chatStorage: []
+      });
     }
-  });
 
-  const totalUsed = imagesSize + videosSize + documentsSize + audioSize + otherSize;
-  const totalStorage = 5 * 1024 * 1024 * 1024; // 5GB default storage
+    const chatIds = chats.map(chat => chat._id);
 
-  // Calculate storage per chat
-  const chatStorage = await Promise.all(
-    chats.map(async (chat) => {
-      const chatMessages = await Message.find({ 
-        chat: chat._id,
-        deletedFor: { $nin: [userId] }
-      });
+    // Find all messages
+    const messages = await Message.find({
+      chat: { $in: chatIds },
+      deletedFor: { $nin: [userId] }
+    });
 
-      let chatSize = 0;
-      chatMessages.forEach(msg => {
-        if (msg.media && msg.media.size) {
-          chatSize += msg.media.size;
-        } else if (msg.media && msg.media.url) {
-          const mediaType = msg.media.type || 'other';
-          chatSize += (
-            mediaType.startsWith('image') ? 500 * 1024 :
-            mediaType.startsWith('video') ? 5 * 1024 * 1024 :
-            mediaType.startsWith('audio') ? 1 * 1024 * 1024 :
-            mediaType === 'document' ? 2 * 1024 * 1024 :
-            100 * 1024
-          );
+    // Calculate storage by type
+    let imagesSize = 0;
+    let videosSize = 0;
+    let documentsSize = 0;
+    let audioSize = 0;
+    let otherSize = 0;
+
+    // Calculate sizes (in a real app, you'd get actual file sizes from storage)
+    messages.forEach(msg => {
+      if (msg.media && msg.media.url) {
+        const mediaType = msg.media.type || 'other';
+        // Estimate size based on type (in bytes)
+        const estimatedSize = msg.media.size || (
+          mediaType.startsWith('image') ? 500 * 1024 : // 500KB for images
+          mediaType.startsWith('video') ? 5 * 1024 * 1024 : // 5MB for videos
+          mediaType.startsWith('audio') ? 1 * 1024 * 1024 : // 1MB for audio
+          mediaType === 'document' ? 2 * 1024 * 1024 : // 2MB for documents
+          100 * 1024 // 100KB for other
+        );
+
+        if (mediaType.startsWith('image')) {
+          imagesSize += estimatedSize;
+        } else if (mediaType.startsWith('video')) {
+          videosSize += estimatedSize;
+        } else if (mediaType.startsWith('audio')) {
+          audioSize += estimatedSize;
+        } else if (mediaType === 'document') {
+          documentsSize += estimatedSize;
+        } else {
+          otherSize += estimatedSize;
         }
-      });
+      }
+    });
 
-      return {
-        _id: chat._id,
-        name: chat.name || chat.participants.find(p => p.user.toString() !== userId.toString())?.user?.fullName || 'Unknown',
-        avatar: chat.participants.find(p => p.user.toString() !== userId.toString())?.user?.avatar || '',
-        storageUsed: chatSize,
-        messageCount: chatMessages.length,
-      };
-    })
-  );
+    const totalUsed = imagesSize + videosSize + documentsSize + audioSize + otherSize;
+    const totalStorage = 5 * 1024 * 1024 * 1024; // 5GB default storage
 
-  // Sort by storage used
-  chatStorage.sort((a, b) => b.storageUsed - a.storageUsed);
+    // Calculate storage per chat
+    const chatStorage = await Promise.all(
+      chats.map(async (chat) => {
+        try {
+          const chatMessages = await Message.find({
+            chat: chat._id,
+            deletedFor: { $nin: [userId] }
+          });
 
-  res.json({
-    success: true,
-    data: {
-      total: totalStorage,
-      used: totalUsed,
-      available: totalStorage - totalUsed,
-      breakdown: {
-        images: imagesSize,
-        videos: videosSize,
-        documents: documentsSize,
-        audio: audioSize,
-        other: otherSize,
-      },
-      chats: chatStorage.slice(0, 20), // Top 20 chats
-    },
-  });
-});
+          let chatSize = 0;
+          chatMessages.forEach(msg => {
+            if (msg.media && msg.media.size) {
+              chatSize += msg.media.size;
+            } else if (msg.media && msg.media.url) {
+              const mediaType = msg.media.type || 'other';
+              chatSize += (
+                mediaType.startsWith('image') ? 500 * 1024 :
+                mediaType.startsWith('video') ? 5 * 1024 * 1024 :
+                mediaType.startsWith('audio') ? 1 * 1024 * 1024 :
+                mediaType === 'document' ? 2 * 1024 * 1024 :
+                100 * 1024
+              );
+            }
+          });
+
+          const otherParticipants = chat.participants.filter(p => p.user.toString() !== userId.toString());
+          
+          return {
+            _id: chat._id,
+            name: chat.groupInfo?.name || otherParticipants[0]?.user?.fullName || 'Unknown',
+            avatar: chat.groupInfo?.avatar || otherParticipants[0]?.user?.avatar || '',
+            storageUsed: chatSize,
+            messageCount: chatMessages.length,
+          };
+        } catch (error) {
+          console.error('Error calculating chat storage:', error.message);
+          return {
+            _id: chat._id,
+            name: 'Unknown',
+            avatar: '',
+            storageUsed: 0,
+            messageCount: 0,
+          };
+        }
+      })
+    );
+
+    res.json({
+      totalUsed,
+      totalStorage,
+      percentageUsed: (totalUsed / totalStorage) * 100,
+      imagesSize,
+      videosSize,
+      documentsSize,
+      audioSize,
+      otherSize,
+      chatStorage: chatStorage.sort((a, b) => b.storageUsed - a.storageUsed)
+    });
+  } catch (error) {
+    console.error('Storage usage error:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Failed to get storage usage',
+      error: error.message 
+    });
+  }
+};
 
 // @desc    Clear storage by type
 // @route   DELETE /api/storage/clear/:type

@@ -251,8 +251,12 @@ const useAuthStore = create(
           const { data } = await api.post('/users/avatar', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           })
-          // Backend returns user directly
-          set({ user: data })
+          // Add cache-busting timestamp to force refresh
+          const updatedUser = {
+            ...data,
+            avatar: data.avatar + (data.avatar.includes('?') ? '&' : '?') + 't=' + Date.now()
+          }
+          set({ user: updatedUser })
           toast.success('Avatar updated successfully')
           return { success: true }
         } catch (error) {

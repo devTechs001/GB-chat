@@ -42,9 +42,37 @@ const StorageSettings = () => {
   const fetchStorageData = async () => {
     try {
       const { data } = await api.get('/storage/usage')
-      setStorageData(data)
+      // Transform API response to match component structure
+      setStorageData({
+        total: data.totalStorage || data.total || 5 * 1024 * 1024 * 1024,
+        used: data.totalUsed || data.used || 0,
+        percentageUsed: data.percentageUsed || 0,
+        breakdown: data.breakdown || {
+          images: data.imagesSize || 0,
+          videos: data.videosSize || 0,
+          documents: data.documentsSize || 0,
+          audio: data.audioSize || 0,
+          other: data.otherSize || 0,
+        },
+        chats: data.chatStorage || data.chats || [],
+      })
     } catch (error) {
+      console.error('Failed to load storage data:', error)
       toast.error('Failed to load storage data')
+      // Set default values on error
+      setStorageData({
+        total: 5 * 1024 * 1024 * 1024,
+        used: 0,
+        percentageUsed: 0,
+        breakdown: {
+          images: 0,
+          videos: 0,
+          documents: 0,
+          audio: 0,
+          other: 0,
+        },
+        chats: [],
+      })
     } finally {
       setLoading(false)
     }

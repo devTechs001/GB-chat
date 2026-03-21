@@ -35,7 +35,7 @@ const MainLayout = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col relative pb-16 lg:pb-0">
+      <div className="flex-1 flex flex-col relative pb-16 lg:pb-0 overflow-hidden">
         <Outlet context={{
           toggleSidebar: () => setIsSidebarOpen(!isSidebarOpen),
           toggleSidePanel: () => setIsSidePanelOpen(!isSidePanelOpen),

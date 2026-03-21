@@ -39,6 +39,11 @@ import emojiRoutes from "./routes/emojiRoutes.js";
 import translationRoutes from "./routes/translationRoutes.js";
 import gbSettingsRoutes from "./routes/gbSettingsRoutes.js";
 
+// New routes: Permissions, Backup, and Recovery
+import permissionRoutes from "./routes/permissionRoutes.js";
+import backupRoutes from "./routes/backupRoutes.js";
+import recoveryRoutes from "./routes/recoveryRoutes.js";
+
 dotenv.config();
 
 const app = express();
@@ -87,6 +92,11 @@ app.use("/api/chat-display", chatDisplayRoutes);
 app.use("/api/emoji", emojiRoutes);
 app.use("/api/translations", translationRoutes);
 app.use("/api/gb-settings", gbSettingsRoutes);
+
+// Permissions, Backup, and Recovery routes
+app.use("/api/permissions", permissionRoutes);
+app.use("/api/backup", backupRoutes);
+app.use("/api/recovery", recoveryRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

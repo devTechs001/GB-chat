@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -94,8 +95,12 @@ const GroupsPage = () => {
   }
 
   const handleGroupClick = (group) => {
-    setSelectedGroup(group)
-    setIsGroupInfoOpen(true)
+    // Set the group as active chat to open chat area
+    setActiveChat(group)
+    // On mobile, hide the groups page and show chat
+    if (isMobile) {
+      setShowChatList(false)
+    }
   }
 
   const formatTime = (dateString) => {
@@ -228,9 +233,9 @@ const GroupsPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 pb-16">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 pb-16 overflow-hidden">
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl">
+      <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
         <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
         <div className="flex items-center gap-2">
           <button
@@ -250,7 +255,7 @@ const GroupsPage = () => {
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl">
+      <div className="hidden md:flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
         <div>
           <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">{groupsList.length} groups</p>
@@ -275,7 +280,7 @@ const GroupsPage = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="px-4 py-2 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl">
+      <div className="px-4 py-2 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {[
             { id: 'groups', label: 'Groups', icon: UserGroupIcon, count: filterCounts.all },
@@ -314,7 +319,7 @@ const GroupsPage = () => {
       {/* Search & Filters */}
       {activeTab === 'groups' && (
         <>
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-3 flex-shrink-0">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input

@@ -196,10 +196,10 @@ const AppUpdateChecker = () => {
 
   return (
     <>
-      {/* Update Button in Header (optional) */}
+      {/* Update Button in Header (hidden by default - can be enabled if needed) */}
       <button
         onClick={() => checkForUpdates(true)}
-        className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+        className="hidden relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         title="Check for updates"
       >
         <ArrowPathIcon className={clsx('w-5 h-5', checking && 'animate-spin')} />

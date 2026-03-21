@@ -76,14 +76,14 @@ const CallsPage = () => {
   const groupedCalls = groupCallsByDate(filteredCalls)
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950 pb-16">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950 pb-16 overflow-hidden">
       {/* Mobile Header */}
-      <div className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 sticky top-0 z-10">
+      <div className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 sticky top-0 z-10 flex-shrink-0">
         <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">📞 Calls</h1>
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:block bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div className="hidden md:block bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 p-6 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
             📞 Calls

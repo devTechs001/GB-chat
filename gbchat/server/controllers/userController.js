@@ -83,6 +83,7 @@ export const uploadAvatar = async (req, res, next) => {
     }
 
     // Upload to Cloudinary so all users can see the profile image
+    let avatarUrl;
     try {
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: "gbchat/avatars",

@@ -16,8 +16,7 @@ const contactSchema = new mongoose.Schema({
     phoneNumber: {
         type: String,
         required: [true, 'Phone number is required'],
-        trim: true,
-        index: true
+        trim: true
     },
     alternateNumbers: [String],
     email: {
@@ -35,8 +34,7 @@ const contactSchema = new mongoose.Schema({
     },
     isFavorite: {
         type: Boolean,
-        default: false,
-        index: true
+        default: false
     },
     labels: [{
         type: String,

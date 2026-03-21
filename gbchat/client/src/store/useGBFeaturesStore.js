@@ -76,7 +76,7 @@ const useGBFeaturesStore = create((set, get) => ({
   fetchGBFeatures: async () => {
     try {
       const token = localStorage.getItem('token')
-      const { data } = await axios.get('/api/gb-features', {
+      const { data } = await axios.get('/api/gb-settings', {
         headers: { Authorization: `Bearer ${token}` }
       })
       set({ gbFeatures: data.data })
@@ -106,12 +106,12 @@ const useGBFeaturesStore = create((set, get) => ({
   updateGBFeatures: async (section, data) => {
     try {
       const token = localStorage.getItem('token')
-      const { response } = await axios.put(
-        '/api/gb-features',
-        { section, data },
+      const { data: responseData } = await axios.put(
+        `/api/gb-settings/${section}`,
+        { [section]: data },
         { headers: { Authorization: `Bearer ${token}` } }
       )
-      set({ gbFeatures: response.data.data })
+      set({ gbFeatures: responseData.data })
       toast.success('Settings updated')
     } catch (error) {
       toast.error('Failed to update settings')
@@ -135,43 +135,68 @@ const useGBFeaturesStore = create((set, get) => ({
           }
         }
         const { data } = await axios.put(
-          '/api/gb-features',
+          '/api/gb-settings/messaging',
           newData,
           { headers: { Authorization: `Bearer ${token}` } }
         )
         set({ gbFeatures: data.data })
-        toast.success(`DND Mode ${data.data.messaging.dndMode.enabled ? 'enabled' : 'disabled'}`)
+        toast.success(`DND Mode ${data.data.messaging?.dndMode?.enabled ? 'enabled' : 'disabled'}`)
       } else if (settingId === 'readReceipts') {
         // Toggle hideBlueTicks (inverse of read receipts)
         const { data } = await axios.post(
-          '/api/gb-features/toggle',
-          { section: 'privacy', feature: 'hideBlueTicks' },
+          '/api/gb-settings/privacy/read-receipts',
+          { hide: !gbFeatures?.privacy?.hideBlueTicks },
           { headers: { Authorization: `Bearer ${token}` } }
         )
         set({ gbFeatures: data.data })
-        toast.success(`Read Receipts ${data.data.privacy.hideBlueTicks ? 'disabled' : 'enabled'}`)
-      } else if (defaultFeatures.display[settingId] !== undefined) {
-        // Handle display settings
-        const currentVal = gbFeatures?.display?.[settingId] || defaultFeatures.display[settingId]
-        const { data } = await axios.put(
-          '/api/gb-features',
-          { display: { [settingId]: !currentVal } },
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-        set({ gbFeatures: data.data })
-        toast.success(`${settingId} ${!currentVal ? 'enabled' : 'disabled'}`)
-      } else {
-        // Generic toggle for privacy features
+        toast.success(`Read Receipts ${data.data.privacy?.hideBlueTicks ? 'disabled' : 'enabled'}`)
+      } else if (settingId === 'onlineStatus') {
+        // Toggle hideOnlineStatus
         const { data } = await axios.post(
-          '/api/gb-features/toggle',
-          { section: 'privacy', feature: settingId },
+          '/api/gb-settings/privacy/online-status',
+          { hide: !gbFeatures?.privacy?.hideOnlineStatus },
           { headers: { Authorization: `Bearer ${token}` } }
         )
         set({ gbFeatures: data.data })
-        toast.success(`${settingId} ${data.data.privacy[settingId] ? 'enabled' : 'disabled'}`)
+        toast.success(`Online Status ${data.data.privacy?.hideOnlineStatus ? 'hidden' : 'visible'}`)
+      } else if (settingId === 'lastSeen') {
+        // Toggle freezeLastSeen
+        const { data } = await axios.post(
+          '/api/gb-settings/privacy/last-seen',
+          { freeze: !gbFeatures?.privacy?.freezeLastSeen },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        set({ gbFeatures: data.data })
+        toast.success(`Last Seen ${data.data.privacy?.freezeLastSeen ? 'frozen' : 'live'}`)
+      } else {
+        // For other settings, use the individual endpoint if it exists
+        const endpointMap = {
+          'blueTicks': '/api/gb-settings/privacy/read-receipts',
+          'secondTick': '/api/gb-settings/privacy/delivery-receipts',
+          'forwardLabel': '/api/gb-settings/privacy/forward-label',
+          'antiStatusView': '/api/gb-settings/privacy/anti-status-view',
+          'antiDeleteStatus': '/api/gb-settings/privacy/anti-delete-status',
+          'antiRevoke': '/api/gb-settings/privacy/anti-revoke',
+          'viewOnceBypass': '/api/gb-settings/privacy/view-once-bypass',
+          'incognitoMode': '/api/gb-settings/privacy/incognito-mode',
+        }
+        
+        const endpoint = endpointMap[settingId]
+        if (endpoint) {
+          const { data } = await axios.post(
+            endpoint,
+            { enable: !gbFeatures?.privacy?.[settingId] },
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          set({ gbFeatures: data.data })
+          toast.success(`${settingId} updated`)
+        } else {
+          toast.error('Setting not available')
+        }
       }
     } catch (error) {
-      toast.error('Failed to update setting')
+      console.error('Quick setting toggle error:', error)
+      toast.error('Failed to update setting: ' + (error.response?.data?.message || ''))
     }
   },
 

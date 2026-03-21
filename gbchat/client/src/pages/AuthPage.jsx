@@ -18,7 +18,7 @@ const AuthPage = () => {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden">
+    <div className="h-screen flex flex-col lg:flex-row overflow-hidden">
       {/* Left Panel - Enhanced Branding with Splash-like effects */}
       <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-8 lg:p-12 relative overflow-hidden">
         {/* Animated mesh background orbs - similar to Splash */}

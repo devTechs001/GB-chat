@@ -227,19 +227,21 @@ const StoryViewer = ({
           <div className="absolute top-4 left-0 right-0 px-4 flex items-center justify-between pointer-events-none">
             <div className="flex items-center gap-3">
               <Avatar
-                src={story.user.avatar}
-                alt={story.user.name}
+                src={story.user?.avatar || null}
+                alt={story.user?.name || 'User'}
                 size="sm"
                 className="ring-2 ring-white/50"
               />
               <div>
                 <p className="text-white font-medium text-sm">
-                  {story.user.name}
+                  {story.user?.name || 'Unknown User'}
                 </p>
                 <p className="text-white/70 text-xs">
-                  {formatDistanceToNow(new Date(currentStoryItem.createdAt), {
-                    addSuffix: true,
-                  })}
+                  {currentStoryItem?.createdAt 
+                    ? formatDistanceToNow(new Date(currentStoryItem.createdAt), {
+                        addSuffix: true,
+                      })
+                    : 'Just now'}
                 </p>
               </div>
             </div>

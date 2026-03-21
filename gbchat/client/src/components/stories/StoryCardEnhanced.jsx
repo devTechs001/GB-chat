@@ -129,10 +129,14 @@ const StoryCard = ({
         <div className="flex items-center justify-center gap-1 mt-0.5">
           {story.createdAt && (
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date(story.createdAt).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {story.createdAt ? (
+                new Date(story.createdAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              ) : (
+                'Recent'
+              )}
             </p>
           )}
           {hasUnviewed && !isOwn && (
