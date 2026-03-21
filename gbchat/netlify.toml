@@ -11,20 +11,20 @@
   NPM_CONFIG_PRODUCTION = "false"
 
 # Environment variables - MUST be set in Netlify dashboard
-# VITE_API_URL = "https://your-backend.onrender.com/api"
-# VITE_SOCKET_URL = "https://your-backend.onrender.com"
+# VITE_API_URL = "https://gb-chat-backend.onrender.com/api"
+# VITE_SOCKET_URL = "https://gb-chat-backend.onrender.com"
 
 # API Proxy to Render backend (must be before SPA catch-all)
 [[redirects]]
   from = "/api/*"
-  to = "https://gbchat-enterprise.onrender.com/api/:splat"
+  to = "https://gb-chat-backend.onrender.com/api/:splat"
   status = 200
   force = true
 
 # WebSocket Proxy (must be before SPA catch-all)
 [[redirects]]
   from = "/socket.io/*"
-  to = "https://gbchat-enterprise.onrender.com/socket.io/:splat"
+  to = "https://gb-chat-backend.onrender.com/socket.io/:splat"
   status = 200
   force = true
 
@@ -44,7 +44,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://gbchat-enterprise.onrender.com wss://gbchat-enterprise.onrender.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://gb-chat-backend.onrender.com wss://gb-chat-backend.onrender.com;"
 
 # Cache Static Assets
 [[headers]]
@@ -93,15 +93,15 @@
 
 # Context-specific settings
 [context.production.environment]
-  VITE_API_URL = "https://gbchat-enterprise.onrender.com/api"
-  VITE_SOCKET_URL = "https://gbchat-enterprise.onrender.com"
+  VITE_API_URL = "https://gb-chat-backend.onrender.com/api"
+  VITE_SOCKET_URL = "https://gb-chat-backend.onrender.com"
   VITE_ENABLE_ANALYTICS = "true"
 
 [context.deploy-preview.environment]
-  VITE_API_URL = "https://gbchat-enterprise.onrender.com/api"
-  VITE_SOCKET_URL = "https://gbchat-enterprise.onrender.com"
+  VITE_API_URL = "https://gb-chat-backend.onrender.com/api"
+  VITE_SOCKET_URL = "https://gb-chat-backend.onrender.com"
   VITE_ENABLE_ANALYTICS = "false"
 
 [context.branch-deploy.environment]
-  VITE_API_URL = "https://gbchat-enterprise.onrender.com/api"
-  VITE_SOCKET_URL = "https://gbchat-enterprise.onrender.com"
+  VITE_API_URL = "https://gb-chat-backend.onrender.com/api"
+  VITE_SOCKET_URL = "https://gb-chat-backend.onrender.com"
