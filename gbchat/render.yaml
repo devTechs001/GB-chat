@@ -7,8 +7,8 @@ services:
     plan: starter
     branch: main
     rootDir: server
-    buildCommand: npm install
-    startCommand: node index.js
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
