@@ -29,9 +29,9 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: CLIENT_URL
-        sync: false
+        value: https://devtechs001.github.io,https://gbchat.netlify.app
       - key: CORS_ORIGIN
-        sync: false
+        value: https://devtechs001.github.io,https://gbchat.netlify.app
       - key: REDIS_URL
         sync: false
     disk:
