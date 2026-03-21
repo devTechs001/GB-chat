@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "start": "node gbchat/server/index.js",
-    "build": "cd gbchat/server && npm install && cd ../client && npm install && npm run build",
+    "build": "cd gbchat/server && npm install",
     "install:client": "cd gbchat/client && npm install",
-    "install:server": "cd gbchat/server && npm install"
+    "install:server": "cd gbchat/server && npm install",
+    "deploy:gh-pages": "cd gbchat/client && npm install && npm run build && npx gh-pages -d dist"
   }
 }

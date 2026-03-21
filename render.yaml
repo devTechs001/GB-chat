@@ -39,7 +39,9 @@ services:
       mountPath: /opt/render/project/src/uploads
       sizeGB:1
 
-  # Frontend Client (Web Service - serves React app)
+  # Frontend Client (GitHub Pages - static hosting)
+  # Note: Frontend now deployed via GitHub Pages at https://devtechs001.github.io/GB-chat
+  # This service can be removed or kept for alternative deployment
   - type: web
     name: gbchat-client
     env: node
