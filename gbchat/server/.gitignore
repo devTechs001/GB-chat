@@ -1,0 +1,111 @@
+# Server .gitignore - Node.js Backend
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ============================================
+# ENVIRONMENT VARIABLES & SECRETS - CRITICAL
+# ============================================
+# NEVER commit these files - they contain sensitive data
+
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.*.local
+
+# Backup env files
+*.env.bak
+*.env.backup
+*.env.old
+
+# ============================================
+# CREDENTIALS & API KEYS
+# ============================================
+# Cloudinary
+cloudinary-config.json
+.cloudinary.*
+
+# Firebase
+firebase-*.json
+service-account*.json
+*-firebase-adminsdk*.json
+
+# Google
+google-*.json
+google-credentials.json
+oauth-*.json
+
+# AWS
+.aws/credentials
+aws-*.json
+
+# Stripe
+stripe-keys.json
+
+# Twilio
+twilio-config.json
+
+# ============================================
+# PRIVATE KEYS & CERTIFICATES
+# ============================================
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+*.ppk
+*.crt
+*.cer
+*.der
+
+# ============================================
+# DATABASE FILES
+# ============================================
+*.sqlite
+*.sqlite3
+*.db
+data.db
+dump/
+
+# ============================================
+# UPLOADS & USER CONTENT
+# ============================================
+uploads/
+public/uploads/
+temp/
+tmp/
+avatars/
+media/
+files/
+
+# ============================================
+# CACHE & TEMP
+# ============================================
+.cache/
+.eslintcache
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
