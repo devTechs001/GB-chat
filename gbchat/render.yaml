@@ -7,8 +7,8 @@ services:
     plan: starter
     branch: main
     rootDir: server
-    buildCommand: cd server && npm install
-    startCommand: cd server && node index.js
+    buildCommand: npm install
+    startCommand: node index.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -30,9 +30,9 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: CLIENT_URL
-        value: https://gbchat.netlify.app
+        value: https://devtechs001.github.io,https://gbchat.netlify.app
       - key: CORS_ORIGIN
-        value: https://gbchat.netlify.app
+        value: https://devtechs001.github.io,https://gbchat.netlify.app
       - key: EMAIL_HOST
         value: smtp.gmail.com
       - key: EMAIL_PORT
