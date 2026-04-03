@@ -172,6 +172,11 @@ const AuthPage = () => {
         </div>
 
         <div className="w-full max-w-md relative z-10">
+          {/* Scrollable container for register form */}
+          <div className={clsx(
+            'transition-all duration-300',
+            activeTab === 'register' ? 'max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent pr-2' : ''
+          )}>
           {/* Mobile Logo - Enhanced */}
           <div className="lg:hidden text-center mb-8">
             <motion.div
@@ -291,6 +296,7 @@ const AuthPage = () => {
                 </p>
               </motion.div>
             ))}
+          </div>
           </div>
         </div>
       </div>

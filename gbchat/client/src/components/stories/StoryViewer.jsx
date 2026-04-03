@@ -11,6 +11,9 @@ import {
   SpeakerXMarkIcon,
   DocumentArrowDownIcon,
   CheckCircleIcon,
+  EyeIcon,
+  ShareIcon,
+  ChatBubbleBottomCenterTextIcon,
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon, CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
@@ -35,6 +38,8 @@ const StoryViewer = ({
   const [showReply, setShowReply] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [showMenu, setShowMenu] = useState(false)
+  const [showViewers, setShowViewers] = useState(false)
+  const [views, setViews] = useState(story?.viewedBy?.length || 0)
   const videoRef = useRef(null)
   const progressInterval = useRef(null)
 
@@ -155,6 +160,7 @@ const StoryViewer = ({
   }
 
   const handleScreenTouch = (e) => {
+    if (showViewers) return // Don't navigate if viewers list is open
     const screenWidth = window.innerWidth
     const touchX = e.clientX || e.touches?.[0]?.clientX
     
@@ -224,7 +230,7 @@ const StoryViewer = ({
           </div>
 
           {/* Header */}
-          <div className="absolute top-4 left-0 right-0 px-4 flex items-center justify-between pointer-events-none">
+          <div className="absolute top-4 left-0 right-0 px-4 flex items-center justify-between pointer-events-none z-20">
             <div className="flex items-center gap-3">
               <Avatar
                 src={story.user?.avatar || null}
@@ -284,94 +290,163 @@ const StoryViewer = ({
           )}
 
           {/* Bottom Actions */}
-          <div className="absolute bottom-4 left-0 right-0 px-4">
-            {showReply ? (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleReply()}
-                  placeholder="Send a reply..."
-                  className="flex-1 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white placeholder-white/50 focus:outline-none focus:bg-white/20"
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button
+          <div className="absolute bottom-4 left-0 right-0 px-4 z-20">
+            <div className="flex flex-col items-center gap-4">
+              {/* Views indicator for own stories */}
+              {story.isOwn && !showReply && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleReply()
+                    setShowViewers(true)
+                    setIsPaused(true)
                   }}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-full"
+                  className="flex flex-col items-center gap-1 text-white opacity-80 hover:opacity-100 transition-opacity"
                 >
-                  <PaperAirplaneIcon className="w-5 h-5 text-white" />
-                </button>
-              </motion.div>
-            ) : (
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsLiked(!isLiked)
-                  }}
-                  className="p-3 hover:bg-white/10 rounded-full"
-                  title="React"
+                  <EyeIcon className="w-6 h-6" />
+                  <span className="text-xs font-medium">{views} views</span>
+                </motion.button>
+              )}
+
+              {showReply ? (
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="flex items-center gap-2 w-full max-w-lg"
                 >
-                  {isLiked ? (
-                    <HeartSolidIcon className="w-6 h-6 text-red-500" />
-                  ) : (
-                    <HeartIcon className="w-6 h-6 text-white" />
+                  <input
+                    type="text"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleReply()}
+                    placeholder="Type a reply..."
+                    className="flex-1 px-4 py-3 bg-white/10 backdrop-blur-md rounded-full text-white placeholder-white/50 border border-white/20 focus:outline-none focus:bg-white/20 transition-all"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleReply()
+                    }}
+                    className="p-3 bg-primary-500 hover:bg-primary-600 rounded-full shadow-lg transition-transform active:scale-90"
+                  >
+                    <PaperAirplaneIcon className="w-5 h-5 text-white" />
+                  </button>
+                </motion.div>
+              ) : (
+                <div className="flex items-center justify-center gap-6 w-full max-w-lg">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsLiked(!isLiked)
+                    }}
+                    className="group flex flex-col items-center gap-1"
+                  >
+                    <div className="p-3 hover:bg-white/10 rounded-full transition-colors">
+                      {isLiked ? (
+                        <HeartSolidIcon className="w-7 h-7 text-red-500" />
+                      ) : (
+                        <HeartIcon className="w-7 h-7 text-white" />
+                      )}
+                    </div>
+                  </button>
+
+                  {allowReplies && !story.isOwn && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowReply(true)
+                      }}
+                      className="flex-1 px-8 py-3 bg-white/10 backdrop-blur-md rounded-full text-white font-medium hover:bg-white/20 border border-white/10 transition-all active:scale-95"
+                    >
+                      Reply
+                    </button>
                   )}
-                </button>
 
-                {allowReplies && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowReply(true)
-                    }}
-                    className="px-6 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white hover:bg-white/20"
-                  >
-                    Reply
-                  </button>
-                )}
-
-                {allowSaving && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleSave()
-                    }}
-                    className="p-3 hover:bg-white/10 rounded-full relative"
-                    title="Save story"
-                  >
-                    {isSaved ? (
-                      <CheckCircleSolidIcon className="w-6 h-6 text-green-500" />
-                    ) : (
-                      <DocumentArrowDownIcon className="w-6 h-6 text-white" />
+                  <div className="flex items-center gap-2">
+                    {allowSaving && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleSave()
+                        }}
+                        className="p-3 hover:bg-white/10 rounded-full transition-colors"
+                        title="Save"
+                      >
+                        {isSaved ? (
+                          <CheckCircleSolidIcon className="w-7 h-7 text-green-500" />
+                        ) : (
+                          <DocumentArrowDownIcon className="w-7 h-7 text-white" />
+                        )}
+                      </button>
                     )}
-                  </button>
-                )}
 
-                {allowSharing && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleShare()
-                    }}
-                    className="p-3 hover:bg-white/10 rounded-full"
-                    title="Share story"
-                  >
-                    <PaperAirplaneIcon className="w-6 h-6 text-white" />
-                  </button>
-                )}
-              </div>
-            )}
+                    {allowSharing && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleShare()
+                        }}
+                        className="p-3 hover:bg-white/10 rounded-full transition-colors"
+                        title="Share"
+                      >
+                        <ShareIcon className="w-7 h-7 text-white" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Viewers List Modal */}
+          <AnimatePresence>
+            {showViewers && (
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="absolute inset-x-0 bottom-0 h-[60vh] bg-white dark:bg-gray-900 rounded-t-[2.5rem] z-30 shadow-2xl flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto my-4" />
+                <div className="px-6 py-2 flex items-center justify-between">
+                  <h3 className="text-xl font-bold dark:text-white">Views ({views})</h3>
+                  <button 
+                    onClick={() => {
+                      setShowViewers(false)
+                      setIsPaused(false)
+                    }}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+                  >
+                    <XMarkIcon className="w-6 h-6 dark:text-white" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-2">
+                  {story.viewedBy?.length > 0 ? (
+                    story.viewedBy.map((viewer, idx) => (
+                      <div key={idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-2xl transition-colors">
+                        <Avatar src={viewer.avatar} alt={viewer.name} size="md" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold dark:text-white truncate">{viewer.name}</p>
+                          <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(viewer.at), { addSuffix: true })}</p>
+                        </div>
+                        {viewer.liked && <HeartSolidIcon className="w-5 h-5 text-red-500" />}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
+                      <EyeIcon className="w-12 h-12 opacity-20" />
+                      <p>No views yet</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Navigation hints for desktop */}
           <div className="hidden md:flex absolute inset-y-0 left-0 right-0 pointer-events-none">

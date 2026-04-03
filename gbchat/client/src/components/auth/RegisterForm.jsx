@@ -145,7 +145,7 @@ const RegisterForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Full Name Input */}
       <Input
         label="Full Name"
@@ -162,33 +162,33 @@ const RegisterForm = () => {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex rounded-xl border border-gray-300 dark:border-gray-600 p-1.5 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600"
+        className="flex rounded-lg border border-gray-300 dark:border-gray-600 p-1 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600"
       >
         <button
           type="button"
-          className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-300 ${
+          className={`flex-1 py-2 px-3 text-xs font-medium rounded-md transition-all duration-300 ${
             registrationMethod === 'email'
               ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-md scale-105'
               : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
           onClick={() => setRegistrationMethod('email')}
         >
-          <div className="flex items-center justify-center gap-2">
-            <EnvelopeIcon className="w-4 h-4" />
+          <div className="flex items-center justify-center gap-1.5">
+            <EnvelopeIcon className="w-3.5 h-3.5" />
             Email
           </div>
         </button>
         <button
           type="button"
-          className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-300 ${
+          className={`flex-1 py-2 px-3 text-xs font-medium rounded-md transition-all duration-300 ${
             registrationMethod === 'phone'
               ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-md scale-105'
               : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
           onClick={() => setRegistrationMethod('phone')}
         >
-          <div className="flex items-center justify-center gap-2">
-            <PhoneIcon className="w-4 h-4" />
+          <div className="flex items-center justify-center gap-1.5">
+            <PhoneIcon className="w-3.5 h-3.5" />
             Phone
           </div>
         </button>

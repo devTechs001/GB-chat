@@ -65,7 +65,7 @@ const userSchema = new mongoose.Schema(
       },
       bubbleStyle: {
         type: String,
-        enum: ["rounded", "sharp", "modern", "minimal", "classic", "rounded"],
+        enum: ["rounded", "sharp", "modern", "minimal", "classic"],
         default: "modern",
       },
       chatBackground: { type: String, default: "" },
@@ -109,21 +109,6 @@ const userSchema = new mongoose.Schema(
       },
       readReceipts: { type: Boolean, default: true },
       onlineStatus: { type: Boolean, default: true },
-    },
-    theme: {
-      name: { type: String, default: "default" },
-      wallpaper: { type: String, default: "" },
-      fontSize: {
-        type: String,
-        enum: ["small", "medium", "large"],
-        default: "medium",
-      },
-      bubbleStyle: {
-        type: String,
-        enum: ["rounded", "sharp", "modern", "minimal"],
-        default: "modern",
-      },
-      chatBackground: { type: String, default: "" },
     },
     contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

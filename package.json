@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node gbchat/server/index.js",
+    "start": "cd gbchat/server && node index.js",
     "build": "cd gbchat/server && npm install",
     "install:client": "cd gbchat/client && npm install",
     "install:server": "cd gbchat/server && npm install",

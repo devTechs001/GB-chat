@@ -1,103 +1,158 @@
 // Service Worker for GBChat PWA
-const CACHE_NAME = 'gbchat-v1';
-const urlsToCache = [
+const CACHE_NAME = 'gbchat-cache-v1';
+const STATIC_CACHE_NAME = 'gbchat-static-v1';
+const API_CACHE_NAME = 'gbchat-api-v1';
+
+const CACHE_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.svg',
+  '/notification.mp3'
 ];
 
-// Install event - cache assets
+const STATIC_ASSETS = [
+  '/icons/',
+  '/assets/',
+  '/images/',
+  '/fonts/'
+];
+
+// Install event
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing service worker');
+  
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Cache opened');
-        return cache.addAll(urlsToCache);
-      })
-      .catch((error) => {
-        console.error('[SW] Cache failed to open:', error);
-      })
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[SW] Cache opened');
+      return cache.addAll(CACHE_URLS);
+    }).catch((error) => {
+      console.error('[SW] Install failed:', error);
+    })
   );
-  self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating service worker');
+  
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
+        cacheNames
+          .filter((cacheName) => cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE_NAME && cacheName !== API_CACHE_NAME)
+          .map((cacheName) => caches.delete(cacheName))
       );
     })
   );
-  self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event
 self.addEventListener('fetch', (event) => {
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
+  const request = event.request;
+  const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          // Return cached response and update cache in background
-          event.waitUntil(
-            fetch(event.request)
-              .then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200) {
-                  const cacheForUpdate = caches.open(CACHE_NAME);
-                  cacheForUpdate.then((cache) => {
-                    cache.put(event.request, networkResponse.clone());
-                  });
-                }
-              })
-              .catch(() => {
-                // Network failed, cached response is used
-              })
-          );
-          return cachedResponse;
+  // Handle static assets
+  if (STATIC_ASSETS.some(asset => url.pathname.startsWith(asset))) {
+    event.respondWith(
+      caches.match(request).then((response) => {
+        if (response) {
+          return response;
         }
-
-        // Not in cache - fetch from network
-        return fetch(event.request)
-          .then((response) => {
-            // Don't cache non-successful responses
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          })
-          .catch((error) => {
-            console.error('[SW] Fetch failed:', error);
-            // Return offline fallback if available
-            return caches.match('/index.html');
-          });
+        
+        // Try to fetch from network
+        return fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            // Cache the successful response
+            caches.open(STATIC_CACHE_NAME).then((cache) => {
+              cache.put(request, networkResponse.clone());
+            });
+            return networkResponse;
+          }
+          
+          // Return error response if network fails
+          return new Response('Asset not found', { status: 404 });
+        }).catch((error) => {
+          console.error('[SW] Static asset fetch error:', error);
+          return new Response('Network error', { status: 500 });
+        });
       })
+    );
+    return;
+  }
+
+  // Handle API requests
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      caches.match(request).then((response) => {
+        if (response) {
+          // Return cached version if available
+          return response;
+        }
+        
+        // Fetch from network
+        return fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            // Cache successful API responses
+            if (request.method === 'GET') {
+              caches.open(API_CACHE_NAME).then((cache) => {
+                cache.put(request, networkResponse.clone());
+              });
+            }
+            return networkResponse;
+          }
+          
+          return networkResponse;
+        }).catch((error) => {
+          console.error('[SW] API fetch error:', error);
+          return new Response('Network error', { status: 500 });
+        });
+      })
+    );
+    return;
+  }
+
+  // Handle navigation requests
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      caches.match(request).then((response) => {
+        if (response) {
+          return response;
+        }
+        
+        return fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            // Cache successful navigation responses
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, networkResponse.clone());
+            });
+            return networkResponse;
+          }
+          
+          return networkResponse;
+        }).catch((error) => {
+          console.error('[SW] Navigation fetch error:', error);
+          return new Response('Network error', { status: 500 });
+        });
+      })
+    );
+    return;
+  }
+
+  // For all other requests, try network first
+  event.respondWith(
+    fetch(request).catch((error) => {
+      console.error('[SW] Fetch error:', error);
+      return new Response('Network error', { status: 500 });
+    })
   );
+});
+
+// Message event for communication with client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Push notification event

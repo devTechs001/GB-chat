@@ -11,7 +11,9 @@ import {
   CalendarIcon,
   MapPinIcon,
   LinkIcon,
-  UserGroupIcon,
+  BellIcon,
+  MusicalNoteIcon,
+  FingerPrintIcon,
 } from '@heroicons/react/24/outline'
 import Avatar from '../components/common/Avatar'
 import Button from '../components/common/Button'
@@ -27,8 +29,10 @@ const ProfilePage = () => {
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('media') // media, groups, links
+  const [activeTab, setActiveTab] = useState('media') // media, groups, links, docs
   const [sharedMedia, setSharedMedia] = useState([])
+  const [showRingtones, setShowRingtones] = useState(false)
+  const [showPermissions, setShowPermissions] = useState(false)
 
   useEffect(() => {
     fetchProfile()
@@ -187,6 +191,28 @@ const ProfilePage = () => {
 
       {/* Info Sections */}
       <div className="mt-2 bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+        {/* Quick Access Actions */}
+        <div className="p-4 grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setShowPermissions(true)}
+            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <ShieldCheckIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <span className="text-sm font-medium">Permissions</span>
+          </button>
+          <button
+            onClick={() => setShowRingtones(true)}
+            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <MusicalNoteIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <span className="text-sm font-medium">Ringtones</span>
+          </button>
+        </div>
+
         {/* About */}
         {profile.about && (
           <div className="p-6">
@@ -296,7 +322,7 @@ const ProfilePage = () => {
       <div className="mt-2 bg-white dark:bg-gray-900">
         <div className="border-b border-gray-200 dark:border-gray-700">
           <div className="flex">
-            {['media', 'links', 'docs'].map((tab) => (
+            {['media', 'links', 'docs', 'groups'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -348,8 +374,107 @@ const ProfilePage = () => {
               No documents shared yet
             </div>
           )}
+
+          {activeTab === 'groups' && (
+            <div className="space-y-2">
+              {profile.commonGroups?.length > 0 ? (
+                profile.commonGroups.map((group) => (
+                  <div
+                    key={group._id}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    <Avatar src={group.avatar} alt={group.name} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{group.name}</p>
+                      <p className="text-xs text-gray-500">{group.memberCount} members</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No common groups
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Ringtones Modal */}
+      {showRingtones && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold">Custom Notifications</h3>
+                <button onClick={() => setShowRingtones(false)}>
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                  <div>
+                    <p className="font-medium">Message Tone</p>
+                    <p className="text-sm text-gray-500">Default (Note)</p>
+                  </div>
+                  <MusicalNoteIcon className="w-5 h-5 text-primary-500" />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                  <div>
+                    <p className="font-medium">Ringtone</p>
+                    <p className="text-sm text-gray-500">Default (Reflection)</p>
+                  </div>
+                  <BellIcon className="w-5 h-5 text-primary-500" />
+                </div>
+                <div className="flex items-center gap-3 p-4">
+                  <input type="checkbox" className="w-5 h-5 rounded text-primary-500" />
+                  <span className="text-sm">Use custom notifications</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Permissions Modal */}
+      {showPermissions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold">Privacy & Permissions</h3>
+                <button onClick={() => setShowPermissions(false)}>
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheckIcon className="w-5 h-5 text-green-500" />
+                    <span>Disappearing Messages</span>
+                  </div>
+                  <span className="text-xs font-medium text-gray-500">Off</span>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <FingerPrintIcon className="w-5 h-5 text-blue-500" />
+                    <span>Lock Chat</span>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded text-primary-500" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

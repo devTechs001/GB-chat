@@ -42,7 +42,7 @@ const deviceSchema = new mongoose.Schema(
       required: true,
     },
     qrCode: {
-      type: String, // Store QR code data temporarily
+      type: String,
       expiresAt: Date,
     },
     isActive: {
@@ -90,7 +90,6 @@ deviceSchema.pre("save", async function (next) {
 });
 
 // Index for efficient queries
-deviceSchema.index({ deviceToken: 1 });
 deviceSchema.index({ sessionToken: 1 });
 deviceSchema.index({ user: 1, isActive: 1 });
 
