@@ -7,7 +7,7 @@ services:
     plan: starter
     branch: main
     rootDir: server
-    buildCommand: npm install
+    buildCommand: npm ci --production=false
     startCommand: node index.js
     healthCheckPath: /api/health
     envVars:
