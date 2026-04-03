@@ -39,15 +39,14 @@ import {
   ArchiveBoxIcon,
   TrashIcon,
   UserMinusIcon,
-  CrownIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
+  LightBulbIcon,
 } from '@heroicons/react/24/outline'
 import {
   PlusIcon as PlusIconSolid,
   StarIcon as StarIconSolid,
   CheckCircleIcon as CheckCircleSolidIcon,
-  CrownIcon as CrownIconSolid,
   FireIcon as FireIconSolid,
 } from '@heroicons/react/24/solid'
 import Button from '../components/common/Button'
@@ -434,7 +433,7 @@ const GroupsPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 pb-16 overflow-hidden">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 pb-16 overflow-hidden scrollbar-hide">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
         <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
@@ -788,7 +787,7 @@ const GroupsPage = () => {
       )}
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         {activeTab === 'groups' && (
           <div className={clsx(
             viewMode === 'grid' ? 'p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 
@@ -875,7 +874,7 @@ const GroupsPage = () => {
                             {group.name}
                           </h3>
                           {group.isAdmin && (
-                            <CrownIconSolid className="w-4 h-4 text-yellow-500" />
+                            <StarIconSolid className="w-4 h-4 text-yellow-500" />
                           )}
                           {group.isMuted && (
                             <BellIcon className="w-4 h-4 text-gray-400" />

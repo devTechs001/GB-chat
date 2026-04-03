@@ -49,21 +49,64 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    @apply w-2;
+  /* Hide scrollbars globally while maintaining functionality */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
   }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-800;
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
+    width: 0px;
+    background: transparent;
   }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-gray-400 dark:bg-gray-600 rounded-full;
+  *::-webkit-scrollbar-track {
+    display: none;
+    background: transparent;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500 dark:bg-gray-500;
+  *::-webkit-scrollbar-thumb {
+    display: none;
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-corner {
+    display: none;
+    background: transparent;
+  }
+
+  /* Hide scrollbars for specific elements */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Alternative scrollbar hiding for webkit browsers */
+  .scrollbar-hide::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  /* Hide scrollbars but keep scrolling functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* For mobile browsers */
+  @supports (-webkit-touch-callout: none) {
+    * {
+      -webkit-overflow-scrolling: touch;
+    }
   }
 
   /* Prevent pull-to-refresh on mobile */
@@ -78,6 +121,36 @@
 }
 
 @layer components {
+  /* Scrollbar hiding utilities */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 
            focus:outline-none focus:ring-2 focus:ring-offset-2 

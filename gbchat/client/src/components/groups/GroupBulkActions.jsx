@@ -8,8 +8,8 @@ import {
   BellIcon,
   StarIcon,
   TrashIcon,
-  DownloadIcon,
-  UploadIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
   EyeIcon,
   LinkIcon,
   DocumentTextIcon,
@@ -253,7 +253,7 @@ const GroupBulkActions = ({
             <div className="grid grid-cols-2 gap-3">
               {[
                 { id: 'json', label: 'JSON', description: 'Machine-readable format', icon: DocumentTextIcon },
-                { id: 'csv', label: 'CSV', description: 'Spreadsheet format', icon: UploadIcon },
+                { id: 'csv', label: 'CSV', description: 'Spreadsheet format', icon: ArrowDownTrayIcon },
                 { id: 'pdf', label: 'PDF', description: 'Print-friendly format', icon: PhotoIcon },
                 { id: 'link', label: 'Share Link', description: 'Public shareable link', icon: LinkIcon },
               ].map((format) => {

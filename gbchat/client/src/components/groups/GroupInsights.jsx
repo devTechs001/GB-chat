@@ -5,7 +5,7 @@ import {
   UsersIcon,
   ChatBubbleLeftRightIcon,
   CalendarIcon,
-  TrendingUpIcon,
+  ArrowTrendingUpIcon,
   FireIcon,
   ClockIcon,
   EyeIcon,
@@ -118,7 +118,7 @@ const GroupInsights = ({ groups, onClose }) => {
           
           <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
             <div className="flex items-center justify-between mb-2">
-              <TrendingUpIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <ArrowTrendingUpIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">Active</span>
             </div>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">{insights.activeGroups}</div>

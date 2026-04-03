@@ -282,8 +282,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
       <div
         ref={chatContainerRef}
         className={clsx(
-          'flex-1 overflow-y-auto px-3 md:px-4 py-4 relative',
-          'scrollbar-thin scrollbar-thumb-gray-400'
+          'flex-1 overflow-y-auto px-3 md:px-4 py-4 relative scrollbar-hide'
         )}
         style={{
           backgroundImage: currentChatWallpaper

@@ -89,7 +89,7 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full scrollbar-hide">
       {/* Mobile Header with Menu Button */}
       {isMobile && showChatList && (
         <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4">
@@ -119,7 +119,7 @@ const ChatPage = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden scrollbar-hide">
         {/* Chat List - Conditional rendering on mobile */}
         <motion.div
           initial={false}
