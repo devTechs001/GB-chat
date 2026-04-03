@@ -19,9 +19,9 @@ import {
   UsersIcon,
   XMarkIcon,
   CheckCircleIcon,
-  PinIcon,
+  StarIcon,
 } from '@heroicons/react/24/outline'
-import { PinIcon as PinIconSolid } from '@heroicons/react/24/solid'
+import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import Button from '../common/Button'
 import Input from '../common/Input'
 import TextArea from '../common/TextArea'
@@ -163,9 +163,9 @@ const AnnouncementCreator = ({ groupId, onClose, onSubmit }) => {
           <label className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center gap-3">
               {formData.isPinned ? (
-                <PinIconSolid className="w-5 h-5 text-primary-500" />
+                <StarIconSolid className="w-5 h-5 text-primary-500" />
               ) : (
-                <PinIcon className="w-5 h-5 text-gray-400" />
+                <StarIcon className="w-5 h-5 text-gray-400" />
               )}
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white">Pin announcement</p>

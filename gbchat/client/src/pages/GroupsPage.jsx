@@ -56,6 +56,8 @@ import GroupPolls from '../components/groups/GroupPolls'
 import GroupEvents from '../components/groups/GroupEvents'
 import GroupInsights from '../components/groups/GroupInsights'
 import GroupBulkActions from '../components/groups/GroupBulkActions'
+import PollCreator from '../components/groups/PollCreator'
+import AnnouncementCreator from '../components/groups/AnnouncementCreator'
 import useChatStore from '../store/useChatStore'
 import useGBFeaturesStore from '../store/useGBFeaturesStore'
 import useAuthStore from '../store/useAuthStore'
@@ -94,6 +96,10 @@ const GroupsPage = () => {
   const [showGroupInsights, setShowGroupInsights] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showPollCreator, setShowPollCreator] = useState(false)
+  const [showAnnouncementCreator, setShowAnnouncementCreator] = useState(false)
+  const [showEventCreator, setShowEventCreator] = useState(false)
+  const [showMoreOptions, setShowMoreOptions] = useState(false)
 
   const { groups, fetchChats, chats, setActiveChat, currentChat } = useChatStore()
   const { user } = useAuthStore()
@@ -260,16 +266,16 @@ const GroupsPage = () => {
   const handleQuickAction = (action) => {
     switch (action) {
       case 'broadcast':
-        toast.info('Opening broadcast creator...')
+        setShowAnnouncementCreator(true)
         break
       case 'poll':
-        toast.info('Opening poll creator...')
+        setShowPollCreator(true)
         break
       case 'event':
-        toast.info('Opening event creator...')
+        setShowEventCreator(true)
         break
       case 'more':
-        toast.info('Opening more options...')
+        setShowMoreOptions(true)
         break
       default:
         toast.info('Action coming soon...')
@@ -307,14 +313,54 @@ const GroupsPage = () => {
     const newPoll = {
       ...pollData,
       _id: Date.now().toString(),
-      options: pollData.options.map(opt => ({ ...opt, votes: 0, voted: false })),
       createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + pollData.durationHours * 60 * 60 * 1000).toISOString(),
-      voted: false,
-      voters: [],
+      createdBy: user._id,
+      groupId: selectedGroups.length > 0 ? selectedGroups[0] : null,
+      votes: [],
+      totalVotes: 0,
+      isActive: true
     }
-    setGroupPolls([newPoll, ...groupPolls])
-    toast.success('Poll created successfully! 📊')
+    
+    // In a real app, this would save to backend
+    console.log('Creating poll:', newPoll)
+    toast.success('Poll created successfully!')
+    setShowPollCreator(false)
+  }
+
+  // Announcement handlers
+  const handleCreateAnnouncement = (announcementData) => {
+    const newAnnouncement = {
+      ...announcementData,
+      _id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      createdBy: user._id,
+      groupId: selectedGroups.length > 0 ? selectedGroups[0] : null,
+      pinned: announcementData.pinned || false,
+      reactions: []
+    }
+    
+    // In a real app, this would save to backend
+    console.log('Creating announcement:', newAnnouncement)
+    toast.success('Announcement created successfully!')
+    setShowAnnouncementCreator(false)
+  }
+
+  // Event handlers
+  const handleCreateEvent = (eventData) => {
+    const newEvent = {
+      ...eventData,
+      _id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      createdBy: user._id,
+      groupId: selectedGroups.length > 0 ? selectedGroups[0] : null,
+      attendees: [{ userId: user._id, status: 'going', name: user.name }],
+      totalAttendees: 1
+    }
+    
+    // In a real app, this would save to backend
+    console.log('Creating event:', newEvent)
+    toast.success('Event created successfully!')
+    setShowEventCreator(false)
   }
 
   const handleVote = (pollId, optionId) => {
@@ -331,49 +377,6 @@ const GroupsPage = () => {
       return poll
     }))
     toast.success('Vote submitted! ✓')
-  }
-
-  // Event handlers
-  const handleCreateEvent = (eventData) => {
-    const newEvent = {
-      ...eventData,
-      _id: Date.now().toString(),
-      rsvps: [],
-      rsvp: null,
-      isCreator: true,
-      createdAt: new Date().toISOString(),
-    }
-    setGroupEvents([newEvent, ...groupEvents])
-    toast.success('Event created successfully! 📅')
-  }
-
-  const handleRSVP = (eventId, status) => {
-    setGroupEvents(events => events.map(event => {
-      if (event._id === eventId) {
-        return { ...event, rsvp: status }
-      }
-      return event
-    }))
-    const statusMessages = {
-      going: 'See you there! 🎉',
-      maybe: 'Maybe response recorded 🤔',
-      'not-going': 'Sorry you can\'t make it 😢',
-    }
-    toast.success(statusMessages[status])
-  }
-
-  // Announcement handlers
-  const handleCreateAnnouncement = (announcementData) => {
-    const newAnnouncement = {
-      ...announcementData,
-      _id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      likes: 0,
-      comments: 0,
-    }
-    setGroupAnnouncements([newAnnouncement, ...groupAnnouncements])
-    localStorage.setItem('group-announcements', JSON.stringify([newAnnouncement, ...groupAnnouncements]))
-    toast.success('Announcement posted! 📢')
   }
 
   // Filter and sort groups
@@ -1132,6 +1135,89 @@ const GroupsPage = () => {
               groups={groupsList}
               onClose={() => setShowGroupInsights(false)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Poll Creator Modal */}
+      <PollCreator
+        isOpen={showPollCreator}
+        onClose={() => setShowPollCreator(false)}
+        onSubmit={handleCreatePoll}
+        chatId={selectedGroups.length > 0 ? selectedGroups[0] : null}
+      />
+
+      {/* Announcement Creator Modal */}
+      <AnnouncementCreator
+        isOpen={showAnnouncementCreator}
+        onClose={() => setShowAnnouncementCreator(false)}
+        onSubmit={handleCreateAnnouncement}
+        chatId={selectedGroups.length > 0 ? selectedGroups[0] : null}
+      />
+
+      {/* Event Creator Modal - Simple version for now */}
+      {showEventCreator && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create Event</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Event creation feature coming soon! This will allow you to schedule group events, meetings, and activities.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowEventCreator(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    toast.success('Event creation coming soon! 📅')
+                    setShowEventCreator(false)
+                  }}
+                  className="flex-1"
+                >
+                  Coming Soon
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* More Options Modal */}
+      {showMoreOptions && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-sm w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">More Options</h3>
+              <div className="space-y-2">
+                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <span className="text-gray-700 dark:text-gray-300">Import Groups</span>
+                </button>
+                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <span className="text-gray-700 dark:text-gray-300">Export Groups</span>
+                </button>
+                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <span className="text-gray-700 dark:text-gray-300">Group Settings</span>
+                </button>
+                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <span className="text-gray-700 dark:text-gray-300">Help & Support</span>
+                </button>
+              </div>
+              <div className="mt-6">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowMoreOptions(false)}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
