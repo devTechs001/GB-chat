@@ -21,7 +21,6 @@ import {
 } from '@heroicons/react/24/outline'
 import {
   FireIcon as FireIconSolid,
-  TrendingUpIcon as TrendingUpIconSolid,
 } from '@heroicons/react/24/solid'
 import clsx from 'clsx'
 
@@ -119,7 +118,7 @@ const GroupInsights = ({ groups, onClose }) => {
           
           <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
             <div className="flex items-center justify-between mb-2">
-              <TrendingUpIconSolid className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <TrendingUpIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">Active</span>
             </div>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">{insights.activeGroups}</div>

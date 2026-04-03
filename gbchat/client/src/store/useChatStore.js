@@ -116,454 +116,691 @@ const sampleGroups = [
   {
     _id: 'g1',
     name: 'Development Team',
-    description: 'Team collaboration and updates',
-    avatar: null,
+    description: 'Main development team for project collaboration, code reviews, and tech discussions',
+    avatar: 'https://picsum.photos/seed/devteam/200/200.jpg',
+    type: 'group',
+    privacy: 'private',
     members: [
-      { _id: 'user1', name: 'You', role: 'admin', avatar: null },
-      { _id: 'user4', name: 'Mike Johnson', role: 'admin', avatar: null },
-      { _id: 'user5', name: 'Sarah Wilson', role: 'member', avatar: null },
-      { _id: 'user6', name: 'Emily Brown', role: 'member', avatar: null },
-      { _id: 'user7', name: 'Alex Chen', role: 'member', avatar: null }
+      { _id: 'user1', name: 'You', role: 'admin', avatar: 'https://picsum.photos/seed/you/100/100.jpg', online: true },
+      { _id: 'user4', name: 'Mike Johnson', role: 'admin', avatar: 'https://picsum.photos/seed/mike/100/100.jpg', online: true },
+      { _id: 'user5', name: 'Sarah Wilson', role: 'member', avatar: 'https://picsum.photos/seed/sarah/100/100.jpg', online: false },
+      { _id: 'user6', name: 'Emily Brown', role: 'member', avatar: 'https://picsum.photos/seed/emily/100/100.jpg', online: true },
+      { _id: 'user7', name: 'Alex Chen', role: 'member', avatar: 'https://picsum.photos/seed/alex/100/100.jpg', online: false },
+      { _id: 'user9', name: 'David Kim', role: 'member', avatar: 'https://picsum.photos/seed/david/100/100.jpg', online: true },
+      { _id: 'user10', name: 'Lisa Garcia', role: 'member', avatar: 'https://picsum.photos/seed/lisa/100/100.jpg', online: false },
+      { _id: 'user11', name: 'Tom Wilson', role: 'member', avatar: 'https://picsum.photos/seed/tom/100/100.jpg', online: true }
     ],
     createdAt: new Date(Date.now() - 86400000 * 30).toISOString(),
     createdBy: { _id: 'user4', name: 'Mike Johnson' },
-    memberCount: 8,
+    isAdmin: true,
+    isStarred: true,
+    isMuted: false,
+    isArchived: false,
     unreadCount: 5,
+    messageCount: 1247,
+    lastMessageAt: new Date(Date.now() - 7200000).toISOString(),
     lastMessage: {
-      content: { text: 'Meeting at 3 PM today' },
+      content: { text: 'Meeting at 3 PM today to discuss the new features rollout 🚀' },
       type: 'text',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       sender: { _id: 'user4', name: 'Mike Johnson' }
+    },
+    settings: {
+      allowMemberAdd: true,
+      allowMemberRemove: false,
+      allowEditInfo: true,
+      approveMembers: false,
+      muteAll: false,
+      allowReactions: true,
+      allowPolls: true,
+      allowEvents: true,
+      allowFileSharing: true,
+      allowVoiceMessages: true,
+      allowVideoCalls: true,
+      allowScreenShare: true,
+      messageRetention: 'forever',
+      maxMembers: 50,
+      slowMode: 0,
+      welcomeMessage: 'Welcome to the Development Team! 🎉 Please introduce yourself and check the pinned messages for important info.',
+      groupRules: ['Be respectful and professional', 'Stay on topic - tech discussions only', 'No spam or self-promotion', 'Help others when you can'],
+      tags: ['development', 'programming', 'team', 'tech'],
+      location: 'San Francisco, CA',
+      website: 'https://devteam.example.com'
     }
   },
   {
     _id: 'g2',
     name: 'Family',
-    description: 'Family group chat',
-    avatar: null,
+    description: 'Our lovely family group for sharing memories, plans, and staying connected',
+    avatar: 'https://picsum.photos/seed/family/200/200.jpg',
+    type: 'group',
+    privacy: 'private',
     members: [
-      { _id: 'user1', name: 'You', role: 'member', avatar: null },
-      { _id: 'user6', name: 'Mom', role: 'admin', avatar: null },
-      { _id: 'user7', name: 'Dad', role: 'member', avatar: null },
-      { _id: 'user8', name: 'Sister', role: 'member', avatar: null }
+      { _id: 'user1', name: 'You', role: 'member', avatar: 'https://picsum.photos/seed/you/100/100.jpg', online: true },
+      { _id: 'user6', name: 'Mom', role: 'admin', avatar: 'https://picsum.photos/seed/mom/100/100.jpg', online: false },
+      { _id: 'user7', name: 'Dad', role: 'admin', avatar: 'https://picsum.photos/seed/dad/100/100.jpg', online: true },
+      { _id: 'user8', name: 'Sister', role: 'member', avatar: 'https://picsum.photos/seed/sister/100/100.jpg', online: false },
+      { _id: 'user12', name: 'Brother', role: 'member', avatar: 'https://picsum.photos/seed/brother/100/100.jpg', online: true },
+      { _id: 'user13', name: 'Grandma', role: 'member', avatar: 'https://picsum.photos/seed/grandma/100/100.jpg', online: false }
     ],
-    createdAt: new Date(Date.now() - 86400000 * 365).toISOString(),
+    createdAt: new Date(Date.now() - 86400000 * 90).toISOString(),
     createdBy: { _id: 'user6', name: 'Mom' },
-    memberCount: 5,
+    isAdmin: false,
+    isStarred: true,
+    isMuted: false,
+    isArchived: false,
     unreadCount: 0,
+    messageCount: 892,
+    lastMessageAt: new Date(Date.now() - 86400000).toISOString(),
     lastMessage: {
-      content: { text: 'Don\'t forget dinner tonight!' },
+      content: { text: "Don't forget dinner tonight! 🍕" },
       type: 'text',
       createdAt: new Date(Date.now() - 86400000).toISOString(),
       sender: { _id: 'user6', name: 'Mom' }
+    },
+    settings: {
+      allowMemberAdd: true,
+      allowMemberRemove: false,
+      allowEditInfo: false,
+      approveMembers: false,
+      muteAll: false,
+      allowReactions: true,
+      allowPolls: false,
+      allowEvents: true,
+      allowFileSharing: true,
+      allowVoiceMessages: true,
+      allowVideoCalls: false,
+      allowScreenShare: false,
+      messageRetention: '1year',
+      maxMembers: 20,
+      slowMode: 0,
+      welcomeMessage: 'Welcome to the family group! ❤️',
+      groupRules: ['Be kind to each other', 'Share family updates', 'No arguing about politics'],
+      tags: ['family', 'personal'],
+      location: 'New York, NY'
     }
   },
   {
     _id: 'g3',
-    name: 'Weekend Trip Planning',
-    description: 'Planning our next adventure',
-    avatar: null,
+    name: 'Tech Enthusiasts',
+    description: 'Public group for tech news, discussions, and networking',
+    avatar: 'https://picsum.photos/seed/tech/200/200.jpg',
+    type: 'channel',
+    privacy: 'public',
     members: [
-      { _id: 'user1', name: 'You', role: 'admin', avatar: null },
-      { _id: 'user2', name: 'John Doe', role: 'member', avatar: null },
-      { _id: 'user3', name: 'Jane Smith', role: 'member', avatar: null }
+      { _id: 'user1', name: 'You', role: 'member', avatar: 'https://picsum.photos/seed/you/100/100.jpg', online: true },
+      { _id: 'user14', name: 'Tech Guru', role: 'admin', avatar: 'https://picsum.photos/seed/guru/100/100.jpg', online: true },
+      { _id: 'user15', name: 'DevOps Expert', role: 'moderator', avatar: 'https://picsum.photos/seed/devops/100/100.jpg', online: false },
+      { _id: 'user16', name: 'AI Researcher', role: 'member', avatar: 'https://picsum.photos/seed/ai/100/100.jpg', online: true },
+      { _id: 'user17', name: 'Cloud Architect', role: 'member', avatar: 'https://picsum.photos/seed/cloud/100/100.jpg', online: false },
+      { _id: 'user18', name: 'Security Specialist', role: 'member', avatar: 'https://picsum.photos/seed/security/100/100.jpg', online: true },
+      { _id: 'user19', name: 'Data Scientist', role: 'member', avatar: 'https://picsum.photos/seed/data/100/100.jpg', online: false },
+      { _id: 'user20', name: 'Frontend Dev', role: 'member', avatar: 'https://picsum.photos/seed/frontend/100/100.jpg', online: true },
+      { _id: 'user21', name: 'Backend Dev', role: 'member', avatar: 'https://picsum.photos/seed/backend/100/100.jpg', online: false },
+      { _id: 'user22', name: 'Mobile Dev', role: 'member', avatar: 'https://picsum.photos/seed/mobile/100/100.jpg', online: true },
+      { _id: 'user23', name: 'Game Developer', role: 'member', avatar: 'https://picsum.photos/seed/game/100/100.jpg', online: false },
+      { _id: 'user24', name: 'Blockchain Dev', role: 'member', avatar: 'https://picsum.photos/seed/blockchain/100/100.jpg', online: true }
     ],
-    createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-    createdBy: { _id: 'user1', name: 'You' },
-    memberCount: 3,
-    unreadCount: 12,
+    createdAt: new Date(Date.now() - 86400000 * 60).toISOString(),
+    createdBy: { _id: 'user14', name: 'Tech Guru' },
+    isAdmin: false,
+    isStarred: false,
+    isMuted: true,
+    isArchived: false,
+    unreadCount: 0,
+    messageCount: 3456,
+    lastMessageAt: new Date(Date.now() - 3600000).toISOString(),
     lastMessage: {
-      content: { text: 'I found a great cabin!' },
+      content: { text: 'New AI breakthrough announced! Check out the latest research paper 📄' },
+      type: 'text',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      sender: { _id: 'user16', name: 'AI Researcher' }
+    },
+    settings: {
+      allowMemberAdd: true,
+      allowMemberRemove: false,
+      allowEditInfo: false,
+      approveMembers: true,
+      muteAll: false,
+      allowReactions: true,
+      allowPolls: true,
+      allowEvents: true,
+      allowFileSharing: true,
+      allowVoiceMessages: false,
+      allowVideoCalls: false,
+      allowScreenShare: false,
+      messageRetention: '30days',
+      maxMembers: 1000,
+      slowMode: 30,
+      welcomeMessage: 'Welcome to Tech Enthusiasts! 🚀 Share your tech knowledge and learn from others.',
+      groupRules: ['No spam', 'Stay on tech topics', 'Be respectful', 'Share credible sources'],
+      tags: ['technology', 'programming', 'ai', 'innovation'],
+      website: 'https://techenthusiasts.example.com'
+    }
+  },
+  {
+    _id: 'g4',
+    name: 'Project Alpha Updates',
+    description: 'Critical project updates and announcements (read-only for members)',
+    avatar: 'https://picsum.photos/seed/alpha/200/200.jpg',
+    type: 'broadcast',
+    privacy: 'private',
+    members: [
+      { _id: 'user1', name: 'You', role: 'member', avatar: 'https://picsum.photos/seed/you/100/100.jpg', online: true },
+      { _id: 'user25', name: 'Project Manager', role: 'admin', avatar: 'https://picsum.photos/seed/pm/100/100.jpg', online: true },
+      { _id: 'user26', name: 'Team Lead', role: 'admin', avatar: 'https://picsum.photos/seed/lead/100/100.jpg', online: false },
+      { _id: 'user27', name: 'Stakeholder 1', role: 'member', avatar: 'https://picsum.photos/seed/stake1/100/100.jpg', online: false },
+      { _id: 'user28', name: 'Stakeholder 2', role: 'member', avatar: 'https://picsum.photos/seed/stake2/100/100.jpg', online: true },
+      { _id: 'user29', name: 'Client Rep', role: 'member', avatar: 'https://picsum.photos/seed/client/100/100.jpg', online: false }
+    ],
+    createdAt: new Date(Date.now() - 86400000 * 15).toISOString(),
+    createdBy: { _id: 'user25', name: 'Project Manager' },
+    isAdmin: false,
+    isStarred: false,
+    isMuted: false,
+    isArchived: false,
+    unreadCount: 2,
+    messageCount: 156,
+    lastMessageAt: new Date(Date.now() - 1800000).toISOString(),
+    lastMessage: {
+      content: { text: '🚀 Project Alpha Phase 2 completed successfully! Deployment scheduled for next week.' },
       type: 'text',
       createdAt: new Date(Date.now() - 1800000).toISOString(),
-      sender: { _id: 'user3', name: 'Jane Smith' }
+      sender: { _id: 'user25', name: 'Project Manager' }
+    },
+    settings: {
+      allowMemberAdd: false,
+      allowMemberRemove: false,
+      allowEditInfo: false,
+      approveMembers: true,
+      muteAll: true,
+      allowReactions: false,
+      allowPolls: false,
+      allowEvents: false,
+      allowFileSharing: false,
+      allowVoiceMessages: false,
+      allowVideoCalls: false,
+      allowScreenShare: false,
+      messageRetention: 'forever',
+      maxMembers: 100,
+      slowMode: 0,
+      welcomeMessage: 'Welcome to Project Alpha Updates - Important announcements only',
+      groupRules: ['This is a broadcast channel', 'Only admins can post', 'No replies allowed'],
+      tags: ['project', 'alpha', 'updates', 'critical'],
+      location: 'Remote'
+    }
+  },
+  {
+    _id: 'g5',
+    name: 'Gaming Community',
+    description: 'Gamers unite! Share tips, tricks, and organize gaming sessions',
+    avatar: 'https://picsum.photos/seed/gaming/200/200.jpg',
+    type: 'group',
+    privacy: 'public',
+    members: [
+      { _id: 'user1', name: 'You', role: 'admin', avatar: 'https://picsum.photos/seed/you/100/100.jpg', online: true },
+      { _id: 'user30', name: 'Pro Gamer', role: 'moderator', avatar: 'https://picsum.photos/seed/pro/100/100.jpg', online: true },
+      { _id: 'user31', name: 'Casual Player', role: 'member', avatar: 'https://picsum.photos/seed/casual/100/100.jpg', online: false },
+      { _id: 'user32', name: 'RPG Fan', role: 'member', avatar: 'https://picsum.photos/seed/rpg/100/100.jpg', online: true },
+      { _id: 'user33', name: 'FPS Master', role: 'member', avatar: 'https://picsum.photos/seed/fps/100/100.jpg', online: false },
+      { _id: 'user34', name: 'Strategy Expert', role: 'member', avatar: 'https://picsum.photos/seed/strategy/100/100.jpg', online: true },
+      { _id: 'user35', name: 'Indie Lover', role: 'member', avatar: 'https://picsum.photos/seed/indie/100/100.jpg', online: false },
+      { _id: 'user36', name: 'Retro Gamer', role: 'member', avatar: 'https://picsum.photos/seed/retro/100/100.jpg', online: true }
+    ],
+    createdAt: new Date(Date.now() - 86400000 * 45).toISOString(),
+    createdBy: { _id: 'user1', name: 'You' },
+    isAdmin: true,
+    isStarred: false,
+    isMuted: false,
+    isArchived: false,
+    unreadCount: 12,
+    messageCount: 2341,
+    lastMessageAt: new Date(Date.now() - 900000).toISOString(),
+    lastMessage: {
+      content: { text: 'Who\'s up for a raid tonight at 8 PM? 🎮' },
+      type: 'text',
+      createdAt: new Date(Date.now() - 900000).toISOString(),
+      sender: { _id: 'user30', name: 'Pro Gamer' }
+    },
+    settings: {
+      allowMemberAdd: true,
+      allowMemberRemove: false,
+      allowEditInfo: true,
+      approveMembers: false,
+      muteAll: false,
+      allowReactions: true,
+      allowPolls: true,
+      allowEvents: true,
+      allowFileSharing: true,
+      allowVoiceMessages: true,
+      allowVideoCalls: true,
+      allowScreenShare: true,
+      messageRetention: '30days',
+      maxMembers: 500,
+      slowMode: 0,
+      welcomeMessage: 'Welcome to Gaming Community! 🎮 Level up your gaming experience!',
+      groupRules: ['Be respectful to all players', 'No cheating discussions', 'Share gaming tips', 'Have fun!'],
+      tags: ['gaming', 'community', 'fun', 'multiplayer'],
+      website: 'https://gaming.example.com'
+    }
+  },
+  {
+    _id: 'g6',
+    name: 'Book Club',
+    description: 'Monthly book discussions and recommendations',
+    avatar: 'https://picsum.photos/seed/books/200/200.jpg',
+    type: 'group',
+    privacy: 'public',
+    members: [
+      { _id: 'user1', name: 'You', role: 'member', avatar: 'https://picsum.photos/seed/you/100/100.jpg', online: true },
+      { _id: 'user37', name: 'Book Worm', role: 'admin', avatar: 'https://picsum.photos/seed/worm/100/100.jpg', online: false },
+      { _id: 'user38', name: 'Literature Lover', role: 'member', avatar: 'https://picsum.photos/seed/literature/100/100.jpg', online: true },
+      { _id: 'user39', name: 'Poetry Fan', role: 'member', avatar: 'https://picsum.photos/seed/poetry/100/100.jpg', online: false },
+      { _id: 'user40', name: 'SciFi Reader', role: 'member', avatar: 'https://picsum.photos/seed/scifi/100/100.jpg', online: true }
+    ],
+    createdAt: new Date(Date.now() - 86400000 * 120).toISOString(),
+    createdBy: { _id: 'user37', name: 'Book Worm' },
+    isAdmin: false,
+    isStarred: true,
+    isMuted: false,
+    isArchived: false,
+    unreadCount: 0,
+    messageCount: 567,
+    lastMessageAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    lastMessage: {
+      content: { text: 'This month\'s book selection is "The Midnight Library" 📚' },
+      type: 'text',
+      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      sender: { _id: 'user37', name: 'Book Worm' }
+    },
+    settings: {
+      allowMemberAdd: true,
+      allowMemberRemove: false,
+      allowEditInfo: false,
+      approveMembers: false,
+      muteAll: false,
+      allowReactions: true,
+      allowPolls: true,
+      allowEvents: true,
+      allowFileSharing: false,
+      allowVoiceMessages: false,
+      allowVideoCalls: false,
+      allowScreenShare: false,
+      messageRetention: '1year',
+      maxMembers: 100,
+      slowMode: 0,
+      welcomeMessage: 'Welcome to Book Club! 📚 Happy reading!',
+      groupRules: ['No spoilers without warning', 'Be respectful of opinions', 'Share book recommendations'],
+      tags: ['books', 'reading', 'literature', 'discussion'],
+      location: 'Online'
+    }
+  },
+  {
+    _id: 'g7',
+    name: 'Fitness Motivation',
+    description: 'Workout tips, progress sharing, and motivation',
+    avatar: 'https://picsum.photos/seed/fitness/200/200.jpg',
+    type: 'group',
+    privacy: 'public',
+    members: [
+      { _id: 'user1', name: 'You', role: 'member', avatar: 'https://picsum.photos/seed/you/100/100.jpg', online: true },
+      { _id: 'user41', name: 'Fitness Coach', role: 'admin', avatar: 'https://picsum.photos/seed/coach/100/100.jpg', online: false },
+      { _id: 'user42', name: 'Yoga Instructor', role: 'moderator', avatar: 'https://picsum.photos/seed/yoga/100/100.jpg', online: true },
+      { _id: 'user43', name: 'Runner', role: 'member', avatar: 'https://picsum.photos/seed/runner/100/100.jpg', online: false },
+      { _id: 'user44', name: 'Weightlifter', role: 'member', avatar: 'https://picsum.photos/seed/weights/100/100.jpg', online: true }
+    ],
+    createdAt: new Date(Date.now() - 86400000 * 30).toISOString(),
+    createdBy: { _id: 'user41', name: 'Fitness Coach' },
+    isAdmin: false,
+    isStarred: false,
+    isMuted: true,
+    isArchived: false,
+    unreadCount: 0,
+    messageCount: 423,
+    lastMessageAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    lastMessage: {
+      content: { text: 'Morning workout complete! 💪 Who else exercised today?' },
+      type: 'text',
+      createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+      sender: { _id: 'user42', name: 'Yoga Instructor' }
+    },
+    settings: {
+      allowMemberAdd: true,
+      allowMemberRemove: false,
+      allowEditInfo: false,
+      approveMembers: false,
+      muteAll: false,
+      allowReactions: true,
+      allowPolls: true,
+      allowEvents: true,
+      allowFileSharing: true,
+      allowVoiceMessages: false,
+      allowVideoCalls: false,
+      allowScreenShare: false,
+      messageRetention: '30days',
+      maxMembers: 200,
+      slowMode: 0,
+      welcomeMessage: 'Welcome to Fitness Motivation! 💪 Let\'s get fit together!',
+      groupRules: ['Be encouraging', 'Share fitness tips', 'No body shaming', 'Celebrate progress'],
+      tags: ['fitness', 'health', 'workout', 'motivation'],
+      location: 'Gym'
+    }
+  },
+  {
+    _id: 'g8',
+    name: 'Archived Work Group',
+    description: 'Old project team - archived for reference',
+    avatar: 'https://picsum.photos/seed/archived/200/200.jpg',
+    type: 'group',
+    privacy: 'private',
+    members: [
+      { _id: 'user1', name: 'You', role: 'member', avatar: 'https://picsum.photos/seed/you/100/100.jpg', online: true },
+      { _id: 'user45', name: 'Former Manager', role: 'admin', avatar: 'https://picsum.photos/seed/former/100/100.jpg', online: false },
+      { _id: 'user46', name: 'Former Colleague', role: 'member', avatar: 'https://picsum.photos/seed/colleague/100/100.jpg', online: false }
+    ],
+    createdAt: new Date(Date.now() - 86400000 * 365).toISOString(),
+    createdBy: { _id: 'user45', name: 'Former Manager' },
+    isAdmin: false,
+    isStarred: false,
+    isMuted: true,
+    isArchived: true,
+    unreadCount: 0,
+    messageCount: 89,
+    lastMessageAt: new Date(Date.now() - 86400000 * 180).toISOString(),
+    lastMessage: {
+      content: { text: 'Project completed successfully! 🎉' },
+      type: 'text',
+      createdAt: new Date(Date.now() - 86400000 * 180).toISOString(),
+      sender: { _id: 'user45', name: 'Former Manager' }
+    },
+    settings: {
+      allowMemberAdd: false,
+      allowMemberRemove: false,
+      allowEditInfo: false,
+      approveMembers: false,
+      muteAll: true,
+      allowReactions: false,
+      allowPolls: false,
+      allowEvents: false,
+      allowFileSharing: false,
+      allowVoiceMessages: false,
+      allowVideoCalls: false,
+      allowScreenShare: false,
+      messageRetention: '1year',
+      maxMembers: 10,
+      slowMode: 0,
+      welcomeMessage: 'This group is archived',
+      groupRules: ['Read-only access'],
+      tags: ['archived', 'completed', 'reference'],
+      location: 'Archive'
     }
   }
 ]
 
-const sampleChannels = [
+const sampleAnnouncements = [
   {
-    _id: 'c1',
-    name: 'Tech News',
-    description: 'Latest technology updates and news',
-    avatar: null,
-    subscribers: 1250,
-    isVerified: true,
-    isSubscribed: true,
-    createdAt: new Date(Date.now() - 86400000 * 90).toISOString(),
-    createdBy: { _id: 'admin1', name: 'Tech Admin' },
-    posts: [
-      {
-        _id: 'p1',
-        content: { text: 'New AI breakthrough announced today! Scientists have developed a new model that can understand context better than ever before.' },
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-        views: 523,
-        reactions: { likes: 45, loves: 12, wow: 8 }
-      },
-      {
-        _id: 'p2',
-        content: { text: 'Breaking: Major tech company announces revolutionary product' },
-        createdAt: new Date(Date.now() - 7200000).toISOString(),
-        views: 892,
-        reactions: { likes: 78, loves: 23 }
-      }
-    ]
-  },
-  {
-    _id: 'c2',
-    name: 'GBChat Updates',
-    description: 'Official GBChat announcements and feature releases',
-    avatar: null,
-    subscribers: 5420,
-    isVerified: true,
-    isSubscribed: true,
-    createdAt: new Date(Date.now() - 86400000 * 180).toISOString(),
-    createdBy: { _id: 'admin2', name: 'GBChat Team' },
-    posts: [
-      {
-        _id: 'p3',
-        content: { text: '🎉 New Feature Alert! Introducing voice messages with transcription. Now available in beta.' },
-        createdAt: new Date(Date.now() - 14400000).toISOString(),
-        views: 2341,
-        reactions: { likes: 234, loves: 89, fire: 45 }
-      }
-    ]
-  },
-  {
-    _id: 'c3',
-    name: 'Daily Motivation',
-    description: 'Start your day with inspiration',
-    avatar: null,
-    subscribers: 3200,
-    isVerified: false,
-    isSubscribed: false,
-    createdAt: new Date(Date.now() - 86400000 * 60).toISOString(),
-    createdBy: { _id: 'admin3', name: 'Motivation Hub' },
-    posts: []
-  },
-  {
-    _id: 'c4',
-    name: 'Crypto Insights',
-    description: 'Market analysis and crypto news',
-    avatar: null,
-    subscribers: 8900,
-    isVerified: true,
-    isSubscribed: false,
-    createdAt: new Date(Date.now() - 86400000 * 120).toISOString(),
-    createdBy: { _id: 'admin4', name: 'Crypto Expert' },
-    posts: []
-  }
-]
-
-const sampleStories = [
-  {
-    _id: 's1',
-    userId: { _id: 'user2', name: 'John Doe', avatar: null },
-    media: [{ url: 'https://via.placeholder.com/400x600', type: 'image' }],
+    _id: 'a1',
+    groupId: 'g1',
+    title: '🚀 New Feature Release',
+    content: 'We are excited to announce the release of our new real-time collaboration features! This includes live code sharing, improved video calls, and enhanced file sharing capabilities.',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
-    expiresAt: new Date(Date.now() + 82800000).toISOString(),
-    views: []
-  },
-  {
-    _id: 's2',
-    userId: { _id: 'user3', name: 'Jane Smith', avatar: null },
-    media: [{ url: 'https://via.placeholder.com/400x600', type: 'image' }],
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-    expiresAt: new Date(Date.now() + 79200000).toISOString(),
-    views: []
+    createdBy: { _id: 'user4', name: 'Mike Johnson' },
+    likes: 12,
+    comments: 5
   }
 ]
 
-const sampleCalls = [
+const samplePolls = [
   {
-    _id: 'call1',
-    userId: { _id: 'user2', name: 'John Doe', avatar: null },
-    type: 'voice',
-    status: 'missed',
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-    duration: 0
-  },
+    _id: 'p1',
+    groupId: 'g1',
+    question: 'What should be our next sprint focus?',
+    options: [
+      { _id: 'o1', text: 'Performance Optimization', votes: 8 },
+      { _id: 'o2', text: 'New Features Development', votes: 12 },
+      { _id: 'o3', text: 'Bug Fixes', votes: 6 }
+    ],
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+    createdBy: { _id: 'user4', name: 'Mike Johnson' }
+  }
+]
+
+const sampleEvents = [
   {
-    _id: 'call2',
-    userId: { _id: 'user3', name: 'Jane Smith', avatar: null },
-    type: 'video',
-    status: 'completed',
-    timestamp: new Date(Date.now() - 86400000).toISOString(),
-    duration: 325
+    _id: 'e1',
+    groupId: 'g1',
+    title: 'Sprint Planning Meeting',
+    description: 'Quarterly sprint planning session to discuss goals.',
+    date: new Date(Date.now() + 86400000 * 2).toISOString(),
+    startTime: '14:00',
+    endTime: '16:00',
+    location: 'Conference Room A'
   }
 ]
 
 const useChatStore = create((set, get) => ({
-  chats: [],
-  activeChat: null,
-  messages: [],
-  typingUsers: {},
-  onlineUsers: [],
-  unreadCounts: {},
-  isLoading: false,
-  searchQuery: '',
-  groups: [],
-  channels: [],
-  stories: [],
-  calls: [],
-
-  // Chat actions
+  // State
+  chats: sampleChats,
+  messages: sampleMessages,
+  groups: sampleGroups,
+  announcements: sampleAnnouncements,
+  polls: samplePolls,
+  events: sampleEvents,
+  currentChat: null,
+  activeTab: 'chats',
+  loading: false,
+  error: null,
+  
+  // Actions
+  setLoading: (loading) => set({ loading }),
+  setError: (error) => set({ error }),
+  setActiveChat: (chat) => set({ currentChat: chat }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
+  
+  // Fetch functions
   fetchChats: async () => {
-    set({ isLoading: true })
+    set({ loading: true, error: null })
     try {
-      const { data } = await api.get('/chats')
-      // Handle both array response and object with chats property
-      const chatsArray = Array.isArray(data) ? data : (data.chats || [])
-      set({ chats: chatsArray.length > 0 ? chatsArray : sampleChats, isLoading: false })
+      // In a real app, this would be an API call
+      // For now, we'll use the sample data
+      set({ chats: sampleChats, loading: false })
     } catch (error) {
-      // Use sample data on error
-      set({ chats: sampleChats, isLoading: false })
-      console.error('Failed to fetch chats:', error)
+      set({ error: error.message, loading: false })
     }
   },
   
-  setActiveChat: (chat) => {
-    set({ activeChat: chat })
-    if (chat) {
-      get().fetchMessages(chat._id)
-      get().markAsRead(chat._id)
-    }
-  },
-  
-  createChat: async (userId) => {
-    try {
-      const { data } = await api.post('/chats', { userId })
-      set((state) => ({
-        chats: [data.chat, ...state.chats.filter(c => c._id !== data.chat._id)]
-      }))
-      return data.chat
-    } catch (error) {
-      toast.error('Failed to create chat')
-      console.error(error)
-    }
-  },
-  
-  // Message actions
   fetchMessages: async (chatId) => {
     try {
-      const { data } = await api.get(`/messages/${chatId}`)
-      // Handle both array response and object with messages property
-      const messagesArray = Array.isArray(data) ? data : (data.messages || [])
-      set({ messages: messagesArray })
+      // In a real app, this would be an API call
+      const chatMessages = sampleMessages.filter(msg => msg.chat === chatId)
+      return chatMessages
     } catch (error) {
-      console.error('Failed to fetch messages:', error)
-      set({ messages: [] })
+      set({ error: error.message })
+      return []
     }
   },
   
-  sendMessage: async (chatId, content, attachments = [], replyTo = null) => {
+  sendMessage: async (chatId, content) => {
     try {
-      const formData = new FormData()
-      formData.append('text', typeof content === 'object' ? content.text : content)
-      formData.append('chatId', chatId)
-      formData.append('type', 'text')
-
-      // Add reply information if replying to a message
-      if (replyTo) {
-        formData.append('replyTo', JSON.stringify({
-          messageId: replyTo._id,
-          content: replyTo.content,
-          sender: replyTo.sender
-        }))
+      const newMessage = {
+        _id: `m${Date.now()}`,
+        chat: chatId,
+        content,
+        type: 'text',
+        sender: { _id: 'user1', name: 'You' },
+        status: 'sent',
+        createdAt: new Date().toISOString()
       }
-
-      attachments.forEach((file) => {
-        formData.append('attachments', file)
-      })
-
-      const { data } = await api.post(`/messages/${chatId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-
-      const newMessage = data.message || data
-
-      // Optimistically add message to store
-      set((state) => ({
-        messages: [...state.messages, newMessage],
-        chats: state.chats.map(chat =>
-          chat._id === chatId
-            ? { ...chat, lastMessage: newMessage, updatedAt: new Date() }
-            : chat
-        ),
+      
+      set(state => ({
+        messages: [...state.messages, newMessage]
       }))
-
-      console.log('[Store] Message added successfully:', newMessage._id)
-
+      
       return newMessage
     } catch (error) {
-      toast.error('Failed to send message')
-      console.error('Send message error:', error)
+      set({ error: error.message })
       throw error
     }
   },
   
-  receiveMessage: (message) => {
-    const { activeChat } = get()
-
-    // Add message to messages if it's for the active chat
-    if (activeChat?._id === message.chat) {
-      set((state) => ({
-        messages: [...state.messages, message],
-      }))
-    }
-
-    // Update chat list
-    set((state) => ({
-      chats: state.chats.map(chat =>
-        chat._id === message.chat
-          ? { ...chat, lastMessage: message, updatedAt: new Date() }
-          : chat
-      ),
-      unreadCounts: {
-        ...state.unreadCounts,
-        [message.chat]: (state.unreadCounts[message.chat] || 0) +
-          (activeChat?._id !== message.chat ? 1 : 0),
-      },
-    }))
-  },
-
-  // Update message status (for when messages are delivered/read)
-  updateMessageStatus: (messageId, status) => {
-    set((state) => ({
-      messages: state.messages.map(msg =>
-        msg._id === messageId ? { ...msg, status } : msg
-      ),
-    }))
-    console.log('[Store] Message status updated:', messageId, status)
-  },
-
-  // Mark messages as delivered in a chat
-  markMessagesAsDelivered: (chatId, messageIds) => {
-    set((state) => ({
-      messages: state.messages.map(msg =>
-        messageIds.includes(msg._id) && msg.chat === chatId
-          ? { ...msg, status: 'delivered' }
-          : msg
-      ),
-    }))
-  },
-
-  // Mark messages as read in a chat
-  markMessagesAsRead: (chatId, messageIds) => {
-    set((state) => ({
-      messages: state.messages.map(msg =>
-        messageIds.includes(msg._id) && msg.chat === chatId
-          ? { ...msg, status: 'read' }
-          : msg
-      ),
-      chats: state.chats.map(chat =>
-        chat._id === chatId
-          ? { ...chat, unreadCount: 0 }
-          : chat
-      ),
-    }))
-    console.log('[Store] Messages marked as read:', chatId, messageIds?.length)
-  },
-  
-  deleteMessage: async (messageId) => {
+  createGroup: async (groupData) => {
     try {
-      await api.delete(`/messages/${messageId}`)
-      set((state) => ({
-        messages: state.messages.filter(msg => msg._id !== messageId),
+      const newGroup = {
+        _id: `g${Date.now()}`,
+        ...groupData,
+        createdAt: new Date().toISOString(),
+        members: [{ _id: 'user1', name: 'You', role: 'admin', avatar: 'https://picsum.photos/seed/you/100/100.jpg' }]
+      }
+      
+      set(state => ({
+        groups: [...state.groups, newGroup]
       }))
-      toast.success('Message deleted')
+      
+      return newGroup
     } catch (error) {
-      toast.error('Failed to delete message')
+      set({ error: error.message })
+      throw error
     }
   },
   
-  editMessage: async (messageId, newContent) => {
+  updateGroup: async (groupId, updates) => {
     try {
-      const { data } = await api.patch(`/messages/${messageId}`, {
-        content: newContent,
-      })
-      set((state) => ({
-        messages: state.messages.map(msg =>
-          msg._id === messageId ? data.message : msg
-        ),
-      }))
-    } catch (error) {
-      toast.error('Failed to edit message')
-    }
-  },
-  
-  // Typing indicators
-  setTyping: (chatId, userId, isTyping) => {
-    set((state) => ({
-      typingUsers: {
-        ...state.typingUsers,
-        [chatId]: isTyping
-          ? [...(state.typingUsers[chatId] || []), userId].filter(
-              (id, index, self) => self.indexOf(id) === index
-            )
-          : (state.typingUsers[chatId] || []).filter(id => id !== userId),
-      },
-    }))
-  },
-  
-  // Online status
-  setOnlineUsers: (users) => {
-    set({ onlineUsers: users })
-  },
-  
-  // Mark as read
-  markAsRead: async (chatId) => {
-    try {
-      await api.post(`/chats/${chatId}/read`)
-      set((state) => ({
-        unreadCounts: {
-          ...state.unreadCounts,
-          [chatId]: 0,
-        },
-      }))
-    } catch (error) {
-      console.error('Failed to mark as read:', error)
-    }
-  },
-  
-  // Search
-  setSearchQuery: (query) => {
-    set({ searchQuery: query })
-  },
-
-  // Update contact information (for real-time profile updates)
-  updateContact: (userId, userData) => {
-    set((state) => ({
-      chats: state.chats.map(chat => {
-        // Check if the user is a participant in this chat
-        const participant = chat.participants?.find(p =>
-          (p.user?._id || p.user) === userId
+      set(state => ({
+        groups: state.groups.map(group =>
+          group._id === groupId ? { ...group, ...updates } : group
         )
-
-        if (participant) {
-          // Update the participant's user data
-          return {
-            ...chat,
-            participants: chat.participants.map(p =>
-              (p.user?._id || p.user) === userId
-                ? { ...p, user: { ...p.user, ...userData } }
-                : p
-            ),
+      }))
+    } catch (error) {
+      set({ error: error.message })
+      throw error
+    }
+  },
+  
+  deleteGroup: async (groupId) => {
+    try {
+      set(state => ({
+        groups: state.groups.filter(group => group._id !== groupId)
+      }))
+    } catch (error) {
+      set({ error: error.message })
+      throw error
+    }
+  },
+  
+  // Poll actions
+  createPoll: async (pollData) => {
+    try {
+      const newPoll = {
+        _id: `p${Date.now()}`,
+        ...pollData,
+        createdAt: new Date().toISOString(),
+        voted: false,
+        voters: []
+      }
+      
+      set(state => ({
+        polls: [...state.polls, newPoll]
+      }))
+      
+      return newPoll
+    } catch (error) {
+      set({ error: error.message })
+      throw error
+    }
+  },
+  
+  votePoll: async (pollId, optionId) => {
+    try {
+      set(state => ({
+        polls: state.polls.map(poll => {
+          if (poll._id === pollId) {
+            return {
+              ...poll,
+              voted: true,
+              options: poll.options.map(option =>
+                option._id === optionId 
+                  ? { ...option, votes: option.votes + 1, voted: true }
+                  : option
+              )
+            }
           }
-        }
-        return chat
-      }),
-    }))
+          return poll
+        })
+      }))
+    } catch (error) {
+      set({ error: error.message })
+      throw error
+    }
   },
-
-  // Clear store
-  clearChat: () => {
-    set({
-      activeChat: null,
-      messages: [],
-      typingUsers: {},
-    })
+  
+  // Event actions
+  createEvent: async (eventData) => {
+    try {
+      const newEvent = {
+        _id: `e${Date.now()}`,
+        ...eventData,
+        createdAt: new Date().toISOString(),
+        attendees: [{ _id: 'user1', name: 'You', status: 'going' }],
+        isCreator: true,
+        rsvp: 'going'
+      }
+      
+      set(state => ({
+        events: [...state.events, newEvent]
+      }))
+      
+      return newEvent
+    } catch (error) {
+      set({ error: error.message })
+      throw error
+    }
   },
+  
+  rsvpEvent: async (eventId, status) => {
+    try {
+      set(state => ({
+        events: state.events.map(event => {
+          if (event._id === eventId) {
+            return {
+              ...event,
+              rsvp: status,
+              attendees: event.attendees.map(attendee =>
+                attendee._id === 'user1' 
+                  ? { ...attendee, status }
+                  : attendee
+              )
+            }
+          }
+          return event
+        })
+      }))
+    } catch (error) {
+      set({ error: error.message })
+      throw error
+    }
+  },
+  
+  // Announcement actions
+  createAnnouncement: async (announcementData) => {
+    try {
+      const newAnnouncement = {
+        _id: `a${Date.now()}`,
+        ...announcementData,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        comments: 0
+      }
+      
+      set(state => ({
+        announcements: [...state.announcements, newAnnouncement]
+      }))
+      
+      return newAnnouncement
+    } catch (error) {
+      set({ error: error.message })
+      throw error
+    }
+  }
 }))
 
 export default useChatStore

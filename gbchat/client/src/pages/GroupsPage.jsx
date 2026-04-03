@@ -258,31 +258,16 @@ const GroupsPage = () => {
     toast.info('Opening announcement details...')
   }
 
-  const handleCreateAnnouncement = () => {
-    // Open announcement creator modal
-    toast.info('Opening announcement creator...')
-  }
-
-  const handleCreatePoll = () => {
-    // Open poll creator modal
-    toast.info('Opening poll creator...')
-  }
-
-  const handleCreateEvent = () => {
-    // Open event creator modal
-    toast.info('Opening event creator...')
-  }
-
   const handleQuickAction = (action) => {
     switch (action) {
       case 'broadcast':
         toast.info('Opening broadcast creator...')
         break
       case 'poll':
-        handleCreatePoll()
+        toast.info('Opening poll creator...')
         break
       case 'event':
-        handleCreateEvent()
+        toast.info('Opening event creator...')
         break
       case 'more':
         toast.info('Opening more options...')
