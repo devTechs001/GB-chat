@@ -15,7 +15,7 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 const CURRENT_VERSION = '2.0.0'
-const VERSION_INFO_URL = '/version.json'
+const VERSION_INFO_URL = '/GB-chat/version.json'
 
 const AppUpdateChecker = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false)
