@@ -55,8 +55,11 @@ import CreateGroup from '../components/groups/CreateGroup'
 import GroupInfo from '../components/groups/GroupInfo'
 import GroupPolls from '../components/groups/GroupPolls'
 import GroupEvents from '../components/groups/GroupEvents'
+import GroupInsights from '../components/groups/GroupInsights'
+import GroupBulkActions from '../components/groups/GroupBulkActions'
 import useChatStore from '../store/useChatStore'
 import useGBFeaturesStore from '../store/useGBFeaturesStore'
+import useAuthStore from '../store/useAuthStore'
 import Avatar from '../components/common/Avatar'
 import clsx from 'clsx'
 import { formatDistanceToNow } from 'date-fns'
@@ -93,8 +96,10 @@ const GroupsPage = () => {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
 
-  const { groups, fetchChats, chats } = useChatStore()
+  const { groups, fetchChats, chats, setActiveChat, currentChat } = useChatStore()
+  const { user } = useAuthStore()
   const gbFeaturesStore = useGBFeaturesStore()
+  const navigate = useNavigate()
 
   // Get groups from chats or use sample data
   const groupsList = groups.length > 0 ? groups : chats.filter(chat => chat.isGroup)
@@ -243,9 +248,47 @@ const GroupsPage = () => {
   const handleGroupClick = (group) => {
     // Set the group as active chat to open chat area
     setActiveChat(group)
-    // On mobile, hide the groups page and show chat
-    if (isMobile) {
-      setShowChatList(false)
+    // Navigate to chat page if not already there
+    navigate('/chat')
+  }
+
+  const handleAnnouncementClick = (announcement) => {
+    setSelectedAnnouncement(announcement)
+    // Could open a modal or navigate to announcement details
+    toast.info('Opening announcement details...')
+  }
+
+  const handleCreateAnnouncement = () => {
+    // Open announcement creator modal
+    toast.info('Opening announcement creator...')
+  }
+
+  const handleCreatePoll = () => {
+    // Open poll creator modal
+    toast.info('Opening poll creator...')
+  }
+
+  const handleCreateEvent = () => {
+    // Open event creator modal
+    toast.info('Opening event creator...')
+  }
+
+  const handleQuickAction = (action) => {
+    switch (action) {
+      case 'broadcast':
+        toast.info('Opening broadcast creator...')
+        break
+      case 'poll':
+        handleCreatePoll()
+        break
+      case 'event':
+        handleCreateEvent()
+        break
+      case 'more':
+        toast.info('Opening more options...')
+        break
+      default:
+        toast.info('Action coming soon...')
     }
   }
 
@@ -402,6 +445,7 @@ const GroupsPage = () => {
     unread: groupsList.filter(g => g.unreadCount).length,
     muted: groupsList.filter(g => g.isMuted).length,
     starred: groupsList.filter(g => g.isStarred).length,
+    archived: groupsList.filter(g => g.isArchived).length,
   }
 
   return (
@@ -695,6 +739,7 @@ const GroupsPage = () => {
                   { id: 'unread', label: 'Unread', count: filterCounts.unread },
                   { id: 'muted', label: 'Muted', count: filterCounts.muted },
                   { id: 'starred', label: 'Starred', count: filterCounts.starred },
+                  { id: 'archived', label: 'Archived', count: filterCounts.archived },
                 ].map((f) => (
                   <button
                     key={f.id}
@@ -731,12 +776,22 @@ const GroupsPage = () => {
                 <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl space-y-3">
                   <h4 className="text-sm font-medium text-gray-900 dark:text-white">Sort by</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    {['Name', 'Recent', 'Unread', 'Members'].map((option) => (
+                    {[
+                      { id: 'name', label: 'Name' },
+                      { id: 'recent', label: 'Recent' },
+                      { id: 'unread', label: 'Unread' },
+                      { id: 'members', label: 'Members' },
+                      { id: 'activity', label: 'Activity' },
+                    ].map((option) => (
                       <button
-                        key={option}
-                        className="px-3 py-2 bg-white dark:bg-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-left"
+                        key={option.id}
+                        onClick={() => setSortBy(option.id)}
+                        className={clsx(
+                          'px-3 py-2 bg-white dark:bg-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-left',
+                          sortBy === option.id && 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                        )}
                       >
-                        {option}
+                        {option.label}
                       </button>
                     ))}
                   </div>
@@ -970,7 +1025,7 @@ const GroupsPage = () => {
             <Button
               variant="primary"
               icon={<PlusIcon className="w-4 h-4" />}
-              onClick={() => {/* Open announcement creator */}}
+              onClick={handleCreateAnnouncement}
               className="w-full"
             >
               Create Announcement
@@ -981,7 +1036,8 @@ const GroupsPage = () => {
                   key={announcement._id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700"
+                  className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleAnnouncementClick(announcement)}
                 >
                   <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{announcement.title}</h4>
                   <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">{announcement.content}</p>
@@ -1036,19 +1092,31 @@ const GroupsPage = () => {
             <UserGroupIcon className="w-6 h-6 text-primary-500 mb-1 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-medium text-primary-600 dark:text-primary-400">New Group</span>
           </button>
-          <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 group">
+          <button 
+            className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 group"
+            onClick={() => handleQuickAction('broadcast')}
+          >
             <ChatBubbleLeftIcon className="w-6 h-6 text-blue-500 mb-1 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Broadcast</span>
           </button>
-          <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all duration-200 group">
+          <button 
+            className="flex flex-col items-center justify-center p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all duration-200 group"
+            onClick={() => handleQuickAction('poll')}
+          >
             <ChartBarIcon className="w-6 h-6 text-purple-500 mb-1 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-medium text-purple-600 dark:text-purple-400">Poll</span>
           </button>
-          <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-all duration-200 group">
+          <button 
+            className="flex flex-col items-center justify-center p-3 rounded-xl bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-all duration-200 group"
+            onClick={() => handleQuickAction('event')}
+          >
             <CalendarIcon className="w-6 h-6 text-green-500 mb-1 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-medium text-green-600 dark:text-green-400">Event</span>
           </button>
-          <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 group">
+          <button 
+            className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 group"
+            onClick={() => handleQuickAction('more')}
+          >
             <EllipsisHorizontalIcon className="w-6 h-6 text-gray-500 mb-1 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400">More</span>
           </button>
@@ -1070,6 +1138,18 @@ const GroupsPage = () => {
           onClose={() => setIsGroupInfoOpen(false)}
           onUpdate={() => fetchChats()}
         />
+      )}
+
+      {/* Group Insights Modal */}
+      {showGroupInsights && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <GroupInsights
+              groups={groupsList}
+              onClose={() => setShowGroupInsights(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

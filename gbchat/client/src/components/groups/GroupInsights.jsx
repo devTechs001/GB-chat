@@ -17,6 +17,7 @@ import {
   MapPinIcon,
   GiftIcon,
   TrophyIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import {
   FireIcon as FireIconSolid,
