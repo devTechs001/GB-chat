@@ -14,7 +14,7 @@ const ChatList = ({ onChatSelect, className }) => {
   const [showNewChatModal, setShowNewChatModal] = useState(false)
 
   const filteredChats = useMemo(() => {
-    let filtered = [...chats]
+    let filtered = [...chats].filter(chat => chat && chat._id) // Filter out undefined/null chats
 
     // Apply filter
     if (filter === 'unread') {
@@ -178,7 +178,7 @@ const ChatList = ({ onChatSelect, className }) => {
           <AnimatePresence>
             {filteredChats.map((chat, index) => (
               <motion.div
-                key={chat._id}
+                key={chat._id || `chat-${index}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}

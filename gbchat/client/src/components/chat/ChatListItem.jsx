@@ -22,6 +22,12 @@ import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 const ChatListItem = ({ chat, onClick }) => {
   const { activeChat, unreadCounts, onlineUsers, typingUsers } = useChatStore()
   const { user } = useAuthStore()
+  
+  // Guard against undefined chat
+  if (!chat) {
+    return null
+  }
+  
   const isActive = activeChat?._id === chat._id
   const unreadCount = unreadCounts[chat._id] || 0
 
@@ -153,7 +159,7 @@ const ChatListItem = ({ chat, onClick }) => {
 
   return (
     <div
-      onClick={onClick}
+      onClick={() => onClick && onClick(chat)}
       className={clsx(
         'flex items-center gap-3 px-4 py-3',
         'hover:bg-gradient-to-r hover:from-primary-50/50 hover:to-transparent',
