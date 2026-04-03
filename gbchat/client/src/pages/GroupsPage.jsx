@@ -22,11 +22,33 @@ import {
   XMarkIcon,
   ArrowPathIcon,
   SpeakerWaveIcon,
+  TagIcon,
+  DocumentTextIcon,
+  PhotoIcon,
+  LinkIcon,
+  MapPinIcon,
+  CogIcon,
+  GiftIcon,
+  TrophyIcon,
+  FireIcon,
+  SparklesIcon,
+  QueueListIcon,
+  BookmarkIcon,
+  ShareIcon,
+  EyeIcon,
+  ArchiveBoxIcon,
+  TrashIcon,
+  UserMinusIcon,
+  CrownIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline'
 import {
   PlusIcon as PlusIconSolid,
   StarIcon as StarIconSolid,
   CheckCircleIcon as CheckCircleSolidIcon,
+  CrownIcon as CrownIconSolid,
+  FireIcon as FireIconSolid,
 } from '@heroicons/react/24/solid'
 import Button from '../components/common/Button'
 import CreateGroup from '../components/groups/CreateGroup'
@@ -55,6 +77,21 @@ const GroupsPage = () => {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedGroups, setSelectedGroups] = useState(new Set())
+  const [showBulkActions, setShowBulkActions] = useState(false)
+  const [sortBy, setSortBy] = useState('recent')
+  const [viewMode, setViewMode] = useState('list') // list, grid, compact
+  const [showArchived, setShowArchived] = useState(false)
+  const [groupStats, setGroupStats] = useState({
+    totalGroups: 0,
+    activeGroups: 0,
+    totalMembers: 0,
+    totalMessages: 0,
+    popularGroups: [],
+  })
+  const [showGroupInsights, setShowGroupInsights] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
 
   const { groups, fetchChats, chats } = useChatStore()
   const gbFeaturesStore = useGBFeaturesStore()
@@ -66,7 +103,12 @@ const GroupsPage = () => {
     fetchChats()
     gbFeaturesStore.fetchGBFeatures()
     loadAnnouncements()
+    calculateGroupStats()
   }, [])
+
+  useEffect(() => {
+    calculateGroupStats()
+  }, [groupsList])
 
   const loadAnnouncements = async () => {
     // Load group announcements from API or local storage
@@ -80,10 +122,114 @@ const GroupsPage = () => {
     }
   }
 
+  const calculateGroupStats = () => {
+    const stats = {
+      totalGroups: groupsList.length,
+      activeGroups: groupsList.filter(g => {
+        const lastMessage = new Date(g.lastMessageAt || g.createdAt)
+        const daysSinceLastMessage = (new Date() - lastMessage) / (1000 * 60 * 60 * 24)
+        return daysSinceLastMessage <= 7
+      }).length,
+      totalMembers: groupsList.reduce((sum, g) => sum + (g.members?.length || 0), 0),
+      totalMessages: groupsList.reduce((sum, g) => sum + (g.messageCount || 0), 0),
+      popularGroups: groupsList
+        .sort((a, b) => (b.members?.length || 0) - (a.members?.length || 0))
+        .slice(0, 5),
+    }
+    setGroupStats(stats)
+  }
+
+  const handleGroupSelection = (groupId) => {
+    const newSelection = new Set(selectedGroups)
+    if (newSelection.has(groupId)) {
+      newSelection.delete(groupId)
+    } else {
+      newSelection.add(groupId)
+    }
+    setSelectedGroups(newSelection)
+    setShowBulkActions(newSelection.size > 0)
+  }
+
+  const handleBulkAction = async (action) => {
+    if (selectedGroups.size === 0) return
+    
+    setLoading(true)
+    try {
+      const groupIds = Array.from(selectedGroups)
+      
+      switch (action) {
+        case 'archive':
+          await Promise.all(groupIds.map(id => api.patch(`/groups/${id}/archive`)))
+          toast.success(`Archived ${groupIds.length} groups`)
+          break
+        case 'mute':
+          await Promise.all(groupIds.map(id => api.patch(`/groups/${id}/mute`)))
+          toast.success(`Muted ${groupIds.length} groups`)
+          break
+        case 'star':
+          await Promise.all(groupIds.map(id => api.patch(`/groups/${id}/star`)))
+          toast.success(`Starred ${groupIds.length} groups`)
+          break
+        case 'delete':
+          if (confirm(`Are you sure you want to delete ${groupIds.length} groups?`)) {
+            await Promise.all(groupIds.map(id => api.delete(`/groups/${id}`)))
+            toast.success(`Deleted ${groupIds.length} groups`)
+          }
+          break
+        default:
+          toast.error('Unknown action')
+      }
+      
+      setSelectedGroups(new Set())
+      setShowBulkActions(false)
+      await fetchChats()
+    } catch (error) {
+      toast.error('Failed to perform bulk action')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleExportGroups = async (format) => {
+    setLoading(true)
+    try {
+      const response = await api.post('/groups/export', { format, groups: Array.from(selectedGroups) })
+      const blob = new Blob([response.data], { type: format === 'csv' ? 'text/csv' : 'application/json' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `groups_export.${format}`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('Groups exported successfully')
+    } catch (error) {
+      toast.error('Failed to export groups')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleInviteToGroups = async (inviteData) => {
+    setLoading(true)
+    try {
+      await api.post('/groups/bulk-invite', {
+        groups: Array.from(selectedGroups),
+        ...inviteData
+      })
+      toast.success('Invitations sent successfully')
+      setShowInviteModal(false)
+    } catch (error) {
+      toast.error('Failed to send invitations')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleRefresh = async () => {
     setRefreshing(true)
     await fetchChats()
     await gbFeaturesStore.fetchGBFeatures()
+    calculateGroupStats()
     setTimeout(() => setRefreshing(false), 1000)
   }
 
@@ -203,7 +349,7 @@ const GroupsPage = () => {
     toast.success('Announcement posted! 📢')
   }
 
-  // Filter groups
+  // Filter and sort groups
   const filteredGroups = groupsList.filter(group => {
     if (searchQuery && !group.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
@@ -220,7 +366,33 @@ const GroupsPage = () => {
     if (filter === 'starred' && !group.isStarred) {
       return false
     }
+    if (filter === 'archived' && !group.isArchived) {
+      return false
+    }
+    if (showArchived && !group.isArchived) {
+      return false
+    }
+    if (!showArchived && group.isArchived) {
+      return false
+    }
     return true
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'name':
+        return a.name.localeCompare(b.name)
+      case 'recent':
+        return new Date(b.lastMessageAt || b.createdAt) - new Date(a.lastMessageAt || a.createdAt)
+      case 'unread':
+        return (b.unreadCount || 0) - (a.unreadCount || 0)
+      case 'members':
+        return (b.members?.length || 0) - (a.members?.length || 0)
+      case 'activity':
+        const aActivity = a.messageCount || 0
+        const bActivity = b.messageCount || 0
+        return bActivity - aActivity
+      default:
+        return 0
+    }
   })
 
   // Get filter counts
@@ -256,11 +428,50 @@ const GroupsPage = () => {
 
       {/* Desktop Header */}
       <div className="hidden md:flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
-        <div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{groupsList.length} groups</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{groupsList.length} groups</p>
+          </div>
+          <button
+            onClick={() => setShowGroupInsights(!showGroupInsights)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            <ChartBarIcon className="w-4 h-4" />
+            <span className="text-sm">Insights</span>
+          </button>
         </div>
         <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            {[
+              { id: 'list', icon: QueueListIcon, label: 'List' },
+              { id: 'grid', icon: UsersIcon, label: 'Grid' },
+              { id: 'compact', icon: FunnelIcon, label: 'Compact' },
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => setViewMode(mode.id)}
+                className={clsx(
+                  'p-1.5 rounded transition-colors',
+                  viewMode === mode.id ? 'bg-white dark:bg-gray-700 shadow-sm' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                )}
+                title={mode.label}
+              >
+                <mode.icon className="w-4 h-4" />
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={clsx(
+              'p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors',
+              showArchived && 'text-primary-600'
+            )}
+            title={showArchived ? 'Hide Archived' : 'Show Archived'}
+          >
+            <ArchiveBoxIcon className="w-5 h-5" />
+          </button>
           <button
             onClick={handleRefresh}
             className={clsx('p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all', refreshing && 'animate-spin')}
@@ -278,6 +489,143 @@ const GroupsPage = () => {
           </Button>
         </div>
       </div>
+
+      {/* Group Insights */}
+      <AnimatePresence>
+        {showGroupInsights && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="hidden md:block border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl overflow-hidden"
+          >
+            <div className="p-4">
+              <div className="grid grid-cols-5 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary-600">{groupStats.totalGroups}</div>
+                  <div className="text-xs text-gray-500">Total Groups</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{groupStats.activeGroups}</div>
+                  <div className="text-xs text-gray-500">Active Groups</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{groupStats.totalMembers}</div>
+                  <div className="text-xs text-gray-500">Total Members</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">{groupStats.totalMessages}</div>
+                  <div className="text-xs text-gray-500">Total Messages</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {groupStats.popularGroups[0]?.members?.length || 0}
+                  </div>
+                  <div className="text-xs text-gray-500">Largest Group</div>
+                </div>
+              </div>
+              {groupStats.popularGroups.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Popular Groups</h4>
+                  <div className="flex gap-2">
+                    {groupStats.popularGroups.map((group) => (
+                      <div
+                        key={group._id}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full"
+                      >
+                        <FireIconSolid className="w-3 h-3 text-orange-500" />
+                        <span className="text-xs font-medium">{group.name}</span>
+                        <span className="text-xs text-gray-500">({group.members?.length})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Actions Bar */}
+      <AnimatePresence>
+        {showBulkActions && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b border-primary-200 dark:border-primary-800 bg-primary-50/50 dark:bg-primary-900/20 overflow-hidden"
+          >
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+                    {selectedGroups.size} groups selected
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedGroups(new Set())
+                      setShowBulkActions(false)
+                    }}
+                    className="text-sm text-primary-600 hover:text-primary-700"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleBulkAction('star')}
+                    loading={loading}
+                  >
+                    <StarIcon className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleBulkAction('mute')}
+                    loading={loading}
+                  >
+                    <BellIcon className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleBulkAction('archive')}
+                    loading={loading}
+                  >
+                    <ArchiveBoxIcon className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowInviteModal(true)}
+                    loading={loading}
+                  >
+                    <UserPlusIcon className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowExportModal(true)}
+                    loading={loading}
+                  >
+                    <ShareIcon className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleBulkAction('delete')}
+                    loading={loading}
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Tab Navigation */}
       <div className="px-4 py-2 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
@@ -402,67 +750,147 @@ const GroupsPage = () => {
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'groups' && (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div className={clsx(
+            viewMode === 'grid' ? 'p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 
+            viewMode === 'compact' ? 'divide-y divide-gray-200 dark:divide-gray-700' :
+            'divide-y divide-gray-200 dark:divide-gray-700'
+          )}>
             {filteredGroups.length > 0 ? (
               filteredGroups.map((group) => (
                 <motion.div
                   key={group._id}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.01 }}
-                  className="p-4 hover:bg-primary-50/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-200 group"
-                  onClick={() => handleGroupClick(group)}
+                  whileHover={{ scale: viewMode === 'grid' ? 1.02 : 1.01 }}
+                  className={clsx(
+                    viewMode === 'grid' 
+                      ? 'bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md cursor-pointer transition-all duration-200'
+                      : viewMode === 'compact'
+                      ? 'p-2 hover:bg-primary-50/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-200 group'
+                      : 'p-4 hover:bg-primary-50/50 dark:hover:bg-gray-800/50 cursor-pointer transition-all duration-200 group'
+                  )}
+                  onClick={(e) => {
+                    if (e.target.type !== 'checkbox') {
+                      handleGroupClick(group)
+                    }
+                  }}
                 >
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 relative">
-                      <img
-                        src={group.avatar}
-                        alt={group.name}
-                        className="w-12 h-12 rounded-full object-cover ring-2 ring-primary-500/20 group-hover:ring-primary-500/40 transition-all"
-                      />
-                      <div className={clsx(
-                        'absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-900 rounded-full',
-                        group.online ? 'bg-green-500' : 'bg-gray-400'
-                      )}></div>
+                  {/* Selection Checkbox */}
+                  <div className="absolute top-2 left-2 z-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedGroups.has(group._id)}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        handleGroupSelection(group._id)
+                      }}
+                      className="w-4 h-4 text-primary-600 rounded border-gray-300 dark:border-gray-600 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  {/* Group Content */}
+                  <div className={clsx(
+                    viewMode === 'grid' ? 'space-y-3' : 'flex items-center'
+                  )}>
+                    {/* Avatar */}
+                    <div className={clsx(
+                      viewMode === 'grid' ? 'flex justify-center' : 'flex-shrink-0 relative'
+                    )}>
+                      <div className="relative">
+                        <img
+                          src={group.avatar}
+                          alt={group.name}
+                          className={clsx(
+                            viewMode === 'grid' ? 'w-16 h-16' : 'w-12 h-12',
+                            'rounded-full object-cover ring-2 ring-primary-500/20 group-hover:ring-primary-500/40 transition-all'
+                          )}
+                        />
+                        <div className={clsx(
+                          'absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white dark:border-gray-900 rounded-full',
+                          group.online ? 'bg-green-500' : 'bg-gray-400'
+                        )}></div>
+                        {group.isStarred && (
+                          <StarIconSolid className="absolute -top-1 -right-1 w-4 h-4 text-yellow-500" />
+                        )}
+                        {group.isArchived && (
+                          <ArchiveBoxIcon className="absolute -bottom-1 -right-1 w-4 h-4 text-gray-500" />
+                        )}
+                      </div>
                     </div>
 
-                    <div className="ml-3 flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {/* Group Info */}
+                    <div className={clsx(
+                      viewMode === 'grid' ? 'text-center space-y-1' : 'ml-3 flex-1 min-w-0'
+                    )}>
+                      <div className={clsx(
+                        viewMode === 'grid' ? 'flex flex-col items-center' : 'flex items-center justify-between'
+                      )}>
+                        <div className={clsx(
+                          viewMode === 'grid' ? 'flex items-center gap-2' : 'flex items-center gap-2'
+                        )}>
+                          <h3 className={clsx(
+                            viewMode === 'grid' ? 'text-base font-medium' : 'text-sm font-medium',
+                            'text-gray-900 dark:text-white truncate'
+                          )}>
                             {group.name}
                           </h3>
                           {group.isAdmin && (
-                            <ShieldCheckIcon className="w-4 h-4 text-green-500" />
+                            <CrownIconSolid className="w-4 h-4 text-yellow-500" />
                           )}
                           {group.isMuted && (
                             <BellIcon className="w-4 h-4 text-gray-400" />
                           )}
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatTime(group.lastMessageAt)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {typeof group.lastMessage?.content === 'string'
-                            ? group.lastMessage?.content
-                            : group.lastMessage?.content?.text || group.description || 'No messages yet'}
-                        </p>
-                        {group.unreadCount > 0 && (
-                          <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-full shadow-sm shadow-primary-500/30 animate-pulse">
-                            {group.unreadCount}
+                        {!viewMode === 'compact' && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatTime(group.lastMessageAt)}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 mt-2">
+                      {/* Description */}
+                      {viewMode !== 'compact' && group.description && (
+                        <p className={clsx(
+                          viewMode === 'grid' ? 'text-sm' : 'text-sm',
+                          'text-gray-500 dark:text-gray-400 line-clamp-2'
+                        )}>
+                          {group.description}
+                        </p>
+                      )}
+
+                      {/* Last Message */}
+                      {viewMode !== 'grid' && (
+                        <div className={clsx(
+                          viewMode === 'compact' ? 'flex items-center justify-between' : 'flex items-center justify-between mt-1'
+                        )}>
+                          <p className={clsx(
+                            viewMode === 'compact' ? 'text-xs' : 'text-sm',
+                            'text-gray-500 dark:text-gray-400 truncate'
+                          )}>
+                            {typeof group.lastMessage?.content === 'string'
+                              ? group.lastMessage?.content
+                              : group.lastMessage?.content?.text || group.description || 'No messages yet'}
+                          </p>
+                          {group.unreadCount > 0 && (
+                            <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-full shadow-sm shadow-primary-500/30 animate-pulse">
+                              {group.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Members */}
+                      <div className={clsx(
+                        viewMode === 'grid' ? 'flex justify-center items-center gap-2 mt-2' : 'flex items-center gap-2 mt-2'
+                      )}>
                         <div className="flex -space-x-2">
-                          {getMemberAvatars(group.members).slice(0, 3).map((avatar, i) => (
+                          {getMemberAvatars(group.members).slice(0, viewMode === 'compact' ? 2 : 3).map((avatar, i) => (
                             <div
                               key={i}
-                              className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center text-xs text-white ring-2 ring-white dark:ring-gray-900"
+                              className={clsx(
+                                viewMode === 'compact' ? 'w-4 h-4' : 'w-5 h-5',
+                                'rounded-full bg-primary-500 flex items-center justify-center text-xs text-white ring-2 ring-white dark:ring-gray-900'
+                              )}
                             >
                               {typeof avatar === 'string' && avatar.startsWith('http') ? (
                                 <img src={avatar} alt="" className="w-full h-full rounded-full object-cover" />
@@ -471,14 +899,43 @@ const GroupsPage = () => {
                               )}
                             </div>
                           ))}
-                          {group.members?.length > 3 && (
-                            <div className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-600 dark:text-gray-300 ring-2 ring-white dark:ring-gray-900">
-                              +{group.members.length - 3}
+                          {group.members?.length > (viewMode === 'compact' ? 2 : 3) && (
+                            <div className={clsx(
+                              viewMode === 'compact' ? 'w-4 h-4' : 'w-5 h-5',
+                              'rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-600 dark:text-gray-300 ring-2 ring-white dark:ring-gray-900'
+                            )}>
+                              +{group.members.length - (viewMode === 'compact' ? 2 : 3)}
                             </div>
                           )}
                         </div>
-                        <span className="text-xs text-gray-400">{group.members?.length || 0} members</span>
+                        <span className={clsx(
+                          viewMode === 'compact' ? 'text-xs' : 'text-xs',
+                          'text-gray-400'
+                        )}>
+                          {group.members?.length || 0} members
+                        </span>
                       </div>
+
+                      {/* Group Tags/Features */}
+                      {viewMode === 'grid' && (
+                        <div className="flex flex-wrap gap-1 justify-center mt-2">
+                          {group.type === 'channel' && (
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs rounded-full">
+                              Channel
+                            </span>
+                          )}
+                          {group.type === 'broadcast' && (
+                            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 text-xs rounded-full">
+                              Broadcast
+                            </span>
+                          )}
+                          {group.privacy === 'public' && (
+                            <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 text-xs rounded-full">
+                              Public
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
