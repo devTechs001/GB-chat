@@ -28,7 +28,7 @@ import TextArea from '../common/TextArea'
 import Modal from '../common/Modal'
 import clsx from 'clsx'
 
-const AnnouncementCreator = ({ groupId, onClose, onSubmit }) => {
+const AnnouncementCreator = ({ isOpen, groupId, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     title: '',
     content: '',

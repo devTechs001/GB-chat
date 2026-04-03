@@ -1,0 +1,6 @@
+{
+  "version": "2.0.0",
+  "build": "20240403-01",
+  "description": "GBChat Ultimate Messaging Platform",
+  "changelog": "Added group management features with polls, events, and announcements"
+}
