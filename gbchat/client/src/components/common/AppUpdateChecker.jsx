@@ -47,7 +47,8 @@ const AppUpdateChecker = () => {
     try {
       // In production, this would fetch from your server
       // For demo, we'll simulate a version check
-      const response = await fetch(VERSION_INFO_URL)
+      const cacheBuster = Date.now()
+      const response = await fetch(`${VERSION_INFO_URL}?v=${cacheBuster}`)
       if (response.ok) {
         const data = await response.json()
         compareVersions(data)
