@@ -58,6 +58,7 @@ import GroupInsights from '../components/groups/GroupInsights'
 import GroupBulkActions from '../components/groups/GroupBulkActions'
 import PollCreator from '../components/groups/PollCreator'
 import AnnouncementCreator from '../components/groups/AnnouncementCreator'
+import EventCreator from '../components/groups/EventCreator'
 import useChatStore from '../store/useChatStore'
 import useGBFeaturesStore from '../store/useGBFeaturesStore'
 import useAuthStore from '../store/useAuthStore'
@@ -309,74 +310,180 @@ const GroupsPage = () => {
   }
 
   // Poll handlers
-  const handleCreatePoll = (pollData) => {
-    const newPoll = {
-      ...pollData,
-      _id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      createdBy: user._id,
-      groupId: selectedGroups.length > 0 ? selectedGroups[0] : null,
-      votes: [],
-      totalVotes: 0,
-      isActive: true
+  const handleCreatePoll = async (pollData) => {
+    try {
+      // Get the first selected group or a default group
+      const groupId = selectedGroups.length > 0 ? selectedGroups[0]._id : groupsList[0]?._id
+      
+      if (!groupId) {
+        toast.error('Please select a group first')
+        return
+      }
+
+      const response = await api.post(`/groups/${groupId}/polls`, {
+        question: pollData.question,
+        options: pollData.options,
+        allowMultipleVotes: pollData.settings.allowMultipleAnswers,
+        anonymous: pollData.settings.anonymous,
+        durationHours: pollData.durationHours || 24
+      })
+
+      toast.success('Poll created successfully! 📊')
+      setShowPollCreator(false)
+      
+      // Refresh groups data to show new poll
+      fetchChats()
+      
+      return response.data
+    } catch (error) {
+      console.error('Error creating poll:', error)
+      toast.error(error.response?.data?.message || 'Failed to create poll')
     }
-    
-    // In a real app, this would save to backend
-    console.log('Creating poll:', newPoll)
-    toast.success('Poll created successfully!')
-    setShowPollCreator(false)
   }
 
   // Announcement handlers
-  const handleCreateAnnouncement = (announcementData) => {
-    const newAnnouncement = {
-      ...announcementData,
-      _id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      createdBy: user._id,
-      groupId: selectedGroups.length > 0 ? selectedGroups[0] : null,
-      pinned: announcementData.pinned || false,
-      reactions: []
+  const handleCreateAnnouncement = async (announcementData) => {
+    try {
+      // Get the first selected group or a default group
+      const groupId = selectedGroups.length > 0 ? selectedGroups[0]._id : groupsList[0]?._id
+      
+      if (!groupId) {
+        toast.error('Please select a group first')
+        return
+      }
+
+      const response = await api.post(`/groups/${groupId}/announcements`, {
+        title: announcementData.title,
+        content: announcementData.content,
+        isPinned: announcementData.pinned || false,
+        attachments: announcementData.attachments || [],
+        targetAudience: announcementData.targetAudience || 'all'
+      })
+
+      toast.success('Announcement created successfully! 📢')
+      setShowAnnouncementCreator(false)
+      
+      // Refresh groups data to show new announcement
+      fetchChats()
+      
+      return response.data
+    } catch (error) {
+      console.error('Error creating announcement:', error)
+      toast.error(error.response?.data?.message || 'Failed to create announcement')
     }
-    
-    // In a real app, this would save to backend
-    console.log('Creating announcement:', newAnnouncement)
-    toast.success('Announcement created successfully!')
-    setShowAnnouncementCreator(false)
   }
 
   // Event handlers
-  const handleCreateEvent = (eventData) => {
-    const newEvent = {
-      ...eventData,
-      _id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      createdBy: user._id,
-      groupId: selectedGroups.length > 0 ? selectedGroups[0] : null,
-      attendees: [{ userId: user._id, status: 'going', name: user.name }],
-      totalAttendees: 1
+  const handleCreateEvent = async (eventData) => {
+    try {
+      // Get the first selected group or a default group
+      const groupId = selectedGroups.length > 0 ? selectedGroups[0]._id : groupsList[0]?._id
+      
+      if (!groupId) {
+        toast.error('Please select a group first')
+        return
+      }
+
+      const response = await api.post(`/groups/${groupId}/events`, {
+        title: eventData.title,
+        description: eventData.description,
+        date: eventData.date,
+        location: eventData.location,
+        isOnline: eventData.isOnline || false,
+        onlineLink: eventData.onlineLink || '',
+        sendReminder: eventData.sendReminder || true
+      })
+
+      toast.success('Event created successfully! 📅')
+      setShowEventCreator(false)
+      
+      // Refresh groups data to show new event
+      fetchChats()
+      
+      return response.data
+    } catch (error) {
+      console.error('Error creating event:', error)
+      toast.error(error.response?.data?.message || 'Failed to create event')
     }
-    
-    // In a real app, this would save to backend
-    console.log('Creating event:', newEvent)
-    toast.success('Event created successfully!')
-    setShowEventCreator(false)
   }
 
-  const handleVote = (pollId, optionId) => {
-    setGroupPolls(polls => polls.map(poll => {
-      if (poll._id === pollId) {
-        return {
-          ...poll,
-          voted: true,
-          options: poll.options.map(opt =>
-            opt._id === optionId ? { ...opt, votes: opt.votes + 1, voted: true } : opt
-          ),
-        }
+  const handleVote = async (pollId, optionId) => {
+    try {
+      // Get the first selected group or a default group
+      const groupId = selectedGroups.length > 0 ? selectedGroups[0]._id : groupsList[0]?._id
+      
+      if (!groupId) {
+        toast.error('Please select a group first')
+        return
       }
-      return poll
-    }))
-    toast.success('Vote submitted! ✓')
+
+      const response = await api.post(`/groups/${groupId}/polls/${pollId}/vote`, {
+        optionId: optionId
+      })
+
+      toast.success('Vote submitted! ✓')
+      
+      // Refresh polls data
+      fetchChats()
+      
+      return response.data
+    } catch (error) {
+      console.error('Error voting on poll:', error)
+      toast.error(error.response?.data?.message || 'Failed to submit vote')
+    }
+  }
+
+  const handleRSVP = async (eventId, status) => {
+    try {
+      // Get the first selected group or a default group
+      const groupId = selectedGroups.length > 0 ? selectedGroups[0]._id : groupsList[0]?._id
+      
+      if (!groupId) {
+        toast.error('Please select a group first')
+        return
+      }
+
+      const response = await api.post(`/groups/${groupId}/events/${eventId}/rsvp`, {
+        status: status // 'going', 'maybe', 'not-going'
+      })
+
+      const statusMessages = {
+        going: 'See you there! 🎉',
+        maybe: 'Maybe response recorded 🤔',
+        'not-going': 'Sorry you can\'t make it 😢',
+      }
+      toast.success(statusMessages[status] || 'RSVP submitted!')
+      
+      // Refresh events data
+      fetchChats()
+      
+      return response.data
+    } catch (error) {
+      console.error('Error RSVPing to event:', error)
+      toast.error(error.response?.data?.message || 'Failed to submit RSVP')
+    }
+  }
+
+  // More Options handlers
+  const handleImportGroups = () => {
+    toast.info('Import groups feature coming soon! 📥')
+    setShowMoreOptions(false)
+  }
+
+  const handleExportGroupsFromMore = () => {
+    setShowExportModal(true)
+    setShowMoreOptions(false)
+  }
+
+  const handleGroupSettings = () => {
+    toast.info('Global group settings coming soon! ⚙️')
+    setShowMoreOptions(false)
+  }
+
+  const handleHelpSupport = () => {
+    toast.info('Opening help & support... 📚')
+    setShowMoreOptions(false)
+    // In a real app, this would navigate to help page or open support chat
   }
 
   // Filter and sort groups
@@ -1155,38 +1262,13 @@ const GroupsPage = () => {
         chatId={selectedGroups.length > 0 ? selectedGroups[0] : null}
       />
 
-      {/* Event Creator Modal - Simple version for now */}
-      {showEventCreator && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create Event</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Event creation feature coming soon! This will allow you to schedule group events, meetings, and activities.
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowEventCreator(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    toast.success('Event creation coming soon! 📅')
-                    setShowEventCreator(false)
-                  }}
-                  className="flex-1"
-                >
-                  Coming Soon
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Event Creator Modal */}
+      <EventCreator
+        isOpen={showEventCreator}
+        onClose={() => setShowEventCreator(false)}
+        onSubmit={handleCreateEvent}
+        chatId={selectedGroups.length > 0 ? selectedGroups[0] : null}
+      />
 
       {/* More Options Modal */}
       {showMoreOptions && (
@@ -1195,16 +1277,28 @@ const GroupsPage = () => {
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">More Options</h3>
               <div className="space-y-2">
-                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button 
+                  onClick={handleImportGroups}
+                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
                   <span className="text-gray-700 dark:text-gray-300">Import Groups</span>
                 </button>
-                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button 
+                  onClick={handleExportGroupsFromMore}
+                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
                   <span className="text-gray-700 dark:text-gray-300">Export Groups</span>
                 </button>
-                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button 
+                  onClick={handleGroupSettings}
+                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
                   <span className="text-gray-700 dark:text-gray-300">Group Settings</span>
                 </button>
-                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button 
+                  onClick={handleHelpSupport}
+                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
                   <span className="text-gray-700 dark:text-gray-300">Help & Support</span>
                 </button>
               </div>
