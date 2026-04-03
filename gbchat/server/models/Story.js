@@ -78,6 +78,5 @@ const storySchema = new mongoose.Schema(
 
 // Index for efficient queries
 storySchema.index({ user: 1, createdAt: -1 });
-storySchema.index({ expiresAt: 1 });
 
 export default mongoose.model("Story", storySchema);
