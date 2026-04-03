@@ -25,6 +25,6 @@
     "concurrently": "^8.2.0"
   },
   "dependencies": {
-    "nodemailer": "^8.0.1"
+    "nodemailer": "^8.0.4"
   }
 }
