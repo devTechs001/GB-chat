@@ -75,7 +75,7 @@ const AnnouncementCreator = ({ groupId, onClose, onSubmit }) => {
 
   return (
     <Modal
-      isOpen={true}
+      isOpen={isOpen}
       onClose={onClose}
       title="Create Announcement"
       size="lg"

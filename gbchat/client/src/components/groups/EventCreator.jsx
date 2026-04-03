@@ -59,6 +59,10 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
     }
   }
 
+  const handleInputEvent = (field) => (e) => {
+    handleInputChange(field, e.target.value)
+  }
+
   const validateForm = () => {
     const newErrors = {}
     
@@ -117,20 +121,8 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
   if (!isOpen) return null
 
   return (
-    <Modal onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Create Event" size="lg">
       <div className="w-full max-w-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Create Event
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <XMarkIcon className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
           <div className="space-y-4">
@@ -138,7 +130,7 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
               label="Event Title"
               placeholder="Enter event title"
               value={formData.title}
-              onChange={(value) => handleInputChange('title', value)}
+              onChange={handleInputEvent('title')}
               error={errors.title}
               required
             />
@@ -147,7 +139,7 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
               label="Description"
               placeholder="Describe your event..."
               value={formData.description}
-              onChange={(value) => handleInputChange('description', value)}
+              onChange={handleInputEvent('description')}
               rows={3}
             />
           </div>
@@ -158,7 +150,7 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
               label="Date"
               type="date"
               value={formData.date}
-              onChange={(value) => handleInputChange('date', value)}
+              onChange={handleInputEvent('date')}
               error={errors.date}
               required
               min={new Date().toISOString().split('T')[0]}
@@ -168,7 +160,7 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
               label="Time"
               type="time"
               value={formData.time}
-              onChange={(value) => handleInputChange('time', value)}
+              onChange={handleInputEvent('time')}
               error={errors.time}
               required
             />
@@ -220,7 +212,7 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
               type="url"
               placeholder="https://zoom.us/j/..."
               value={formData.onlineLink}
-              onChange={(value) => handleInputChange('onlineLink', value)}
+              onChange={handleInputEvent('onlineLink')}
               error={errors.onlineLink}
               icon={<GlobeAltIcon className="w-5 h-5 text-gray-400" />}
               required
@@ -230,7 +222,7 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
               label="Location"
               placeholder="Enter event location"
               value={formData.location}
-              onChange={(value) => handleInputChange('location', value)}
+              onChange={handleInputEvent('location')}
               error={errors.location}
               icon={<MapPinIcon className="w-5 h-5 text-gray-400" />}
               required
@@ -278,7 +270,7 @@ const EventCreator = ({ isOpen, onClose, onSubmit, chatId }) => {
               type="number"
               placeholder="Leave empty for unlimited"
               value={formData.maxAttendees}
-              onChange={(value) => handleInputChange('maxAttendees', value)}
+              onChange={handleInputEvent('maxAttendees')}
               min="1"
               icon={<UsersIcon className="w-5 h-5 text-gray-400" />}
             />
