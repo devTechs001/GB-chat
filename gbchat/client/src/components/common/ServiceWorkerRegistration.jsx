@@ -5,7 +5,7 @@ const ServiceWorkerRegistration = () => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
-          .register('/GB-chat/sw.js')
+          .register('/sw.js')
           .then((registration) => {
             console.log('[PWA] ServiceWorker registration successful:', registration.scope);
             
