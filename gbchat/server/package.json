@@ -9,6 +9,7 @@
     "seed": "node scripts/seed.js",
     "seed:business": "node scripts/seed-business.js",
     "seed:demo": "node scripts/seed-demo-data.js",
+    "seed:admin": "node scripts/seed-admin.js",
     "seed:all": "node scripts/seed.js && node scripts/seed-demo-data.js",
     "worker": "node services/worker.js"
   },

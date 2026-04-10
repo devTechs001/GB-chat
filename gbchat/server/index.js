@@ -14,6 +14,7 @@ import { initializeSocket } from "./socket/index.js";
 import { corsOptions } from "./config/cors.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
+import { initializeAdmin } from "./utils/initAdmin.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -142,7 +143,10 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  // Initialize admin user
+  await initializeAdmin();
+  
   server.listen(PORT, () => {
     console.log(`🚀 GBChat server running on port ${PORT}`);
   });
