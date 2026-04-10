@@ -2,3 +2,13 @@
 # Points Netlify to the gbchat subdirectory where the full config lives
 [build]
   base = "gbchat"
+  command = "cd client && npm install && npm run build"
+  publish = "gbchat/client/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_VERSION = "10"
+
+# Redirects and Headers are typically handled in the base directory's toml
+# but we ensure the root build settings are correct for the monorepo.
+
