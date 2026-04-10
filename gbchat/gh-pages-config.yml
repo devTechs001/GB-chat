@@ -22,7 +22,7 @@ environment:
   VITE_API_URL: https://gb-chat-backend.onrender.com/api
   VITE_SOCKET_URL: https://gb-chat-backend.onrender.com
   VITE_ENABLE_ANALYTICS: "true"
-  MONGODB_URL: "mongodb+srv://devtechs842:devtechs842@cluster0.0xqzq.mongodb.net/gbchat?retryWrites=true&w=majority"
+  MONGODB_URL: "mongodb+srv://devtechs842_db_user:20051117dan@cluster0.kparor6.mongodb.net/gbchat?retryWrites=true&w=majority"
   JWT_SECRET: "gbchat_secret_key_2024_production_stable"
   JWT_EXPIRE: "7d"
   NODE_ENV: "production"
