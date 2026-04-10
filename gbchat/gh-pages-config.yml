@@ -9,16 +9,16 @@
 # 2. Deploy to gh-pages branch: npx gh-pages -d dist
 
 # GitHub Pages specific configuration
-base: /gbchat/
+base: /
 
 # Build settings
 build:
   command: npm install && npm run build
   output: dist
-  
+
 # Environment variables for GitHub Pages
 environment:
-  VITE_BASE_URL: /gbchat/
+  VITE_BASE_URL: /
   VITE_API_URL: https://gb-chat-backend.onrender.com/api
   VITE_SOCKET_URL: https://gb-chat-backend.onrender.com
   VITE_ENABLE_ANALYTICS: "true"
