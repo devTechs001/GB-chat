@@ -9,7 +9,6 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://devtechs001.github.io",
-  "https://devtechs001.github.io/GB-chat",
   "https://gbchat.netlify.app",
   ...envOrigins
 ];
@@ -29,4 +28,6 @@ export const corsOptions = {
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-request-id", "X-Requested-With"],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
