@@ -27,7 +27,7 @@ const recoverySchema = new mongoose.Schema({
 
   // Recovery Codes (backup codes)
   recoveryCodes: [{
-    code: { type: String, unique: true },
+    code: { type: String },
     used: { type: Boolean, default: false },
     usedAt: Date,
     createdAt: { type: Date, default: Date.now },
