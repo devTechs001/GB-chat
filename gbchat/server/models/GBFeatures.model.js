@@ -6,6 +6,7 @@ const gbFeaturesSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
     unique: true
+    // Index automatically created by unique: true
   },
   
   // Privacy Features
@@ -205,8 +206,7 @@ const gbFeaturesSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster lookups
-gbFeaturesSchema.index({ userId: 1 });
+// Note: userId index is automatically created by unique: true
 
 const GBFeatures = mongoose.model('GBFeatures', gbFeaturesSchema);
 

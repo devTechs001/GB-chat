@@ -130,8 +130,8 @@ const businessProfileSchema = new mongoose.Schema({
 });
 
 // Indexes
+// Note: userId index is automatically created by unique: true
 businessProfileSchema.index({ businessName: 'text', description: 'text' });
 businessProfileSchema.index({ category: 1, verified: 1 });
-businessProfileSchema.index({ userId: 1 });
 
 module.exports = mongoose.models.BusinessProfile || mongoose.model('BusinessProfile', businessProfileSchema);

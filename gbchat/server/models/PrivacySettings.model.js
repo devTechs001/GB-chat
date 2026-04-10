@@ -7,6 +7,7 @@ const privacySettingsSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
         unique: true
+        // Index automatically created by unique: true
     },
     // Last Seen & Online
     lastSeen: {
@@ -205,8 +206,7 @@ const privacySettingsSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes
-privacySettingsSchema.index({ userId: 1 });
+// Note: userId index is automatically created by unique: true
 
 // Static methods
 privacySettingsSchema.statics.getDefaults = function() {

@@ -6,6 +6,7 @@ const permissionSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
     unique: true
+    // Index automatically created by unique: true
   },
 
   // Device Permissions
@@ -167,8 +168,7 @@ const permissionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for efficient queries
-permissionSchema.index({ userId: 1 });
+// Note: userId index is automatically created by unique: true
 
 // Method to update permission status
 permissionSchema.methods.updatePermission = async function(permissionType, granted, device = 'unknown') {
