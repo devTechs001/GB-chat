@@ -22,6 +22,7 @@ environment:
   VITE_API_URL: https://gb-chat-backend.onrender.com/api
   VITE_SOCKET_URL: https://gb-chat-backend.onrender.com
   VITE_ENABLE_ANALYTICS: "true"
+  MONGODB_URL: "mongodb+srv://devtechs842:devtechs842@cluster0.0xqzq.mongodb.net/gbchat?retryWrites=true&w=majority"
 
 # Custom domain (optional)
 # Uncomment and set your domain
