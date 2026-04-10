@@ -28,6 +28,7 @@ export default defineConfig({
           'ui': ['framer-motion', '@heroicons/react', '@headlessui/react'],
         }
       }
-    }
+    },
+    copyPublicDir: true
   }
 });
