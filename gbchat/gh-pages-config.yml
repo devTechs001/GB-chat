@@ -19,8 +19,9 @@ build:
 # Environment variables for GitHub Pages
 environment:
   VITE_BASE_URL: /gbchat/
-  VITE_API_URL: https://gbchat-enterprise.onrender.com/api
-  VITE_SOCKET_URL: https://gbchat-enterprise.onrender.com
+  VITE_API_URL: https://gb-chat-backend.onrender.com/api
+  VITE_SOCKET_URL: https://gb-chat-backend.onrender.com
+  VITE_ENABLE_ANALYTICS: "true"
 
 # Custom domain (optional)
 # Uncomment and set your domain
@@ -39,5 +40,6 @@ source: client/dist
 # - Update API URLs to point to external backend
 
 # For full functionality, deploy backend separately:
-# - Backend: Render (see render.yaml)
+# - Backend: Render (https://gb-chat-backend.onrender.com)
+# - Database: MongoDB Atlas (via Render environment variables)
 # - Frontend: GitHub Pages or Netlify
