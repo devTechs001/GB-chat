@@ -124,8 +124,11 @@ PORT=5000
 
 **Problem:** 404 on refresh
 ```bash
-# Solution: GitHub Pages needs proper base path
-# In vite.config.js:
+# Solution: Set correct base path in vite.config.js
+# For Netlify (root domain):
+base: "/"
+
+# For GitHub Pages (subfolder):
 base: "/GB-chat/"
 ```
 

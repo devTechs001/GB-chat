@@ -59,7 +59,8 @@ These warnings should now be gone on next deployment.
 
 2. **For GitHub Pages:** The MIME type errors suggest the build path might be incorrect
    - Verify your `vite.config.js` has the correct `base` path for GitHub Pages
-   - Should be `base: '/GB-chat/'` for `https://devtechs001.github.io/GB-chat/`
+   - Set `base: '/'` for root deployments (Netlify, Vercel, Render)
+   - Set `base: '/GB-chat/'` for GitHub Pages (at https://devtechs001.github.io/GB-chat/)
 
 ## Deploy to Render - Step by Step
 

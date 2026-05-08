@@ -3,7 +3,7 @@
 [build]
   base = "gbchat"
   command = "cd client && npm install && npm run build"
-  publish = "gbchat/client/dist"
+  publish = "client/dist"
 
 [build.environment]
   NODE_VERSION = "20"

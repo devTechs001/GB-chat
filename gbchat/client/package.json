@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "description": "GBChat Enterprise Client - Advanced Messaging with AI & Payments",
   "type": "module",
-  "homepage": "https://devtechs001.github.io/GB-chat",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
