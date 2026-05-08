@@ -83,7 +83,8 @@ This guide walks you through deploying GBChat to Netlify (frontend) and Render (
    - Copy values from `.env.render` file
    - **CRITICAL VARIABLES:**
      ```
-     MONGODB_URI=your_actual_mongodb_connection_string
+     MONGODB_URI=your_primary_mongodb_connection_string
+     MONGODB_FALLBACK_URI=your_fallback_mongodb_connection_string
      JWT_SECRET=generate_random_32_char_string
      CLIENT_URL=https://your-site-name.netlify.app
      CORS_ORIGIN=https://your-site-name.netlify.app
