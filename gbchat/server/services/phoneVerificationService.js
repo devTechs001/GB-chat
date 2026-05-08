@@ -1,19 +1,40 @@
 import crypto from 'crypto';
 import User from '../models/User.js';
+import twilio from 'twilio';
+
+// Initialize Twilio client
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
 
 // Generate a random 6-digit verification code
 const generateVerificationCode = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-// Send SMS verification (placeholder - in production, use a service like Twilio)
+// Send SMS verification
 const sendSMS = async (phoneNumber, message) => {
-  // In a real implementation, you would use an SMS service like Twilio
-  console.log(`SMS sent to ${phoneNumber}: ${message}`);
-  
-  // For development/testing purposes, we'll just log the code
-  // In production, replace this with actual SMS service integration
-  return true;
+  try {
+    console.log(`[SMS Service] Sending to ${phoneNumber}: ${message}`);
+    
+    if (twilioClient && process.env.TWILIO_PHONE_NUMBER) {
+      await twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: phoneNumber
+      });
+      console.log(`✅ SMS successfully sent via Twilio to ${phoneNumber}`);
+      return true;
+    } else {
+      console.warn('⚠️ Twilio not configured. Code only logged to console.');
+      return true; // Return true so the flow continues in dev
+    }
+  } catch (error) {
+    console.error('❌ Twilio SMS Error:', error.message);
+    // In production, you might want to throw this error
+    // throw new Error('Failed to send SMS. Please try again later.');
+    return false;
+  }
 };
 
 // Initiate phone verification
@@ -24,24 +45,20 @@ export const initiatePhoneVerification = async (phoneNumber) => {
       throw new Error('Invalid phone number format');
     }
 
-    // Check if phone number is already registered
-    const existingUser = await User.findOne({ phone: phoneNumber });
-    if (existingUser) {
-      throw new Error('Phone number already registered');
-    }
-
     // Generate verification code
     const verificationCode = generateVerificationCode();
     const expiryTime = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
-    // In a real implementation, you would store the code in a temporary storage
-    // For now, we'll temporarily store it in the user document (not ideal for production)
-    // A better approach would be to use Redis or a separate verification table
-    
-    // Create a temporary user record if not exists, or update existing
+    // Find user or create temporary record
     let user = await User.findOne({ phone: phoneNumber });
     if (!user) {
-      user = new User({ phone: phoneNumber });
+      // For registration flow, we might want to check if email is also provided later
+      user = new User({ 
+        phone: phoneNumber,
+        fullName: 'New User', // Placeholder for temporary record
+        email: `${phoneNumber}@temp.com`, // Placeholder for temporary record
+        password: crypto.randomBytes(16).toString('hex'), // Temporary password
+      });
     }
     
     user.otp = {

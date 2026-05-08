@@ -437,3 +437,59 @@ export const importUserData = async (req, res, next) => {
     next(error);
   }
 };
+
+// Forgot Password via Phone
+export const forgotPasswordPhone = async (req, res, next) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ message: "Phone number is required" });
+    }
+
+    const user = await User.findOne({ phone });
+    if (!user) {
+      // For security, don't confirm if user exists
+      return res.json({ message: "If an account exists with this phone number, an OTP has been sent." });
+    }
+
+    // Use the phoneVerificationService to send OTP
+    const result = await phoneVerificationService.initiatePhoneVerification(phone);
+    
+    if (result.success) {
+      res.json({ message: "Verification code sent to your phone" });
+    } else {
+      res.status(500).json({ message: "Failed to send verification code" });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Reset Password via Phone
+export const resetPasswordPhone = async (req, res, next) => {
+  try {
+    const { phone, code, newPassword } = req.body;
+
+    if (!phone || !code || !newPassword) {
+      return res.status(400).json({ message: "Phone, code, and new password are required" });
+    }
+
+    // Verify the OTP
+    const verification = await phoneVerificationService.verifyPhoneNumber(phone, code);
+    
+    if (!verification.success) {
+      return res.status(401).json({ message: "Invalid or expired verification code" });
+    }
+
+    const user = verification.user;
+    
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+    next(error);
+  }
+};

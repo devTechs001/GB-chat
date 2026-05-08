@@ -9,6 +9,8 @@ import {
   updateProfile,
   forgotPassword,
   resetPassword,
+  forgotPasswordPhone,
+  resetPasswordPhone,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
@@ -27,5 +29,7 @@ router.get("/me", protect, getMe);
 router.put("/profile", protect, updateProfile);
 router.post("/forgot-password", authLimiter, forgotPassword);
 router.post("/reset-password", authLimiter, resetPassword);
+router.post("/forgot-password/phone", authLimiter, forgotPasswordPhone);
+router.post("/reset-password/phone", authLimiter, resetPasswordPhone);
 
 export default router;
