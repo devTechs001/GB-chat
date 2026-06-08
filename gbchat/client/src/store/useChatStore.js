@@ -109,7 +109,88 @@ const sampleMessages = [
     sender: { _id: 'user1', name: 'You' },
     status: 'read',
     createdAt: new Date(Date.now() - 60000).toISOString()
-  }
+  },
+  {
+    _id: 'm3',
+    chat: '2',
+    content: { text: 'The project looks great! 🎉' },
+    type: 'text',
+    sender: { _id: 'user3', name: 'Jane Smith' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 3600000).toISOString()
+  },
+  {
+    _id: 'm4',
+    chat: '2',
+    content: { text: 'Thanks Jane! Working on the final touches.' },
+    type: 'text',
+    sender: { _id: 'user1', name: 'You' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 3500000).toISOString()
+  },
+  {
+    _id: 'm5',
+    chat: '3',
+    content: { text: 'Meeting at 3 PM today' },
+    type: 'text',
+    sender: { _id: 'user4', name: 'Mike Johnson' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 7200000).toISOString()
+  },
+  {
+    _id: 'm6',
+    chat: '3',
+    content: { text: 'I\'ll prepare the slides for the demo' },
+    type: 'text',
+    sender: { _id: 'user5', name: 'Sarah Wilson' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 7100000).toISOString()
+  },
+  {
+    _id: 'm7',
+    chat: '3',
+    content: { text: 'Sounds good, see you all there!' },
+    type: 'text',
+    sender: { _id: 'user1', name: 'You' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 7000000).toISOString()
+  },
+  {
+    _id: 'm8',
+    chat: '4',
+    content: { text: 'Don\'t forget dinner tonight!' },
+    type: 'text',
+    sender: { _id: 'user6', name: 'Mom' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    _id: 'm9',
+    chat: '4',
+    content: { text: 'What time should I be there?' },
+    type: 'text',
+    sender: { _id: 'user1', name: 'You' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 86000000).toISOString()
+  },
+  {
+    _id: 'm10',
+    chat: '5',
+    content: { text: 'Check out this photo!' },
+    type: 'image',
+    sender: { _id: 'user7', name: 'Alex Chen' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 172800000).toISOString()
+  },
+  {
+    _id: 'm11',
+    chat: '5',
+    content: { text: 'Nice shot! Where was this taken?' },
+    type: 'text',
+    sender: { _id: 'user1', name: 'You' },
+    status: 'read',
+    createdAt: new Date(Date.now() - 172700000).toISOString()
+  },
 ]
 
 const sampleGroups = [
@@ -587,14 +668,18 @@ const useChatStore = create((set, get) => ({
   polls: samplePolls,
   events: sampleEvents,
   currentChat: null,
+  activeChat: null,
   activeTab: 'chats',
   loading: false,
   error: null,
+  unreadCounts: {},
+  onlineUsers: {},
+  typingUsers: {},
   
   // Actions
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
-  setActiveChat: (chat) => set({ currentChat: chat }),
+  setActiveChat: (chat) => set({ activeChat: chat, currentChat: chat }),
   setActiveTab: (tab) => set({ activeTab: tab }),
   
   // Fetch functions
@@ -611,30 +696,121 @@ const useChatStore = create((set, get) => ({
   
   fetchMessages: async (chatId) => {
     try {
-      // In a real app, this would be an API call
-      const chatMessages = sampleMessages.filter(msg => msg.chat === chatId)
-      return chatMessages
+      const { data } = await api.get(`/messages/${chatId}`)
+      const msgs = Array.isArray(data) ? data : (data.messages || [])
+      if (msgs.length > 0) {
+        set(state => {
+          const otherMessages = state.messages.filter(m => {
+            const mChatId = m.chat?._id || m.chat?.id || m.chat
+            return String(mChatId) !== String(chatId)
+          })
+          return { messages: [...otherMessages, ...msgs] }
+        })
+        return msgs
+      }
     } catch (error) {
-      set({ error: error.message })
-      return []
+      console.log('[ChatStore] API fetchMessages failed, using sample messages')
     }
+    const chatMessages = (sampleMessages || []).filter(msg => {
+      const mChatId = msg.chat?._id || msg.chat?.id || msg.chat
+      return String(mChatId) === String(chatId)
+    })
+    if (chatMessages.length > 0) {
+      set(state => {
+        const otherMessages = state.messages.filter(m => {
+          const mChatId = m.chat?._id || m.chat?.id || m.chat
+          return String(mChatId) !== String(chatId)
+        })
+        return { messages: [...otherMessages, ...chatMessages] }
+      })
+    }
+    return chatMessages
   },
   
-  sendMessage: async (chatId, content) => {
+  createChat: async (userId) => {
     try {
+      const { data } = await api.post('/chats', { participantId: userId })
+      const chat = {
+        _id: data._id || data.id,
+        name: data.name || data.participants?.find(p => String(p.user?._id || p.user) !== String(get().user?._id))?.user?.fullName || 'New Chat',
+        avatar: data.avatar || null,
+        isGroup: data.type === 'group',
+        isPinned: false,
+        unreadCount: 0,
+        lastMessage: null,
+        lastMessageAt: data.createdAt || new Date().toISOString(),
+        participants: data.participants || [],
+      }
+      set(state => {
+        if (state.chats.find(c => c._id === chat._id)) return state
+        return { chats: [chat, ...state.chats] }
+      })
+      set({ activeChat: chat, currentChat: chat })
+      return chat
+    } catch (error) {
+      console.log('[ChatStore] API createChat failed, creating locally')
+      const chat = {
+        _id: `chat_${Date.now()}`,
+        name: 'New Chat',
+        avatar: null,
+        isGroup: false,
+        isPinned: false,
+        unreadCount: 0,
+        lastMessage: null,
+        lastMessageAt: new Date().toISOString(),
+        participants: [{ user: { _id: userId, fullName: 'User' } }],
+      }
+      set(state => ({ chats: [chat, ...state.chats], activeChat: chat, currentChat: chat }))
+      return chat
+    }
+  },
+
+  sendMessage: async (chatId, content, attachments = [], replyTo = null) => {
+    try {
+      let messageType = 'text'
+      let messageContent = { text: content }
+
+      if (attachments.length > 0) {
+        const firstFile = attachments[0]
+        if (firstFile.type?.startsWith('image/')) {
+          messageType = 'image'
+          messageContent = { text: content, image: firstFile.url || firstFile.dataURL }
+        } else if (firstFile.type?.startsWith('video/')) {
+          messageType = 'video'
+          messageContent = { text: content, video: firstFile.url || firstFile.dataURL }
+        } else if (firstFile.type?.startsWith('audio/') || firstFile.isVoice) {
+          messageType = 'voice'
+          messageContent = { text: content, audio: firstFile.url || firstFile.dataURL, duration: firstFile.duration }
+        } else {
+          messageType = 'document'
+          messageContent = { text: content, file: firstFile.url || firstFile.dataURL, fileName: firstFile.name }
+        }
+      }
+
       const newMessage = {
         _id: `m${Date.now()}`,
         chat: chatId,
-        content,
-        type: 'text',
+        content: messageContent,
+        type: messageType,
         sender: { _id: 'user1', name: 'You' },
         status: 'sent',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        replyTo: replyTo ? {
+          _id: replyTo._id,
+          content: replyTo.content,
+          sender: replyTo.sender,
+        } : null,
       }
       
       set(state => ({
         messages: [...state.messages, newMessage]
       }))
+      
+      try {
+        await api.post(`/messages/${chatId}`, { content: messageContent, type: messageType, replyTo: replyTo?._id })
+      } catch (apiError) {
+        console.log('[ChatStore] API send failed, message saved locally')
+      }
       
       return newMessage
     } catch (error) {

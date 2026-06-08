@@ -247,14 +247,15 @@ const useAuthStore = create(
         formData.append('avatar', file)
 
         try {
-          // Use /users/avatar endpoint
           const { data } = await api.post('/users/avatar', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           })
-          // Add cache-busting timestamp to force refresh
+          const avatarUrl = data.avatar
           const updatedUser = {
             ...data,
-            avatar: data.avatar + (data.avatar.includes('?') ? '&' : '?') + 't=' + Date.now()
+            avatar: avatarUrl
+              ? avatarUrl + (avatarUrl.includes('?') ? '&' : '?') + 't=' + Date.now()
+              : null
           }
           set({ user: updatedUser })
           toast.success('Avatar updated successfully')

@@ -39,6 +39,7 @@ import {
   ArchiveBoxIcon,
   TrashIcon,
   UserMinusIcon,
+  UserPlusIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
   LightBulbIcon,
@@ -254,8 +255,8 @@ const GroupsPage = () => {
   const handleGroupClick = (group) => {
     // Set the group as active chat to open chat area
     setActiveChat(group)
-    // Navigate to chat page if not already there
-    navigate('/chat')
+    // Navigate to chats page (path is /chats or / in App.jsx)
+    navigate('/chats')
   }
 
   const handleAnnouncementClick = (announcement) => {

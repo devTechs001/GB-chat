@@ -19,6 +19,7 @@ import toast from 'react-hot-toast'
 const MessageActions = ({ message, isMine, onReply, onReact, className, chatId, onSchedule }) => {
   const [isStarring, setIsStarring] = useState(false)
   const [isPinning, setIsPinning] = useState(false)
+  const messageId = message._id || message.id
 
   const handleStar = async () => {
     try {
@@ -26,7 +27,7 @@ const MessageActions = ({ message, isMine, onReply, onReact, className, chatId, 
       const token = localStorage.getItem('token')
       await axios.post(
         '/api/gb-features/star',
-        { messageId: message._id, chatId },
+        { messageId, chatId },
         { headers: { Authorization: `Bearer ${token}` } }
       )
       toast.success(message.isStarred ? 'Message unstarred' : 'Message starred')
@@ -43,7 +44,7 @@ const MessageActions = ({ message, isMine, onReply, onReact, className, chatId, 
       const token = localStorage.getItem('token')
       await axios.post(
         '/api/gb-features/pin',
-        { messageId: message._id, chatId },
+        { messageId, chatId },
         { headers: { Authorization: `Bearer ${token}` } }
       )
       toast.success('Message pinned')
@@ -56,7 +57,10 @@ const MessageActions = ({ message, isMine, onReply, onReact, className, chatId, 
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(message.content)
+      const contentToCopy = typeof message.content === 'object' && message.content !== null
+        ? message.content.text || JSON.stringify(message.content)
+        : message.content || ''
+      await navigator.clipboard.writeText(contentToCopy)
       toast.success('Message copied')
     } catch (error) {
       toast.error('Failed to copy message')

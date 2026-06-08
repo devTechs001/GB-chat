@@ -2,15 +2,16 @@
 import mongoose from "mongoose";
 
 export const connectDB = async () => {
-  const isDev = process.env.NODE_ENV === 'development';
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const isDev = nodeEnv === 'development';
 
   // Try MONGODB_URI first (Render uses this), then fall back to MONGODB_URL
   const uri = process.env.MONGODB_URI || process.env.MONGODB_URL;
   const fallbackUri = process.env.MONGODB_FALLBACK_URI;
-  const localUri = 'mongodb://localhost:27017/gbchat';
+  const localUri = process.env.MONGODB_LOCAL_URI || 'mongodb://localhost:27017/gbchat';
 
   if (!uri && !fallbackUri && isDev) {
-    console.warn('⚠️ No MongoDB connection strings found. Falling back to local MongoDB...');
+    console.warn('⚠️ No MongoDB connection strings found. Falling back to local MongoDB Compass...');
   }
 
   const connectWithRetry = async (connectionString, label) => {
@@ -44,17 +45,15 @@ export const connectDB = async () => {
       if (success) return;
     }
 
-    // 3. Fallback to local MongoDB in development
-    if (isDev) {
-      console.warn('⚠️ Both primary and fallback Atlas connections failed. Falling back to local MongoDB...');
-      const conn = await mongoose.connect(localUri, {
-        maxPoolSize: 10,
-      });
-      console.log(`✅ Local MongoDB connected: ${conn.connection.host}`);
-    } else {
-      console.error("❌ No valid MongoDB connection strings succeeded in production");
-      process.exit(1);
+    // 3. Try local MongoDB as fallback if Atlas fails
+    if (localUri) {
+      console.warn('⚠️ Atlas connection failed. Attempting local MongoDB Compass fallback...');
+      const success = await connectWithRetry(localUri, 'Local MongoDB');
+      if (success) return;
     }
+
+    console.error('❌ No valid MongoDB connection strings succeeded. Make sure your Atlas connection is valid or local MongoDB is running.');
+    process.exit(1);
   } catch (error) {
     console.error("❌ Fatal MongoDB error:", error.message);
     process.exit(1);

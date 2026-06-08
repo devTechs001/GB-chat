@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import ChatLock from '../models/ChatLock.js';
 import Chat from '../models/Chat.js';
 import bcrypt from 'bcryptjs';
@@ -178,6 +179,16 @@ export const getLockStatus = async (req, res) => {
   try {
     const { chatId } = req.params;
     const userId = req.user._id;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.json({
+        success: true,
+        isLocked: false,
+        exists: false,
+        message: 'Invalid chat ID format (possibly mock data)'
+      });
+    }
 
     const chatLock = await ChatLock.findOne({ chatId, userId });
     

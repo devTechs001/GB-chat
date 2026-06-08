@@ -10,6 +10,7 @@ import {
   ClockIcon,
   SparklesIcon,
   DevicePhoneMobileIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
 import { useNavigate } from 'react-router-dom'
 import LinkedDevices from '../common/LinkedDevices'
@@ -56,6 +57,12 @@ const actions = [
     label: 'Link Device',
     icon: DevicePhoneMobileIcon,
     color: 'bg-cyan-500 hover:bg-cyan-600',
+  },
+  {
+    id: 'app-permissions',
+    label: 'Permissions',
+    icon: ShieldCheckIcon,
+    color: 'bg-orange-500 hover:bg-orange-600',
   },
   {
     id: 'gb-features',

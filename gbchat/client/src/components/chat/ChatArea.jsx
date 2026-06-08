@@ -22,12 +22,14 @@ const ChatArea = ({ onInfoClick, onBack }) => {
     activeChat,
     messages,
     typingUsers,
-    sendMessage: sendMsg
+    sendMessage: sendMsg,
+    fetchMessages,
   } = useChatStore((state) => ({
     activeChat: state.activeChat,
     messages: state.messages,
     typingUsers: state.typingUsers,
     sendMessage: state.sendMessage,
+    fetchMessages: state.fetchMessages,
   }), shallow)
 
   // Get user with proper fallback to persisted data
@@ -153,6 +155,13 @@ const ChatArea = ({ onInfoClick, onBack }) => {
     console.log('[Wallpaper] Chat effect:', chatEffect)
   }, [chatWallpaper, chatEffect])
 
+  // Load messages when active chat changes
+  useEffect(() => {
+    if (activeChat?._id) {
+      fetchMessages(activeChat._id)
+    }
+  }, [activeChat?._id, fetchMessages])
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -216,7 +225,14 @@ const ChatArea = ({ onInfoClick, onBack }) => {
 
   // Group messages by date
   const groupedMessages = (messages || [])
-    .filter(message => message && message.createdAt && message._id) // Filter out undefined messages and those without createdAt or _id
+    .filter(message => {
+      if (!message || !message.createdAt || !(message._id || message.id)) return false;
+      
+      // CRITICAL FIX: Filter by active chat ID
+      // Some messages have chat as an object, others as a string ID
+      const msgChatId = message.chat?._id || message.chat?.id || message.chat;
+      return String(msgChatId) === String(activeChat?._id);
+    })
     .reduce((groups, message) => {
       const date = new Date(message.createdAt).toDateString()
       if (!groups[date]) groups[date] = []
@@ -282,15 +298,16 @@ const ChatArea = ({ onInfoClick, onBack }) => {
       <div
         ref={chatContainerRef}
         className={clsx(
-          'flex-1 overflow-y-auto px-3 md:px-4 py-4 relative scrollbar-hide'
+          'flex-1 overflow-y-auto px-3 md:px-4 py-4 relative scrollbar-hide',
+          currentChatWallpaper ? '' : 'bg-gray-100 dark:bg-dark-surface'
         )}
         style={{
           backgroundImage: currentChatWallpaper
             ? `url('${currentChatWallpaper}')`
-            : `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23dcfce7' fill-opacity='0.4'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3Cpath d='M30 30c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3Cpath d='M70 70c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3Cpath d='M30 70c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3Cpath d='M70 30c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10-10-4.477-10-10zm10-8a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'/%3E%3C/g%3E%3C/svg%3E")`,
-          backgroundSize: currentChatWallpaper ? 'cover' : 'auto',
+            : `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239CA3AF' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3Cg fill='%239CA3AF' fill-opacity='0.04'%3E%3Cpath d='M36 14v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: currentChatWallpaper ? 'cover' : '60px 60px',
           backgroundPosition: 'center',
-          backgroundColor: currentChatWallpaper ? 'transparent' : 'rgb(229, 231, 235)',
+          backgroundColor: currentChatWallpaper ? 'transparent' : '',
           backgroundAttachment: 'scroll',
         }}
       >
@@ -373,21 +390,30 @@ const ChatArea = ({ onInfoClick, onBack }) => {
               
               {/* Messages */}
               {msgs.map((message, index) => {
+                const messageId = message._id || message.id;
+                
                 // Skip messages without valid IDs or sender
-                if (!message || !message._id) {
+                if (!message || !messageId) {
                   console.warn('Invalid message:', message)
                   return null;
                 }
 
                 // Determine if message is from current user - handle multiple sender formats
-                const senderId = message.sender?._id || message.sender?.id || message.sender;
+                const senderId = typeof message.sender === 'object' 
+                  ? (message.sender?._id || message.sender?.id) 
+                  : message.sender;
 
                 // Only mark as mine if we have both IDs and they match
-                const isMine = !!(userId && senderId && senderId === userId);
+                // Added check for 'user1' which is used in sample data for 'You'
+                const isMine = !!(
+                  (userId && senderId && String(senderId) === String(userId)) || 
+                  (senderId === 'user1') || 
+                  (message.sender?.name === 'You')
+                );
 
                 // Debug - log EVERY message to see positioning
                 console.log(`Message #${index}:`, {
-                  id: message._id,
+                  id: messageId,
                   'sender._id': message.sender?._id,
                   'sender.fullName': message.sender?.fullName,
                   senderId,
@@ -400,22 +426,22 @@ const ChatArea = ({ onInfoClick, onBack }) => {
 
                 return (
                 <motion.div
-                  key={message._id}
+                  key={messageId}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   className={clsx(
                     'mb-1 md:mb-2',
-                    selectedMessages.includes(message._id) && 'bg-blue-50/50 dark:bg-blue-900/20 -mx-2 px-2 rounded-lg'
+                    selectedMessages.includes(messageId) && 'bg-blue-50/50 dark:bg-blue-900/20 -mx-2 px-2 rounded-lg'
                   )}
                 >
                   <ChatBubble
                     message={message}
                     isMine={isMine}
                     onReply={() => setReplyTo(message)}
-                    onSelect={() => handleSelectMessage(message._id)}
-                    onLongPress={() => handleLongPress(message._id)}
-                    isSelected={selectedMessages.includes(message._id)}
+                    onSelect={() => handleSelectMessage(messageId)}
+                    onLongPress={() => handleLongPress(messageId)}
+                    isSelected={selectedMessages.includes(messageId)}
                     showAvatar={!isMine}
                     onSchedule={() => setShowScheduleModal(true)}
                   />

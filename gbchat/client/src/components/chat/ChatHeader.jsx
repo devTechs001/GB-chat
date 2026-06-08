@@ -22,6 +22,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
+import ImageViewer from '../common/ImageViewer'
 import Dropdown from '../common/Dropdown'
 import clsx from 'clsx'
 import { format, isToday, isYesterday, subDays } from 'date-fns'
@@ -63,6 +64,7 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
   const [showLockSettings, setShowLockSettings] = useState(false)
   const [showCallInterface, setShowCallInterface] = useState(false)
   const [callType, setCallType] = useState('audio') // 'audio' or 'video'
+  const [showImageViewer, setShowImageViewer] = useState(false)
 
   // Get the other participant's info (not the current user)
   const participants = chat.participants || []
@@ -320,17 +322,18 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
 
-          <div
-            onClick={onInfoClick}
-            className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 cursor-pointer"
-          >
+          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
             <Avatar
               src={displayAvatar}
               alt={displayName}
               size="sm"
               status={isOnline ? 'online' : 'offline'}
+              onClick={() => displayAvatar && setShowImageViewer(true)}
             />
-            <div className="flex-1 min-w-0">
+            <div
+              onClick={onInfoClick}
+              className="flex-1 min-w-0 cursor-pointer"
+            >
               <h3 className="font-medium text-gray-900 dark:text-white truncate text-sm md:text-base">
                 {displayName}
               </h3>

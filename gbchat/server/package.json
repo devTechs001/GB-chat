@@ -4,7 +4,7 @@
   "description": "GBChat Enterprise - Advanced Messaging Platform with AI, Business & Payments",
   "type": "module",
   "scripts": {
-    "dev": "nodemon index.js",
+    "dev": "NODE_ENV=development nodemon index.js",
     "start": "node index.js",
     "seed": "node scripts/seed.js",
     "seed:business": "node scripts/seed-business.js",

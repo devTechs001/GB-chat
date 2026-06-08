@@ -8,6 +8,11 @@ export const getMessages = async (req, res, next) => {
     const { chatId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
+    // Handle non-ObjectId chat IDs (mock/sample data)
+    if (!chatId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.json([]);
+    }
+
     const messages = await Message.find({
       chat: chatId,
       deletedFor: { $nin: [req.user._id] },
@@ -61,6 +66,11 @@ export const sendMessage = async (req, res, next) => {
       selfDestruct,
       scheduledAt,
     } = req.body;
+
+    // Handle non-ObjectId chat IDs (mock/sample data)
+    if (!chatId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid chat ID format (mock data)" });
+    }
 
     const chat = await Chat.findById(chatId);
     if (!chat) return res.status(404).json({ message: "Chat not found" });
@@ -461,6 +471,11 @@ export const sendVoiceMessage = async (req, res, next) => {
   try {
     const { chatId } = req.params;
     const { duration } = req.body;
+
+    // Handle non-ObjectId chat IDs (mock/sample data)
+    if (!chatId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid chat ID format (mock data)" });
+    }
 
     const chat = await Chat.findById(chatId);
     if (!chat) return res.status(404).json({ message: "Chat not found" });

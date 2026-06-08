@@ -14,6 +14,7 @@ import {
   BellIcon,
   MusicalNoteIcon,
   FingerPrintIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline'
 import Avatar from '../components/common/Avatar'
 import Button from '../components/common/Button'

@@ -29,12 +29,36 @@ const ChatListItem = ({ chat, onClick }) => {
   }
   
   const isActive = activeChat?._id === chat._id
-  const unreadCount = unreadCounts[chat._id] || 0
+  const unreadCount = unreadCounts?.[chat._id] || chat.unreadCount || 0
 
   // Get the other participant's info (not the current user)
   const participants = chat.participants || []
-  const otherParticipant = participants.find(p => {
-    const pId = p.user?._id || p.user
+
+  // Normalize participant entries: support object, string id, or array formats
+  const normalizedParticipants = participants
+    .map((p) => {
+      if (!p) return null
+      if (Array.isArray(p)) {
+        // Some backends return participant data as arrays like [id, name, avatar, status, lastSeen]
+        return {
+          user: {
+            _id: p[0],
+            fullName: p[1] || undefined,
+            avatar: p[2] || undefined,
+            status: p[3] || undefined,
+            lastSeen: p[4] || undefined,
+          },
+        }
+      }
+      if (typeof p === 'string') {
+        return { user: { _id: p } }
+      }
+      return p
+    })
+    .filter(Boolean)
+
+  const otherParticipant = normalizedParticipants.find((p) => {
+    const pId = p?.user?._id || p?.user
     return pId !== user?._id
   })
 
@@ -44,7 +68,7 @@ const ChatListItem = ({ chat, onClick }) => {
   const isOnline = otherParticipant?.user?.status === 'online'
   const lastSeen = otherParticipant?.user?.lastSeen
 
-  const isTyping = typingUsers[chat._id]?.length > 0
+  const isTyping = typingUsers?.[chat._id]?.length > 0
 
   // Format time with seconds for today, otherwise show days ago
   const formatMessageTime = (date) => {

@@ -15,6 +15,8 @@ import clsx from 'clsx'
 import StarredMessages from '../components/chat/StarredMessages'
 import PinnedMessages from '../components/chat/PinnedMessages'
 import ChatProfileDrawer from '../components/chat/ChatProfileDrawer'
+import NewChatModal from '../components/chat/NewChatModal'
+import AppPermissions from '../components/enhanced/AppPermissions'
 import useGBFeaturesStore from '../store/useGBFeaturesStore'
 
 const ChatPage = () => {
@@ -29,6 +31,8 @@ const ChatPage = () => {
   const [showStarred, setShowStarred] = useState(false)
   const [showPinned, setShowPinned] = useState(false)
   const [showProfileDrawer, setShowProfileDrawer] = useState(false)
+  const [showNewChatModal, setShowNewChatModal] = useState(false)
+  const [showAppPermissions, setShowAppPermissions] = useState(false)
 
   useEffect(() => {
     fetchChats()
@@ -70,13 +74,16 @@ const ChatPage = () => {
     // Handle different FAB actions
     switch (actionId) {
       case 'new-chat':
-        // Open new chat modal
+        setShowNewChatModal(true)
         break
       case 'new-group':
         // Open create group modal
         break
       case 'add-contact':
         setShowPermissions(true)
+        break
+      case 'app-permissions':
+        setShowAppPermissions(true)
         break
       case 'starred-messages':
         setShowStarred(true)
@@ -204,6 +211,18 @@ const ChatPage = () => {
       {showPinned && (
         <PinnedMessages onClose={() => setShowPinned(false)} />
       )}
+
+      {/* New Chat Modal */}
+      <NewChatModal
+        isOpen={showNewChatModal}
+        onClose={() => setShowNewChatModal(false)}
+      />
+
+      {/* App Permissions Modal */}
+      <AppPermissions
+        isOpen={showAppPermissions}
+        onClose={() => setShowAppPermissions(false)}
+      />
 
       {/* Chat Profile Drawer - GB Features */}
       <ChatProfileDrawer

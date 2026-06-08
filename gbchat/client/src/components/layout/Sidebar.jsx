@@ -69,23 +69,27 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* User Profile Card */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30">
+        <NavLink 
+          to={`/profile/${user?._id || user?.id}`}
+          onClick={handleNavClick}
+          className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all group"
+        >
           <Avatar
             src={user?.avatar}
-            alt={user?.name}
+            alt={user?.fullName || user?.name}
             status="online"
             size="md"
-            className="ring-2 ring-primary-500/30"
+            className="ring-2 ring-primary-500/30 group-hover:scale-105 transition-transform"
           />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 dark:text-white truncate">
-              {user?.name}
+              {user?.fullName || user?.name || 'My Profile'}
             </p>
             <p className="text-xs text-primary-500 dark:text-primary-400 truncate font-medium">
               {user?.status || '🟢 Available'}
             </p>
           </div>
-        </div>
+        </NavLink>
       </div>
 
       {/* Navigation */}

@@ -342,12 +342,14 @@ const ProfileEditor = () => {
         >
           {/* Avatar with overlay on hover */}
           <div className="relative group">
-            <Avatar
-              src={user?.avatar}
-              alt={user?.fullName}
-              size="xl"
-              className="w-32 h-32 ring-4 ring-gray-100 dark:ring-gray-700"
-            />
+            <div className="p-1 rounded-full bg-gradient-to-tr from-primary-500 to-primary-600 shadow-xl">
+              <Avatar
+                src={user?.avatar}
+                alt={user?.fullName}
+                size="xl"
+                className="w-32 h-32 rounded-full border-4 border-white dark:border-gray-800 object-cover"
+              />
+            </div>
 
             {/* Hover overlay for upload */}
             <button

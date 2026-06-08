@@ -78,9 +78,9 @@ const MessageStatus = ({
         return (
           <div className="flex items-center gap-0.5">
             {renderNetworkIndicator()}
-            <div className="flex -space-x-1">
-              <CheckIcon className="w-3.5 h-3.5" />
-              <CheckIcon className="w-3.5 h-3.5" />
+            <div className="flex -space-x-1.5">
+              <CheckIcon className="w-3.5 h-3.5 text-gray-400" />
+              <CheckIcon className="w-3.5 h-3.5 text-gray-400" />
             </div>
           </div>
         )
@@ -91,7 +91,7 @@ const MessageStatus = ({
           return (
             <div className="flex items-center gap-0.5">
               {renderNetworkIndicator()}
-              <div className="flex -space-x-1">
+              <div className="flex -space-x-1.5">
                 <CheckIcon className="w-3.5 h-3.5 text-gray-400" />
                 <CheckIcon className="w-3.5 h-3.5 text-gray-400" />
               </div>
@@ -101,7 +101,10 @@ const MessageStatus = ({
         return (
           <div className="flex items-center gap-0.5">
             {renderNetworkIndicator()}
-            <CheckCircleIcon className="w-3.5 h-3.5 text-blue-400" />
+            <div className="flex -space-x-1.5">
+              <CheckIcon className="w-3.5 h-3.5 text-blue-500 stroke-[3]" />
+              <CheckIcon className="w-3.5 h-3.5 text-blue-500 stroke-[3]" />
+            </div>
           </div>
         )
 

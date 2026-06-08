@@ -74,9 +74,18 @@ const ChatInput = ({ onSendMessage, replyTo, chatId }) => {
     }
   }
 
-  const handleFileSelect = (e) => {
+  const fileToDataURL = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve({ file, dataURL: reader.result, type: file.type, name: file.name, size: file.size })
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files)
-    setAttachedFiles(prev => [...prev, ...files])
+    const fileInfos = await Promise.all(files.map(f => fileToDataURL(f)))
+    setAttachedFiles(prev => [...prev, ...fileInfos])
   }
 
   const removeFile = (index) => {
@@ -100,9 +109,9 @@ const ChatInput = ({ onSendMessage, replyTo, chatId }) => {
                 key={index}
                 className="relative flex-shrink-0 group"
               >
-                {file.type.startsWith('image/') ? (
+                {file.type?.startsWith('image/') ? (
                   <img
-                    src={URL.createObjectURL(file)}
+                    src={file.dataURL || URL.createObjectURL(file.file || file)}
                     alt={file.name}
                     className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg"
                   />
@@ -255,8 +264,19 @@ const ChatInput = ({ onSendMessage, replyTo, chatId }) => {
       {/* Voice Recorder */}
       {isRecording && (
         <VoiceRecorder
-          onStop={(audioBlob) => {
-            setAttachedFiles(prev => [...prev, audioBlob])
+          onStop={(audioBlob, durationTenths) => {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              setAttachedFiles(prev => [...prev, {
+                file: audioBlob,
+                dataURL: reader.result,
+                type: 'audio/webm',
+                name: 'voice-message.webm',
+                isVoice: true,
+                duration: Math.floor(durationTenths / 10),
+              }])
+            }
+            reader.readAsDataURL(audioBlob)
             setIsRecording(false)
           }}
           onCancel={() => setIsRecording(false)}

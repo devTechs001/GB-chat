@@ -65,6 +65,7 @@ const ChatBubble = ({
 
   const animVariant = messageAnimations[messageAnimation] || messageAnimations.slide
   const bubbleRadius = bubbleRadii[bubbleStyle] || bubbleRadii.modern
+  const messageId = message._id || message.id
 
   // GB Features settings
   const hideSecondTick = gbFeatures?.privacy?.hideSecondTick || false
@@ -118,15 +119,22 @@ const ChatBubble = ({
       ? message.content.text || JSON.stringify(message.content)
       : message.content || '';
 
+    const imageUrl = message.media?.[0]?.url || message.content?.image || null
+    const videoUrl = message.media?.[0]?.url || message.content?.video || null
+    const audioUrl = message.media?.[0]?.url || message.content?.audio || null
+    const fileUrl = message.media?.[0]?.url || message.content?.file || null
+    const fileName = message.media?.[0]?.name || message.content?.fileName || ''
+
     switch (message.type) {
       case 'image':
+        if (!imageUrl) return <p className="text-sm">{contentText}</p>
         return (
           <div className="relative">
             <img
-              src={message.media[0]?.url}
+              src={imageUrl}
               alt="Image"
               className="rounded-lg max-w-[200px] md:max-w-[300px] cursor-pointer"
-              onClick={() => window.open(message.media[0]?.url, '_blank')}
+              onClick={() => window.open(imageUrl, '_blank')}
             />
             {contentText && (
               <p className="mt-2 text-sm">{contentText}</p>
@@ -135,10 +143,11 @@ const ChatBubble = ({
         )
 
       case 'video':
+        if (!videoUrl) return <p className="text-sm">{contentText}</p>
         return (
           <div className="relative">
             <video
-              src={message.media[0]?.url}
+              src={videoUrl}
               controls
               className="rounded-lg max-w-[200px] md:max-w-[300px]"
             />
@@ -149,6 +158,7 @@ const ChatBubble = ({
         )
 
       case 'audio':
+      case 'voice':
         return (
           <div className="min-w-[280px] max-w-[320px]">
             <div className="flex items-center gap-3 bg-gradient-to-r from-green-500/10 to-transparent dark:from-green-500/20 rounded-2xl p-3 pr-4">
@@ -156,18 +166,29 @@ const ChatBubble = ({
                 <MicrophoneIcon className="w-5 h-5" />
               </button>
               <div className="flex-1 min-w-0">
-                <audio
-                  src={message.media[0]?.url}
-                  controls
-                  className="w-full h-8 [&::-webkit-media-controls-panel]:bg-green-500 [&::-webkit-media-controls-current-time-display]:text-gray-700 [&::-webkit-media-controls-time-remaining-display]:text-gray-700"
-                  style={{
-                    '--media-control-background': '#22c55e',
-                    '--media-control-foreground': 'white',
-                  }}
-                />
-                {message.duration && (
+                {audioUrl ? (
+                  <audio
+                    src={audioUrl}
+                    controls
+                    className="w-full h-8 [&::-webkit-media-controls-panel]:bg-green-500 [&::-webkit-media-controls-current-time-display]:text-gray-700 [&::-webkit-media-controls-time-remaining-display]:text-gray-700"
+                    style={{
+                      '--media-control-background': '#22c55e',
+                      '--media-control-foreground': 'white',
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 py-1">
+                    <div className="flex gap-0.5 items-end h-6">
+                      {[4,8,12,16,20,24,20,16,12,8,4].map((h, i) => (
+                        <div key={i} className="w-1 bg-green-500 rounded-full" style={{height: `${h}px`}} />
+                      ))}
+                    </div>
+                    <span className="text-xs text-gray-500">Voice message</span>
+                  </div>
+                )}
+                {(message.duration || message.content?.duration) && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {Math.floor(message.duration / 60)}:{String(message.duration % 60).padStart(2, '0')}
+                    {Math.floor((message.duration || message.content?.duration || 0) / 60)}:{String((message.duration || message.content?.duration || 0) % 60).padStart(2, '0')}
                   </p>
                 )}
               </div>
@@ -181,7 +202,7 @@ const ChatBubble = ({
       case 'document':
         return (
           <a
-            href={message.media[0]?.url}
+            href={fileUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg"
@@ -189,10 +210,10 @@ const ChatBubble = ({
             <DocumentIcon className="w-5 h-5" />
             <div>
               <p className="text-sm font-medium truncate max-w-[150px]">
-                {message.media[0]?.name}
+                {fileName || fileUrl?.split('/').pop() || 'Document'}
               </p>
               <p className="text-xs text-gray-500">
-                {message.media[0]?.size}
+                {message.media?.[0]?.size || ''}
               </p>
             </div>
           </a>
@@ -288,15 +309,22 @@ const ChatBubble = ({
       >
         <div
           className={clsx(
-            'px-3 py-2',
+            'px-3 py-1.5',
             bubbleRadius,
             isMine
-              ? 'bg-primary-600 text-white rounded-br-sm'
-              : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-sm',
-            'shadow-sm',
+              ? 'bg-[#dcf8c6] dark:bg-[#056162] text-gray-900 dark:text-white rounded-tr-none'
+              : 'bg-white dark:bg-[#202c33] text-gray-900 dark:text-white rounded-tl-none',
+            'shadow-sm relative',
             isSelected && 'ring-2 ring-primary-400'
           )}
         >
+          {/* WhatsApp Style Tails */}
+          <div className={clsx(
+            'absolute top-0 w-2 h-2.5',
+            isMine 
+              ? '-right-2 bg-[#dcf8c6] dark:bg-[#056162] [clip-path:polygon(0_0,0_100%,100%_0)]' 
+              : '-left-2 bg-white dark:bg-[#202c33] [clip-path:polygon(100%_0,0_0,100%_100%)]'
+          )} />
           {/* Sender name for group chats */}
           {!isMine && message.chat?.isGroup && (
             <p className="text-xs font-medium text-primary-600 dark:text-primary-400 mb-1">
@@ -337,7 +365,7 @@ const ChatBubble = ({
         {message.reactions?.length > 0 && (
           <MessageReactions
             reactions={message.reactions}
-            messageId={message._id}
+            messageId={messageId}
             className="absolute -bottom-3 left-0"
           />
         )}

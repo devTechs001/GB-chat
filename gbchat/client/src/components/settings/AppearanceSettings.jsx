@@ -82,7 +82,15 @@ const AppearanceSettings = () => {
     { id: 'abstract', name: 'Abstract', thumbnail: '/wallpapers/abstract-thumb.jpg', url: '/wallpapers/abstract.jpg' },
     { id: 'gradient1', name: 'Gradient Blue', thumbnail: '/wallpapers/gradient1-thumb.jpg', url: '/wallpapers/gradient1.jpg' },
     { id: 'gradient2', name: 'Gradient Purple', thumbnail: '/wallpapers/gradient2-thumb.jpg', url: '/wallpapers/gradient2.jpg' },
+    { id: 'gradient3', name: 'Gradient Sunset', thumbnail: '/wallpapers/gradient3-thumb.jpg', url: '/wallpapers/gradient3.jpg' },
+    { id: 'gradient4', name: 'Gradient Ocean', thumbnail: '/wallpapers/gradient4-thumb.jpg', url: '/wallpapers/gradient4.jpg' },
+    { id: 'gradient5', name: 'Gradient Mint', thumbnail: '/wallpapers/gradient5-thumb.jpg', url: '/wallpapers/gradient5.jpg' },
     { id: 'pattern1', name: 'Pattern Dots', thumbnail: '/wallpapers/pattern1-thumb.jpg', url: '/wallpapers/pattern1.jpg' },
+    { id: 'pattern2', name: 'Pattern Stripes', thumbnail: '/wallpapers/pattern2-thumb.jpg', url: '/wallpapers/pattern2.jpg' },
+    { id: 'pattern3', name: 'Pattern Waves', thumbnail: '/wallpapers/pattern3-thumb.jpg', url: '/wallpapers/pattern3.jpg' },
+    { id: 'nature1', name: 'Nature Forest', thumbnail: '/wallpapers/nature1-thumb.jpg', url: '/wallpapers/nature1.jpg' },
+    { id: 'nature2', name: 'Nature Beach', thumbnail: '/wallpapers/nature2-thumb.jpg', url: '/wallpapers/nature2.jpg' },
+    { id: 'nature3', name: 'Nature Mountains', thumbnail: '/wallpapers/nature3-thumb.jpg', url: '/wallpapers/nature3.jpg' },
     { id: 'custom', name: 'Custom', thumbnail: null },
   ]
 

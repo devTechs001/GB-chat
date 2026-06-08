@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import clsx from 'clsx'
 
 const Avatar = ({
@@ -10,6 +10,8 @@ const Avatar = ({
   className,
   fallback,
 }) => {
+  const [imgError, setImgError] = useState(false)
+
   const sizes = {
     xs: 'w-8 h-8',
     sm: 'w-10 h-10',
@@ -33,13 +35,28 @@ const Avatar = ({
     busy: 'bg-red-500',
   }
 
+  const showFallback = !src || imgError
+
   return (
     <div className={clsx('relative inline-block', className)}>
-      {src ? (
+      {showFallback ? (
+        <div
+          onClick={onClick}
+          className={clsx(
+            sizes[size],
+            'rounded-full bg-gray-300 dark:bg-gray-600',
+            'flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold',
+            onClick && 'cursor-pointer hover:opacity-90'
+          )}
+        >
+          {fallback || alt?.charAt(0)?.toUpperCase()}
+        </div>
+      ) : (
         <img
           src={src}
           alt={alt}
           onClick={onClick}
+          onError={() => setImgError(true)}
           className={clsx(
             sizes[size],
             'rounded-full object-cover',
@@ -47,18 +64,6 @@ const Avatar = ({
           )}
           style={{ objectFit: 'cover' }}
         />
-      ) : (
-        <div
-          onClick={onClick}
-          className={clsx(
-            sizes[size],
-            'rounded-full bg-gray-300 dark:bg-gray-600',
-            'flex items-center justify-center text-gray-600 dark:text-gray-300',
-            onClick && 'cursor-pointer hover:opacity-90'
-          )}
-        >
-          {fallback || alt?.charAt(0)?.toUpperCase()}
-        </div>
       )}
       
       {status && (

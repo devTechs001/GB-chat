@@ -64,7 +64,7 @@ const VoiceRecorder = ({ onStop, onCancel }) => {
   const handleStop = () => {
     stopRecording()
     if (audioBlob) {
-      onStop(audioBlob)
+      onStop(audioBlob, duration)
       toast.success('Voice message ready to send')
     }
   }

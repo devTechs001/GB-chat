@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Backup from '../models/Backup.model.js';
 import User from '../models/User.js';
 import crypto from 'crypto';
@@ -382,5 +383,3 @@ function formatBytes(bytes) {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
-// Import mongoose for aggregation
-import mongoose from 'mongoose';
