@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   PlusIcon,
@@ -11,6 +12,7 @@ import {
   CurrencyDollarIcon,
 } from '@heroicons/react/24/outline'
 import ChannelCard from '../components/channels/ChannelCard'
+import ChannelDetail from '../components/channels/ChannelDetail'
 import ChannelCreate from '../components/channels/ChannelCreate'
 import ChannelAnalytics from '../components/channels/ChannelAnalytics'
 import ChannelPostScheduler from '../components/channels/ChannelPostScheduler'
@@ -21,6 +23,7 @@ import api from '../lib/api'
 import PageHeader from '../components/layout/PageHeader'
 import EmptyState from '../components/layout/EmptyState'
 import clsx from 'clsx'
+import toast from 'react-hot-toast'
 
 // Demo/offline fallback so the page is never blank when the API is unreachable
 const SAMPLE_CHANNELS = [
@@ -71,8 +74,13 @@ const SAMPLE_CHANNELS = [
 ]
 
 const ChannelsPage = () => {
+  const navigate = useNavigate()
+  const { channelId } = useParams()
   const [channels, setChannels] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
   const [filter, setFilter] = useState('all') // all, subscribed, trending
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreate, setShowCreate] = useState(false)
@@ -80,22 +88,41 @@ const ChannelsPage = () => {
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [activeTab, setActiveTab] = useState('browse') // browse, analytics, scheduler, monetization
   const [scheduledPosts, setScheduledPosts] = useState([])
+  const [ownedChannels, setOwnedChannels] = useState([])
+  const [schedulerChannelId, setSchedulerChannelId] = useState('')
+  const [schedulerLoading, setSchedulerLoading] = useState(false)
 
   useEffect(() => {
     fetchChannels()
+    fetchOwnedChannels()
   }, [])
 
-  const fetchChannels = async () => {
+  // The scheduler only makes sense for channels you own/admin.
+  useEffect(() => {
+    if (activeTab === 'scheduler' && schedulerChannelId) fetchScheduledPosts(schedulerChannelId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, schedulerChannelId])
+
+  const fetchChannels = async ({ page = 1, append = false } = {}) => {
+    setLoadingMore(page > 1)
     try {
-      const { data } = await api.get('/channels')
-      // Handle both array and object responses
+      // The endpoint returns a bare array and reports totals in headers, so the
+      // grid keeps its shape while "Load more" knows whether a next page exists.
+      const response = await api.get('/channels', { params: { page, limit: 50 } })
+      const data = response.data
       const channelsArray = Array.isArray(data) ? data : (data.channels || [])
-      setChannels(channelsArray)
+      const hasMore = response.headers?.['x-has-more'] === 'true'
+
+      setChannels((prev) => (append ? [...prev, ...channelsArray] : channelsArray))
+      setPage(page)
+      setHasMore(hasMore)
     } catch (error) {
       console.error('Failed to fetch channels:', error)
-      setChannels(SAMPLE_CHANNELS)
+      if (!append) setChannels(SAMPLE_CHANNELS)
+      setHasMore(false)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -108,20 +135,87 @@ const ChannelsPage = () => {
     return true
   })
 
-  const handleSchedulePost = (postData) => {
-    console.log('Scheduling post:', postData)
-    setScheduledPosts([...scheduledPosts, { ...postData, _id: Date.now().toString(), status: 'pending' }])
+  /* ---------------- channel ownership + real scheduler ---------------- */
+
+  const fetchOwnedChannels = async () => {
+    try {
+      const { data } = await api.get('/channels/mine')
+      const list = Array.isArray(data) ? data : data.channels || []
+      setOwnedChannels(list)
+      if (list.length && !schedulerChannelId) setSchedulerChannelId(list[0]._id)
+    } catch {
+      // offline / demo mode: the scheduler shows its empty state
+      setOwnedChannels([])
+    }
   }
 
-  const handlePublishNow = (postId) => {
-    console.log('Publishing post:', postId)
-    setScheduledPosts(scheduledPosts.map(p =>
-      p._id === postId ? { ...p, status: 'published' } : p
-    ))
+  const normalizeScheduled = (post) => ({
+    ...post,
+    content: post.text,
+    media: post.mediaUrl ? { url: post.mediaUrl, thumbnail: post.mediaUrl } : null,
+    status: post.status === 'published' ? 'published' : post.status || 'pending',
+  })
+
+  const fetchScheduledPosts = async (channelId) => {
+    setSchedulerLoading(true)
+    try {
+      const { data } = await api.get(`/channels/${channelId}/posts/scheduled`)
+      const list = data?.scheduled || []
+      setScheduledPosts(list.map(normalizeScheduled))
+    } catch (error) {
+      setScheduledPosts([])
+      const status = error?.response?.status
+      if (status === 403) toast.error('Only channel admins can manage the schedule')
+    } finally {
+      setSchedulerLoading(false)
+    }
   }
 
-  const handleDeleteScheduledPost = (postId) => {
-    setScheduledPosts(scheduledPosts.filter(p => p._id !== postId))
+  const handleSchedulePost = async (postData) => {
+    const channelId = postData.channelId || schedulerChannelId
+    if (!channelId) {
+      toast.error('Create a channel first')
+      return
+    }
+    try {
+      const { data } = await api.post(`/channels/${channelId}/posts/schedule`, {
+        text: postData.content,
+        type: postData.media ? 'image' : 'text',
+        mediaUrl: typeof postData.media === 'string' ? postData.media : postData.media?.url || '',
+        scheduledFor: postData.scheduledFor,
+      })
+      const created = data?.scheduledPost
+      if (created) {
+        setScheduledPosts((prev) => [...prev, normalizeScheduled(created)])
+        toast.success('Post scheduled')
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not schedule this post')
+    }
+  }
+
+  const handlePublishNow = async (postId) => {
+    if (!schedulerChannelId) return
+    try {
+      await api.post(`/channels/${schedulerChannelId}/posts/scheduled/${postId}/publish`)
+      setScheduledPosts((prev) =>
+        prev.map((post) => (post._id === postId ? { ...post, status: 'published' } : post))
+      )
+      toast.success('Post published')
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not publish this post')
+    }
+  }
+
+  const handleDeleteScheduledPost = async (postId) => {
+    if (!schedulerChannelId) return
+    try {
+      await api.delete(`/channels/${schedulerChannelId}/posts/scheduled/${postId}`)
+      setScheduledPosts((prev) => prev.filter((post) => post._id !== postId))
+      toast.success('Scheduled post removed')
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not remove this post')
+    }
   }
 
   const TABS = [
@@ -130,6 +224,18 @@ const ChannelsPage = () => {
     { id: 'scheduler', label: 'Scheduler', icon: CalendarIcon },
     { id: 'monetization', label: 'Monetize', icon: CurrencyDollarIcon },
   ]
+
+  /* /channels/:channelId renders the channel itself, not the browse grid. */
+  if (channelId) {
+    const initial = channels.find((channel) => String(channel._id) === String(channelId)) || null
+    return (
+      <ChannelDetail
+        channelId={channelId}
+        initialChannel={initial}
+        onBack={() => navigate('/channels')}
+      />
+    )
+  }
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-gray-50 dark:bg-gray-950">
@@ -251,6 +357,18 @@ const ChannelsPage = () => {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+
+                {hasMore && (
+                  <div className="col-span-full flex justify-center pt-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => fetchChannels({ page: page + 1, append: true })}
+                      disabled={loadingMore}
+                    >
+                      {loadingMore ? 'Loading…' : 'Load more channels'}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -276,14 +394,52 @@ const ChannelsPage = () => {
           />
         )}
 
-        {activeTab === 'scheduler' && (
-          <ChannelPostScheduler
-            channelId="current-channel"
-            scheduledPosts={scheduledPosts}
-            onSchedule={handleSchedulePost}
-            onPublish={handlePublishNow}
-            onDelete={handleDeleteScheduledPost}
+        {activeTab === 'scheduler' && ownedChannels.length === 0 && (
+          <EmptyState
+            icon={CalendarIcon}
+            title="No channels to schedule for"
+            description="Create a channel first — scheduled posts are published to that channel's subscribers."
+            action={
+              <Button variant="primary" onClick={() => setShowCreate(true)}>
+                Create channel
+              </Button>
+            }
           />
+        )}
+
+        {activeTab === 'scheduler' && ownedChannels.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Channel</span>
+              <div className="flex flex-wrap gap-2">
+                {ownedChannels.map((channel) => (
+                  <button
+                    key={channel._id}
+                    onClick={() => setSchedulerChannelId(channel._id)}
+                    className={clsx(
+                      'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
+                      schedulerChannelId === channel._id
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    )}
+                  >
+                    {channel.name}
+                  </button>
+                ))}
+              </div>
+              {schedulerLoading && (
+                <span className="w-4 h-4 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+              )}
+            </div>
+
+            <ChannelPostScheduler
+              channelId={schedulerChannelId}
+              scheduledPosts={scheduledPosts}
+              onSchedule={handleSchedulePost}
+              onPublish={handlePublishNow}
+              onDelete={handleDeleteScheduledPost}
+            />
+          </div>
         )}
 
         {activeTab === 'monetization' && selectedChannel && (

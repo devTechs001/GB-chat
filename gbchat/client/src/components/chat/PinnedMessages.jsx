@@ -1,3 +1,4 @@
+import { getToken } from '../../lib/token'
 import React, { useState, useEffect } from 'react';
 import { Pin, MessageSquare, Calendar, Trash2, ExternalLink, X } from 'lucide-react';
 import axios from 'axios';
@@ -16,7 +17,7 @@ const PinnedMessages = ({ onClose }) => {
 
   const fetchPinnedMessages = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await axios.get('/api/gb-features/pinned', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -48,7 +49,7 @@ const PinnedMessages = ({ onClose }) => {
 
   const handleUnpinMessage = async (messageId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       await axios.post(
         '/api/gb-features/unpin',
         { messageId },
@@ -65,7 +66,7 @@ const PinnedMessages = ({ onClose }) => {
   };
 
   const handleNavigateToChat = (chatId, messageId) => {
-    navigate(`/chat?chatId=${chatId}&messageId=${messageId}`);
+    navigate(`/chats?chat=${chatId}&message=${messageId}`);
     onClose?.();
   };
 

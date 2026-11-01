@@ -66,6 +66,9 @@ services:
       TRUST_PROXY: 1
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-600}
       RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-20}
+      # The dedicated `worker` service owns the cron jobs in this stack.
+      SCHEDULER_ENABLED: "false"
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -87,6 +90,30 @@ services:
     environment:
       <<: *server-env
       NODE_ID: server2
+
+  # ---- Background worker ------------------------------------------------
+  # Shares the API image, runs the maintenance loop (story expiry, scheduled
+  # channel posts, notification pruning, stale calls). Safe to scale: every job
+  # takes a Redis lock. API replicas run with SCHEDULER_ENABLED=false.
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["node", "services/worker.js"]
+    environment:
+      <<: *server-env
+      NODE_ID: worker
+      GRPC_ENABLED: "false"
+      SCHEDULER_ENABLED: "false"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+    networks: [gbchat-network]
 
   # ---- Internal load balancer -------------------------------------------
   lb:

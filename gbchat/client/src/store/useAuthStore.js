@@ -1,3 +1,4 @@
+import { setToken, getToken, clearTokens } from '../lib/token'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '../lib/api'
@@ -43,7 +44,7 @@ const useAuthStore = create(
           let token = data.token
 
           // Persist tokens to localStorage for other parts of the app
-          if (token) localStorage.setItem('token', token)
+          if (token) setToken(token)
 
           // If backend returned only token, fetch user profile
           if (!user && token) {
@@ -91,7 +92,7 @@ const useAuthStore = create(
           const { data } = await api.post('/auth/phone-login', { phone, code })
           let { user, token, refreshToken } = data
 
-          if (token) localStorage.setItem('token', token)
+          if (token) setToken(token)
           if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
 
           if (!user && token) {
@@ -155,7 +156,7 @@ const useAuthStore = create(
           const { data } = await api.post('/auth/register', userData)
           let { user, token, refreshToken } = data
 
-          if (token) localStorage.setItem('token', token)
+          if (token) setToken(token)
           if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
 
           if (!user && token) {
@@ -206,7 +207,7 @@ const useAuthStore = create(
         try {
           localStorage.setItem('demo-mode', 'true')
           localStorage.setItem('hasCompletedOnboarding', 'true')
-          localStorage.setItem('token', 'demo-token')
+          setToken('demo-token')
         } catch {
           /* ignore */
         }
@@ -235,6 +236,7 @@ const useAuthStore = create(
         } catch {
           /* ignore */
         }
+        clearTokens()
         delete api.defaults.headers.common['Authorization']
         toast.success('Logged out successfully')
       },

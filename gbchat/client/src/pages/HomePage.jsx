@@ -9,6 +9,14 @@ import {
   Zap,
   Download,
   Ghost,
+  Snowflake,
+  PhoneOff,
+  Palette,
+  Plane,
+  BarChart3,
+  Users,
+  Globe,
+  Rocket,
 } from 'lucide-react';
 import Button from '../components/common/Button';
 
@@ -42,7 +50,7 @@ const HomePage = () => {
     },
     {
       icon: <Lock className="w-7 h-7" />,
-      title: "End-to-End Encryption",
+      title: "Encrypted Transport",
       description: "Military-grade encryption for all messages, calls, and media.",
       gradient: "from-blue-500 to-cyan-600"
     },
@@ -55,21 +63,21 @@ const HomePage = () => {
   ];
 
   const gbExclusive = [
-    { icon: '🧊', title: 'Freeze Last Seen', desc: 'Lock your last seen at any time' },
-    { icon: '👻', title: 'Ghost Mode', desc: 'Be completely invisible to everyone' },
-    { icon: '🔒', title: 'App Lock', desc: 'Fingerprint & pattern lock support' },
-    { icon: '🚫', title: 'Anti-Delete', desc: 'See messages others have deleted' },
-    { icon: '📞', title: 'Call Blocker', desc: 'Block calls from unknown numbers' },
-    { icon: '🎨', title: 'Custom Bubbles', desc: 'Change chat bubble styles & colors' },
-    { icon: '✈️', title: 'DND Mode', desc: 'Receive messages without notifications' },
-    { icon: '📊', title: 'Chat Analytics', desc: 'See detailed chat statistics' },
+    { icon: <Snowflake className="w-7 h-7" />, title: 'Freeze Last Seen', desc: 'Lock your last seen at any time' },
+    { icon: <Ghost className="w-7 h-7" />, title: 'Ghost Mode', desc: 'Be completely invisible to everyone' },
+    { icon: <Lock className="w-7 h-7" />, title: 'App Lock', desc: 'Fingerprint & pattern lock support' },
+    { icon: <EyeOff className="w-7 h-7" />, title: 'Anti-Delete', desc: 'See messages others have deleted' },
+    { icon: <PhoneOff className="w-7 h-7" />, title: 'Call Blocker', desc: 'Block calls from unknown numbers' },
+    { icon: <Palette className="w-7 h-7" />, title: 'Custom Bubbles', desc: 'Change chat bubble styles & colors' },
+    { icon: <Plane className="w-7 h-7" />, title: 'DND Mode', desc: 'Receive messages without notifications' },
+    { icon: <BarChart3 className="w-7 h-7" />, title: 'Chat Analytics', desc: 'See detailed chat statistics' },
   ];
 
   const stats = [
-    { value: "10M+", label: "Active Users", icon: "👥" },
-    { value: "99.9%", label: "Uptime", icon: "⚡" },
-    { value: "150+", label: "Countries", icon: "🌍" },
-    { value: "14+", label: "Themes", icon: "🎨" }
+    { value: "10M+", label: "Active Users", icon: <Users className="w-6 h-6" /> },
+    { value: "99.9%", label: "Uptime", icon: <Zap className="w-6 h-6" /> },
+    { value: "150+", label: "Countries", icon: <Globe className="w-6 h-6" /> },
+    { value: "14+", label: "Themes", icon: <Palette className="w-6 h-6" /> }
   ];
 
   useEffect(() => {
@@ -134,14 +142,15 @@ const HomePage = () => {
 
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
             className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto">
-            Privacy-first messaging with advanced features. Ghost mode, anti-delete, 14+ premium themes, and encrypted calls — all in one app.
+            Privacy-first messaging with advanced features. Ghost mode, anti-delete, 14+ premium themes, and PIN-locked chats, and TLS on every request — all in one app.
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3 }}
             className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
             <Link to="/auth">
               <Button size="lg" className="min-w-[220px] bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-xl shadow-primary-500/25 text-lg py-3">
-                🚀 Get Started Free
+                <Rocket className="w-5 h-5 mr-2 inline" />
+                Get Started Free
               </Button>
             </Link>
             <Button size="lg" variant="outline" className="min-w-[220px] border-white/20 text-white hover:bg-white/10 text-lg py-3">
@@ -160,7 +169,7 @@ const HomePage = () => {
               <motion.div key={index} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="text-center group">
-                <div className="text-3xl mb-2">{stat.icon}</div>
+                <div className="mb-2 flex justify-center text-primary-400">{stat.icon}</div>
                 <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                   {stat.value}
                 </div>
@@ -221,7 +230,7 @@ const HomePage = () => {
                 viewport={{ once: true }} transition={{ duration: 0.4, delay: index * 0.05 }}
                 whileHover={{ scale: 1.05 }}
                 className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 border border-white/10 hover:border-purple-500/30 transition-all text-center group cursor-pointer">
-                <div className="text-3xl mb-3 group-hover:scale-125 transition-transform">{item.icon}</div>
+                <div className="mb-3 flex justify-center text-purple-300 transition-transform group-hover:scale-110">{item.icon}</div>
                 <h4 className="font-semibold text-white text-sm mb-1">{item.title}</h4>
                 <p className="text-gray-500 text-xs">{item.desc}</p>
               </motion.div>
@@ -235,7 +244,9 @@ const HomePage = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-primary-600/20 via-transparent to-purple-600/20" />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <div className="text-5xl mb-6">🚀</div>
+            <div className="mb-6 flex justify-center text-primary-400">
+              <Rocket className="w-12 h-12" />
+            </div>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Ready to Experience the <span className="bg-gradient-to-r from-primary-400 to-emerald-400 bg-clip-text text-transparent">Future</span>?
             </h2>

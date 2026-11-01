@@ -69,6 +69,36 @@ const userSchema = new mongoose.Schema(
       default: "",
       maxlength: 30,
     },
+    /** Named gradient used behind the avatar when no cover photo is set. */
+    coverGradient: {
+      type: String,
+      enum: ["aurora", "sunset", "ocean", "forest", "midnight", "rose", "graphite"],
+      default: "aurora",
+    },
+    /** Public extras shown on the profile "About" card. */
+    jobTitle: {
+      type: String,
+      default: "",
+      maxlength: 80,
+    },
+    /** IANA zone id, e.g. "Africa/Nairobi" — lets the profile show local time. */
+    timezone: {
+      type: String,
+      default: "",
+      maxlength: 64,
+    },
+    /** How many times another member opened this profile. */
+    profileViews: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    /** Free-form status line ("In a meeting") — `status` stays presence. */
+    statusText: {
+      type: String,
+      default: "",
+      maxlength: 80,
+    },
     status: {
       type: String,
       enum: ["online", "offline", "busy", "away"],
@@ -140,6 +170,15 @@ const userSchema = new mongoose.Schema(
       },
       readReceipts: { type: Boolean, default: true },
       onlineStatus: { type: Boolean, default: true },
+    },
+    /** Per-user defaults applied when joining or creating groups */
+    groupPreferences: {
+      whoCanAddMe: { type: String, enum: ["everyone", "contacts", "nobody"], default: "everyone" },
+      muteNewGroups: { type: Boolean, default: false },
+      autoArchiveLargeGroups: { type: Boolean, default: true },
+      largeGroupThreshold: { type: Number, default: 100, min: 3, max: 1024 },
+      showGroupNotifications: { type: Boolean, default: true },
+      defaultAnnouncementReplies: { type: Boolean, default: false },
     },
     contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -255,6 +294,10 @@ userSchema.methods.toPublicProfile = function () {
     location: this.location,
     coverPhoto: this.coverPhoto,
     pronouns: this.pronouns,
+    coverGradient: this.coverGradient,
+    statusText: this.statusText,
+    jobTitle: this.jobTitle,
+    timezone: this.timezone,
     isVerified: this.isVerified,
     email: this.email,
     phone: this.phone,

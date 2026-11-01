@@ -2,26 +2,53 @@
 import Call from '../models/Call.js';
 import Chat from '../models/Chat.js';
 import asyncHandler from 'express-async-handler';
+import { parsePagination, buildPageMeta, cursorFilter } from '../utils/pagination.js';
 
 // @desc    Get call history
 // @route   GET /api/calls/history
 // @access  Private
 export const getCallHistory = asyncHandler(async (req, res) => {
-  const calls = await Call.find({
+  // Default stays 50 so existing clients see the same list; `?page=` and
+  // `?cursor=` are the additions. One extra row is fetched to answer hasMore
+  // without a second count query.
+  const { page, limit, cursor } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 100 });
+  const { status } = req.query;
+
+  const filter = {
     $or: [
       { caller: req.user._id },
       { 'participants.user': req.user._id },
     ],
-  })
+    ...cursorFilter('createdAt', cursor),
+  };
+  if (status) filter.status = status;
+
+  const calls = await Call.find(filter)
     .populate('caller', 'fullName avatar phone')
     .populate('participants.user', 'fullName avatar phone')
     .populate('chat', 'type groupInfo.name')
     .sort({ createdAt: -1 })
-    .limit(50);
+    .skip((page - 1) * limit)
+    .limit(limit + 1);
+
+  const hasMore = calls.length > limit;
+  const items = hasMore ? calls.slice(0, limit) : calls;
+  const total = await Call.countDocuments({
+    $or: [{ caller: req.user._id }, { 'participants.user': req.user._id }],
+    ...(status ? { status } : {}),
+  });
 
   res.json({
     success: true,
-    data: calls,
+    data: items,
+    meta: buildPageMeta({
+      page,
+      limit,
+      total,
+      returned: items.length,
+      hasMore,
+      cursor: items.length ? new Date(items[items.length - 1].createdAt).toISOString() : cursor,
+    }),
   });
 });
 

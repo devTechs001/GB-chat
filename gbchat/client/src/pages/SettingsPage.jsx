@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   UserCircleIcon,
@@ -13,6 +14,7 @@ import {
   XMarkIcon,
   ChevronRightIcon,
   ArrowLeftIcon,
+  SignalIcon,
 } from '@heroicons/react/24/outline'
 import AccountSettings from '../components/settings/AccountSettings'
 import NotificationSettings from '../components/settings/NotificationSettings'
@@ -23,6 +25,7 @@ import StorageSettings from '../components/settings/StorageSettings'
 import AboutSection from '../components/settings/AboutSection'
 import HelpCenter from '../components/settings/HelpCenter'
 import GBFeaturesSettings from '../components/settings/GBFeaturesSettings'
+import SystemHealth from '../components/settings/SystemHealth'
 import PageHeader from '../components/layout/PageHeader'
 import clsx from 'clsx'
 
@@ -35,6 +38,7 @@ const SECTIONS = [
   { id: 'storage', label: 'Storage', description: 'Data usage & cache cleaner', icon: CloudArrowUpIcon, component: StorageSettings },
   { id: 'help', label: 'Help', description: 'Guides and support', icon: QuestionMarkCircleIcon, component: HelpCenter },
   { id: 'about', label: 'About', description: 'Version & legal', icon: InformationCircleIcon, component: AboutSection },
+  { id: 'system', label: 'System health', description: 'Live metrics & browser crash reports', icon: SignalIcon, component: SystemHealth },
 ]
 
 /**
@@ -43,16 +47,37 @@ const SECTIONS = [
  *  < lg : section list (master) ⇄ section content (detail)
  */
 const SettingsPage = () => {
-  const [activeSection, setActiveSection] = useState('account')
+  const navigate = useNavigate()
+  const { section: routeSection } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedSection = routeSection || searchParams.get('section') || 'account'
+  const isValidSection = SECTIONS.some((entry) => entry.id === requestedSection)
+
+  const [activeSection, setActiveSection] = useState(isValidSection ? requestedSection : 'account')
   const [showGBFeaturesDrawer, setShowGBFeaturesDrawer] = useState(false)
   const [mobileContentOpen, setMobileContentOpen] = useState(false)
 
   const currentSection = SECTIONS.find((section) => section.id === activeSection) || SECTIONS[0]
   const ActiveComponent = currentSection.component
 
+  // Deep links (/settings/privacy, /settings?section=help) win over local state,
+  // so notifications can link straight to the pane they are talking about.
+  useEffect(() => {
+    if (!routeSection && !searchParams.get('section')) return
+    if (!isValidSection) {
+      setSearchParams({}, { replace: true })
+      return
+    }
+    setActiveSection(requestedSection)
+    setMobileContentOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedSection, isValidSection])
+
   const openSection = (sectionId) => {
     setActiveSection(sectionId)
     setMobileContentOpen(true)
+    // Keep the URL shareable without remounting the page.
+    navigate(`/settings/${sectionId}`, { replace: true })
   }
 
   const SectionList = ({ onSelect }) => (
@@ -129,7 +154,7 @@ const SettingsPage = () => {
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-            <SectionList onSelect={setActiveSection} />
+            <SectionList onSelect={openSection} />
             <div className="px-3 pb-4">
               <button
                 onClick={() => setShowGBFeaturesDrawer(true)}

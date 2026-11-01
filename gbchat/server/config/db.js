@@ -1,6 +1,15 @@
 // server/config/db.js
 import mongoose from "mongoose";
 
+/**
+ * When the database is unreachable, every query that needs it waits for mongoose
+ * to buffer it — 10 s by default. That is a *very* slow 401/503 for the caller:
+ * a request to a DB-backed route looked like a hang, and the metrics reported it
+ * as a 10-second error. Cap the buffer so the request fails fast with the normal
+ * error envelope instead.
+ */
+mongoose.set("bufferTimeoutMS", Number(process.env.MONGO_BUFFER_TIMEOUT_MS || 2000));
+
 export const connectDB = async () => {
   const nodeEnv = process.env.NODE_ENV || 'development';
   const isDev = nodeEnv === 'development';
@@ -36,26 +45,31 @@ export const connectDB = async () => {
     // 1. Try Primary URI
     if (uri) {
       const success = await connectWithRetry(uri, 'Primary MongoDB');
-      if (success) return;
+      if (success) return true;
     }
 
     // 2. Try Fallback URI
     if (fallbackUri) {
       const success = await connectWithRetry(fallbackUri, 'Fallback MongoDB');
-      if (success) return;
+      if (success) return true;
     }
 
     // 3. Try local MongoDB as fallback if Atlas fails
     if (localUri) {
       console.warn('⚠️ Atlas connection failed. Attempting local MongoDB Compass fallback...');
       const success = await connectWithRetry(localUri, 'Local MongoDB');
-      if (success) return;
+      if (success) return true;
     }
 
     console.error('❌ No valid MongoDB connection strings succeeded. Make sure your Atlas connection is valid or local MongoDB is running.');
-    process.exit(1);
+    // Do NOT kill the process: the HTTP server stays up so probes and
+    // /api/system/* can report "degraded" and the orchestrator can restart or
+    // route around this node. Set EXIT_ON_DB_FAILURE=true for the old behaviour.
+    if (String(process.env.EXIT_ON_DB_FAILURE || '').toLowerCase() === 'true') process.exit(1);
+    return false;
   } catch (error) {
     console.error("❌ Fatal MongoDB error:", error.message);
-    process.exit(1);
+    if (String(process.env.EXIT_ON_DB_FAILURE || '').toLowerCase() === 'true') process.exit(1);
+    return false;
   }
 };

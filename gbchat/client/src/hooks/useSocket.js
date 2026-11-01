@@ -1,3 +1,4 @@
+import { getToken } from '../lib/token'
 import { useCallback, useRef } from 'react'
 import io from 'socket.io-client'
 import useAuthStore from '../store/useAuthStore'
@@ -28,17 +29,6 @@ let sharedUserId = null
 let handlersAttached = false
 let reconnectAttempts = 0
 const MAX_RECONNECT_ATTEMPTS = 8
-
-const getToken = () => {
-  try {
-    const direct = localStorage.getItem('token')
-    if (direct) return direct
-    const stored = JSON.parse(localStorage.getItem('auth-storage') || 'null')
-    return stored?.state?.token || null
-  } catch {
-    return null
-  }
-}
 
 const attachHandlers = (socket) => {
   if (handlersAttached) return

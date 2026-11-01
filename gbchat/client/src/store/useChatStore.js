@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import api from '../lib/api'
+import offlineDb from '../lib/offlineDb'
 import useAuthStore from './useAuthStore'
 import { isDemoMode } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -833,6 +834,9 @@ const useChatStore = create((set, get) => ({
       const list = Array.isArray(data) ? data : data.chats || []
       const normalized = list.map((chat) => normalizeChat(chat, meId)).filter(Boolean)
 
+      // Write-through: the offline cache mirrors the last successful fetch.
+      offlineDb.cacheChats(normalized).catch(() => {})
+
       if (normalized.length > 0) {
         set({ chats: normalized, loading: false, usingSampleChats: false })
       } else {
@@ -843,6 +847,21 @@ const useChatStore = create((set, get) => ({
     } catch (error) {
       console.warn('[ChatStore] fetchChats failed:', error?.message)
       const isAuthError = error?.response?.status === 401
+
+      // Offline: fall back to the cached list before showing an error.
+      if (!isAuthError) {
+        const cached = await offlineDb.getCachedChats().catch(() => [])
+        if (cached.length) {
+          set({
+            chats: cached,
+            loading: false,
+            usingSampleChats: false,
+            error: 'Offline — showing your cached conversations',
+          })
+          return cached
+        }
+      }
+
       set({
         chats: isAuthError ? sampleChats : get().chats,
         loading: false,
@@ -860,6 +879,7 @@ const useChatStore = create((set, get) => ({
       const { data } = await api.get(`/messages/${chatId}`)
       const msgs = Array.isArray(data) ? data : (data.messages || [])
       if (msgs.length > 0) {
+        offlineDb.cacheMessages(chatId, msgs).catch(() => {})
         set(state => {
           const otherMessages = state.messages.filter(m => {
             const mChatId = m.chat?._id || m.chat?.id || m.chat
@@ -870,7 +890,19 @@ const useChatStore = create((set, get) => ({
         return msgs
       }
     } catch (error) {
-      console.log('[ChatStore] API fetchMessages failed, using sample messages')
+      console.log('[ChatStore] API fetchMessages failed, trying the offline cache')
+
+      const cached = await offlineDb.getCachedMessages(chatId).catch(() => [])
+      if (cached.length) {
+        set(state => {
+          const otherMessages = state.messages.filter(m => {
+            const mChatId = m.chat?._id || m.chat?.id || m.chat
+            return String(mChatId) !== String(chatId)
+          })
+          return { messages: [...otherMessages, ...cached] }
+        })
+        return cached
+      }
     }
     const chatMessages = (sampleMessages || []).filter(msg => {
       const mChatId = msg.chat?._id || msg.chat?.id || msg.chat
@@ -945,9 +977,16 @@ const useChatStore = create((set, get) => ({
       }
     }
 
+    // Idempotency key: survives the outbox, so a replay cannot duplicate.
+    const clientMessageId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `cmid-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+
     // Optimistic message — replaced by the server response below
     const optimistic = {
       _id: `temp-${Date.now()}`,
+      clientMessageId,
       chat: chatId,
       content: messageContent,
       type: messageType,
@@ -988,6 +1027,7 @@ const useChatStore = create((set, get) => ({
         form.append('media', rawFile, rawFile.name || 'attachment')
         form.append('text', content || '')
         form.append('type', messageType)
+        form.append('clientMessageId', clientMessageId)
         if (replyTo?._id) form.append('replyTo', replyTo._id)
         ;({ data } = await api.post(`/messages/${chatId}`, form, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -997,6 +1037,7 @@ const useChatStore = create((set, get) => ({
           text: content || '',
           type: messageType,
           replyTo: replyTo?._id,
+          clientMessageId,
         }))
       }
 
@@ -1010,15 +1051,28 @@ const useChatStore = create((set, get) => ({
       }))
       return saved || optimistic
     } catch (apiError) {
+      // No response at all ⇒ we are offline: keep the message and queue it.
+      const offline = !apiError?.response
+      if (offline) {
+        await offlineDb
+          .queueMessage({ chatId, text: content || '', type: messageType, clientMessageId })
+          .catch(() => {})
+      }
+
       set((state) => ({
         messages: state.messages.map((message) =>
           message._id === optimistic._id
-            ? { ...message, status: 'failed', pending: false }
+            ? { ...message, status: offline ? 'queued' : 'failed', pending: false }
             : message
         ),
-        error: apiError?.response?.data?.message || 'Message not sent',
+        error: offline
+          ? 'You are offline — the message will send when you reconnect'
+          : apiError?.response?.data?.message || 'Message not sent',
       }))
-      toast.error('Message not sent — tap to retry')
+
+      if (offline) toast('Offline — message queued', { icon: undefined })
+      else toast.error('Message not sent — tap to retry')
+
       return optimistic
     }
   },

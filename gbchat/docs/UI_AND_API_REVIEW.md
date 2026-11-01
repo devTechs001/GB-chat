@@ -270,3 +270,43 @@ and a Docker Compose stack with two API replicas behind a sticky nginx LB.
   interactive controls — **ALL GREEN**.
 * Server module graph loads to the MongoDB connect step (no Mongo in CI); every
   new file passes `node --check`.
+
+---
+
+## 6. Round 4 — endpoint audit + UI polish
+
+Endpoint review lives in [`IMPROVEMENTS.md`](./IMPROVEMENTS.md) (judgement) and
+[`ENDPOINT_AUDIT.md`](./ENDPOINT_AUDIT.md) (generated inventory). Headline
+numbers: **410 routes / 27 routers / 117 client calls / 0 unmatched / 0 shadowed
+/ 0 duplicate / 0 unauthenticated writes**.
+
+### 6.1 Server
+* Route-shadowing guard (`scripts/audit-endpoints.mjs`) now compares path depth,
+  so a literal route can no longer hide behind a parameterised one.
+* Boot is fail-soft: no MongoDB → the process still serves `/api/system/live`
+  and reports `degraded` on `/api/system/ready` instead of exiting.
+* Unknown `/api/*` paths return a JSON `404 NOT_FOUND` instead of the SPA shell.
+* Rate limiters key on the authenticated user id and normalise IPv6 to /64.
+* New: `Channel.scheduledPosts` queue + publish/cancel endpoints, `StoryHighlight`
+  model, group import + preferences, `PATCH /api/users/status` with `statusText`.
+* New background worker (`server/services/worker.js`, `npm run worker`) and
+  Redis-lock-guarded scheduler — safe with N replicas.
+
+### 6.2 Client
+* Home pane (`HomeWelcome`) replaces the blank "no chat selected" state: greeting,
+  presence, three stat chips, six quick-action tiles, "jump back in" recents.
+* Profile rebuilt: gradient cover presets, one-tap presence, completion meter,
+  six tabs with counts (Media / Stories / Docs / Links / Groups / About), media
+  lightbox with video support, vCard download, story highlight rings.
+* Token accessor (`lib/token.js`) so the API client and socket share one source
+  of truth (fixes 401s after a silent refresh).
+* Emoji-as-icon sweep: presence dots, translator language pickers, reaction
+  hearts, marketing feature grid and hero CTA now use real icon components.
+* Marketing page reachable at `/welcome` (it was built but never routed).
+
+### 6.3 Verification (round 4)
+* `npm run check:endpoints` → 408 routes / 117 client calls / 0 unmatched.
+* `node scripts/audit-endpoints.mjs` → 410/27/117/0/293/0/0/0.
+* `npx vite build` → success after every edit batch.
+* Boot without MongoDB → probes + `/api/health` answer, unknown `/api/*` → 404.
+* 25 consecutive logins → HTTP 429 `RATE_LIMITED` with `retryAfter`.

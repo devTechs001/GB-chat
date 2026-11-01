@@ -1,4 +1,7 @@
 // server/index.js
+// Must be the first import: loads .env before anything else reads process.env.
+import "./config/env.js";
+
 import express from "express";
 import { createServer } from "http";
 import dotenv from "dotenv";
@@ -24,6 +27,7 @@ import {
   registerLimiter,
 } from "./middleware/rateLimiter.js";
 import { startGrpcServer } from "./grpc/server.js";
+import { startScheduler } from "./services/schedulerService.js";
 import { closeRedis } from "./config/redis.js";
 import systemRoutes from "./routes/systemRoutes.js";
 import { initializeAdmin } from "./utils/initAdmin.js";
@@ -41,6 +45,7 @@ import privacyRoutes from "./routes/privacyRoutes.js";
 import gbFeaturesRoutes from "./routes/gbFeaturesRoutes.js";
 import chatLockRoutes from "./routes/chatLockRoutes.js";
 import deviceRoutes from "./routes/deviceRoutes.js";
+import pushRoutes from "./routes/pushRoutes.js";
 
 // Settings routes
 import appearanceRoutes from "./routes/appearanceRoutes.js";
@@ -56,6 +61,9 @@ import gbSettingsRoutes from "./routes/gbSettingsRoutes.js";
 // New routes: Permissions, Backup, and Recovery
 import permissionRoutes from "./routes/permissionRoutes.js";
 import backupRoutes from "./routes/backupRoutes.js";
+import { metricsMiddleware, requestId } from "./middleware/observability.js";
+import localBackupRoutes from "./routes/localBackupRoutes.js";
+import offlineRoutes from "./routes/offlineRoutes.js";
 import recoveryRoutes from "./routes/recoveryRoutes.js";
 
 dotenv.config();
@@ -90,6 +98,10 @@ app.use(helmet({
 app.set("trust proxy", process.env.TRUST_PROXY || 1);
 
 app.use(cors(corsOptions));
+// Every response carries an id; anything logged for this request can be
+// matched to it. Metrics are recorded on `finish`, so they include 4xx/5xx.
+app.use(requestId);
+app.use(metricsMiddleware);
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
@@ -139,6 +151,7 @@ app.use("/api/privacy", privacyRoutes);
 app.use("/api/gb-features", gbFeaturesRoutes);
 app.use("/api/chat-lock", chatLockRoutes);
 app.use("/api/devices", deviceRoutes);
+app.use("/api/push", pushRoutes);
 
 // Settings routes
 app.use("/api/appearance", appearanceRoutes);
@@ -153,6 +166,10 @@ app.use("/api/gb-settings", gbSettingsRoutes);
 
 // Permissions, Backup, and Recovery routes
 app.use("/api/permissions", permissionRoutes);
+// Local (SQLite) + offline mirror endpoints must be mounted before the
+// Mongo-backed /api/backup router so its "/:backupId" route cannot swallow them.
+app.use("/api/backup/local", localBackupRoutes);
+app.use("/api/backup/offline", offlineRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/recovery", recoveryRoutes);
 
@@ -166,6 +183,16 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Unknown API route → JSON 404 (never the SPA fallback HTML, which made client
+// errors look like a 200 with an HTML body).
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    success: false,
+    code: "NOT_FOUND",
+    message: `No API route matches ${req.method} ${req.originalUrl}`,
+  });
+});
+
 // Serve SPA for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'client/dist/index.html'));
@@ -176,19 +203,57 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(async () => {
-  // Initialize admin user
-  await initializeAdmin();
-
-  // Internal gRPC API (presence + notification fan-out across nodes)
-  await startGrpcServer({ io }).catch((error) =>
-    console.warn("[grpc] failed to start:", error.message)
-  );
-
+const startHttp = () => {
   server.listen(PORT, () => {
     console.log(`🚀 GBChat server running on port ${PORT}`);
     console.log(`   pid ${process.pid} · node ${process.env.NODE_ID || "local"}`);
   });
+};
+
+/**
+ * Boot sequence.
+ *
+ * The HTTP listener (and the internal gRPC API) start even when MongoDB is
+ * unreachable: probes and `/api/system/*` must keep answering so a load
+ * balancer / orchestrator can see "degraded" instead of "connection refused",
+ * and the process keeps retrying Mongo in the background instead of dying.
+ */
+const start = async () => {
+  let dbReady = false;
+
+  try {
+    dbReady = await connectDB();
+  } catch (error) {
+    console.error("[boot] Mongo connection failed:", error.message);
+  }
+
+  if (dbReady) {
+    try {
+      await initializeAdmin();
+    } catch (error) {
+      console.warn("[boot] admin seed skipped:", error.message);
+    }
+  } else {
+    console.warn("[boot] starting WITHOUT MongoDB — /api/system/ready will report degraded");
+  }
+
+  await startGrpcServer({ io }).catch((error) =>
+    console.warn("[grpc] failed to start:", error.message)
+  );
+
+  // Background jobs. A Redis leader lock makes this safe with N replicas — only
+  // one node executes each tick. Set SCHEDULER_ENABLED=false and run the
+  // dedicated worker (npm run worker) instead if you prefer to split concerns.
+  if (process.env.SCHEDULER_ENABLED !== "false" && dbReady) {
+    startScheduler(io);
+  }
+
+  startHttp();
+};
+
+start().catch((error) => {
+  console.error("[boot] fatal:", error);
+  process.exit(1);
 });
 
 // ---------------------------------------------------------------------------

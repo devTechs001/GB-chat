@@ -51,6 +51,29 @@ const channelSchema = new mongoose.Schema(
     isPublic: { type: Boolean, default: true },
     inviteLink: String,
     posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Message" }],
+    /**
+     * Posts queued for the future. Each entry is published lazily by
+     * `publishDueScheduledPosts()` (no background worker needed): any time the
+     * channel or its schedule is read, due entries are promoted to real
+     * messages.
+     */
+    scheduledPosts: [
+      {
+        text: { type: String, maxlength: 4096 },
+        type: { type: String, enum: ["text", "image", "video", "document"], default: "text" },
+        mediaUrl: { type: String, default: "" },
+        scheduledFor: { type: Date, required: true },
+        status: {
+          type: String,
+          enum: ["pending", "published", "cancelled"],
+          default: "pending",
+        },
+        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+        createdAt: { type: Date, default: Date.now },
+        publishedAt: Date,
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -5,6 +5,7 @@ import Button from '../common/Button'
 import useNotificationStore from '../../store/useNotificationStore'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import PushDeviceCard from './PushDeviceCard'
 
 const NotificationSettings = () => {
   const { settings, updateSettings, loadSettings, requestPermission, permission } =
@@ -117,6 +118,9 @@ const NotificationSettings = () => {
         </div>
       )}
 
+      {/* Push: real background delivery via the service worker */}
+      <PushDeviceCard />
+
       {/* Notification Options */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm divide-y divide-gray-200 dark:divide-gray-700">
         {notificationOptions.map((option) => (
@@ -178,12 +182,27 @@ const NotificationSettings = () => {
         </p>
         <Button
           variant="secondary"
-          onClick={() => {
-            new Notification('GBChat Test', {
-              body: 'This is a test notification',
-              icon: '/logo.png',
-            })
-            toast.success('Test notification sent')
+          onClick={async () => {
+            // Prefer the service worker: it is the same path a real push takes,
+            // and unlike `new Notification()` it works on Android Chrome.
+            try {
+              const registration = await navigator.serviceWorker?.ready
+              if (registration) {
+                await registration.showNotification('GBChat Test', {
+                  body: 'This is a test notification',
+                  icon: '/icons/icon-192x192.png',
+                  badge: '/icons/favicon-32x32.png',
+                })
+              } else {
+                new Notification('GBChat Test', {
+                  body: 'This is a test notification',
+                  icon: '/icons/icon-192x192.png',
+                })
+              }
+              toast.success('Test notification sent')
+            } catch {
+              toast.error('Could not show a test notification')
+            }
           }}
           disabled={permission !== 'granted'}
           className="w-full sm:w-auto"

@@ -6,6 +6,14 @@ Welcome to the GBChat technical documentation. This folder contains comprehensiv
 
 ## 📚 Available Documentation
 
+### 0. Audit, offline & backup (newest)
+- [Endpoint audit](./ENDPOINT_AUDIT.md) — generated inventory: every route, per router, with auth status and client usage.
+- [Improvement backlog](./IMPROVEMENTS.md) — what the review found, what was fixed, what is recommended next.
+- [Offline mode & local backup](./OFFLINE_AND_BACKUP.md) — the SQLite mirror, the browser cache and the outbox.
+- [Observability](./OBSERVABILITY.md) — request ids, per-route latency percentiles, Prometheus output, gRPC trace propagation, browser crash digest, crash isolation.
+- [Web Push](./PUSH_NOTIFICATIONS.md) — VAPID setup, subscription storage, delivery hooks, service-worker behaviour, troubleshooting.
+- [Scaling & infrastructure](./SCALING_AND_INFRA.md) — rate limits, gRPC, replicas, Docker, background worker.
+
 ### 1. [Documentation README](./README.md)
 **Start here!** Overview of all documentation and quick start guide.
 

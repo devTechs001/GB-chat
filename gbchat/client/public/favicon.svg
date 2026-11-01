@@ -1,7 +1,36 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="12" fill="#0EA5E9"/>
-  <path d="M32 16C22.0589 16 14 23.1634 14 32C14 35.4118 15.1765 38.5882 17.1765 41.1765L15.4118 48.5882L23.4118 46.8235C25.8824 48.4706 28.8235 49.4118 32 49.4118C41.9412 49.4118 50 42.2482 50 33.4118C50 24.5753 41.9412 16 32 16Z" fill="white"/>
-  <path d="M38.5 28.5C38.5 29.3284 37.8284 30 37 30C36.1716 30 35.5 29.3284 35.5 28.5C35.5 27.6716 36.1716 27 37 27C37.8284 27 38.5 27.6716 38.5 28.5Z" fill="#0EA5E9"/>
-  <path d="M28.5 28.5C28.5 29.3284 27.8284 30 27 30C26.1716 30 25.5 29.3284 25.5 28.5C25.5 27.6716 26.1716 27 27 27C27.8284 27 28.5 27.6716 28.5 28.5Z" fill="#0EA5E9"/>
-  <path d="M25 35C25 35 27 38 32 38C37 38 39 35 39 35" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round"/>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GBChat">
+  <defs>
+    <linearGradient id="gbBg" x1="56" y1="16" x2="456" y2="496" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0EA5E9"/>
+      <stop offset="0.52" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="gbGlow" x1="88" y1="32" x2="352" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.38"/>
+      <stop offset="0.72" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gbBubble" x1="140" y1="168" x2="352" y2="352" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E6F1FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- tile -->
+  <rect width="512" height="512" rx="116" fill="url(#gbBg)"/>
+  <rect width="512" height="512" rx="116" fill="url(#gbGlow)"/>
+
+  <!-- secondary bubble: a thread, not a single message -->
+  <g fill="#FFFFFF" fill-opacity="0.3">
+    <rect x="322" y="118" width="112" height="82" rx="30"/>
+    <path d="M406 190l30 32-42-12 12-20Z"/>
+  </g>
+
+  <!-- primary bubble -->
+  <rect x="118" y="166" width="244" height="180" rx="58" fill="url(#gbBubble)"/>
+  <path d="M166 330l-30 62 74-40-44-22Z" fill="url(#gbBubble)"/>
+
+  <!-- typing dots -->
+  <circle cx="192" cy="256" r="19" fill="#0EA5E9"/>
+  <circle cx="240" cy="256" r="19" fill="#4F46E5"/>
+  <circle cx="288" cy="256" r="19" fill="#7C3AED"/>
 </svg>

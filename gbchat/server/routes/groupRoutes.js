@@ -31,6 +31,9 @@ import {
   getAnnouncements,
   pinAnnouncement,
   deleteAnnouncement,
+  importGroups,
+  getGroupPreferences,
+  updateGroupPreferences,
 } from "../controllers/groupController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -42,6 +45,9 @@ router.use(protect);
 router.get("/", getGroups);
 router.post("/", createGroup);
 router.post("/export", exportGroups);
+router.post("/import", importGroups);
+router.get("/preferences", getGroupPreferences);
+router.put("/preferences", updateGroupPreferences);
 router.post("/bulk-invite", bulkInvite);
 router.get("/:id", getGroup);
 router.put("/:id", updateGroup);
@@ -52,7 +58,6 @@ router.patch("/:id/star", setGroupFlag);
 router.patch("/:id/mute", setGroupFlag);
 router.post("/:id/mute", setGroupMute);
 router.post("/:id/unmute", setGroupMute);
-router.put("/:id", updateGroup);
 router.post("/:id/members", addMembers);
 router.delete("/:id/members/:memberId", removeMember);
 router.post("/:id/leave", leaveGroup);

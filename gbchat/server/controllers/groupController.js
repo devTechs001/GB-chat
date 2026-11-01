@@ -3,6 +3,7 @@ import Chat from "../models/Chat.js";
 import User from "../models/User.js";
 import Message from "../models/Message.js";
 import crypto from "crypto";
+import { parsePagination, buildPageMeta } from "../utils/pagination.js";
 
 export const createGroup = async (req, res, next) => {
   try {
@@ -67,7 +68,11 @@ export const createGroup = async (req, res, next) => {
 
 export const getGroups = async (req, res, next) => {
   try {
-    const { search, archived, starred, limit = 100 } = req.query;
+    const { search, archived, starred } = req.query;
+    // Paging happens after the in-memory filters (search / archived / starred)
+    // so a page always has `limit` *matching* groups. 200 is the ceiling the
+    // endpoint already imposed, so nothing that worked before disappears.
+    const { page, limit } = parsePagination(req.query, { defaultLimit: 100, maxLimit: 200 });
 
     const query = {
       type: "group",
@@ -81,7 +86,7 @@ export const getGroups = async (req, res, next) => {
         populate: { path: "sender", select: "fullName avatar" },
       })
       .sort({ updatedAt: -1 })
-      .limit(Math.min(Number(limit) || 100, 200));
+      .limit(200);
 
     const me = (chat) =>
       chat.participants.find(
@@ -118,14 +123,18 @@ export const getGroups = async (req, res, next) => {
         return true;
       });
 
+    const pageSlice = filtered.slice((page - 1) * limit, page * limit);
+
     res.json({
       success: true,
-      groups: filtered,
+      groups: pageSlice,
       stats: {
         totalGroups: normalized.length,
         adminOf: normalized.filter((g) => g.isAdmin).length,
         totalMembers: normalized.reduce((sum, g) => sum + g.memberCount, 0),
       },
+      // Additive: clients that ignore `meta` behave exactly as before.
+      meta: buildPageMeta({ page, limit, total: filtered.length, returned: pageSlice.length }),
     });
   } catch (error) {
     next(error);
@@ -963,6 +972,175 @@ export const setGroupFlag = async (req, res, next) => {
     }
 
     res.status(400).json({ message: "Unsupported flag" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/* Import + per-user group preferences                                 */
+/* ------------------------------------------------------------------ */
+
+const buildGroupChat = async (userId, { name, description, avatar, memberIds }) => {
+  const participants = [
+    { user: userId, role: "admin" },
+    ...memberIds.map((id) => ({ user: id, role: "member" })),
+  ];
+
+  const chat = await Chat.create({
+    type: "group",
+    participants,
+    groupInfo: {
+      name,
+      description: description || "",
+      avatar: avatar || "",
+      createdBy: userId,
+      inviteLink: crypto.randomBytes(16).toString("hex"),
+    },
+    unreadCounts: participants.map((p) => ({ user: p.user, count: 0 })),
+  });
+
+  const systemMsg = await Message.create({
+    chat: chat._id,
+    sender: userId,
+    type: "system",
+    content: { text: `Group "${name}" was created` },
+  });
+
+  chat.lastMessage = systemMsg._id;
+  await chat.save();
+
+  return chat;
+};
+
+// @desc    Import several groups at once from a list
+// @route   POST /api/groups/import
+// @access  Private
+// @body    { groups: [{ name, description?, members: [userId|phone|email] }] }
+export const importGroups = async (req, res, next) => {
+  try {
+    const groups = Array.isArray(req.body.groups) ? req.body.groups : [];
+    if (!groups.length) {
+      return res.status(400).json({ message: "No groups to import" });
+    }
+    if (groups.length > 25) {
+      return res.status(400).json({ message: "Import at most 25 groups at a time" });
+    }
+
+    // Resolve every identifier (id, phone or email) in one query per kind.
+    const identifiers = new Set();
+    groups.forEach((group) => {
+      (group.members || []).forEach((member) => {
+        if (member) identifiers.add(String(member).trim());
+      });
+    });
+
+    const all = [...identifiers];
+    const users = all.length
+      ? await User.find({
+          $or: [
+            { _id: { $in: all.filter((value) => /^[a-f\d]{24}$/i.test(value)) } },
+            { phone: { $in: all } },
+            { email: { $in: all.map((value) => value.toLowerCase()) } },
+          ],
+        }).select("_id phone email")
+      : [];
+
+    const directory = new Map();
+    users.forEach((user) => {
+      directory.set(String(user._id), String(user._id));
+      if (user.phone) directory.set(String(user.phone), String(user._id));
+      if (user.email) directory.set(String(user.email).toLowerCase(), String(user._id));
+    });
+
+    const created = [];
+    const skipped = [];
+
+    for (const group of groups) {
+      const name = String(group.name || "").trim();
+      if (!name) {
+        skipped.push({ name: group.name || "(unnamed)", reason: "Missing group name" });
+        continue;
+      }
+
+      const memberIds = [
+        ...new Set(
+          (group.members || [])
+            .map((member) => directory.get(String(member).trim().toLowerCase()) || directory.get(String(member).trim()))
+            .filter((id) => id && id !== String(req.user._id))
+        ),
+      ];
+
+      try {
+        const chat = await buildGroupChat(req.user._id, {
+          name: name.slice(0, 100),
+          description: group.description,
+          avatar: group.avatar,
+          memberIds,
+        });
+        created.push({
+          _id: chat._id,
+          name,
+          importedMembers: memberIds.length,
+          unresolvedMembers: (group.members || []).length - memberIds.length,
+        });
+      } catch (error) {
+        skipped.push({ name, reason: error.message });
+      }
+    }
+
+    res.status(201).json({ success: true, created, skipped });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const GROUP_PREFERENCE_DEFAULTS = {
+  whoCanAddMe: "everyone", // everyone | contacts | nobody
+  muteNewGroups: false,
+  autoArchiveLargeGroups: true,
+  largeGroupThreshold: 100,
+  showGroupNotifications: true,
+  defaultAnnouncementReplies: false,
+};
+
+// @desc    Read the caller's group preferences
+// @route   GET /api/groups/preferences
+// @access  Private
+export const getGroupPreferences = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select("groupPreferences");
+    res.json({
+      success: true,
+      preferences: { ...GROUP_PREFERENCE_DEFAULTS, ...(user?.groupPreferences || {}) },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update the caller's group preferences
+// @route   PUT /api/groups/preferences
+// @access  Private
+export const updateGroupPreferences = async (req, res, next) => {
+  try {
+    const allowed = Object.keys(GROUP_PREFERENCE_DEFAULTS);
+    const patch = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) patch[`groupPreferences.${key}`] = req.body[key];
+    }
+    if (!Object.keys(patch).length) {
+      return res.status(400).json({ message: "No valid preference supplied" });
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id, { $set: patch }, { new: true }).select(
+      "groupPreferences"
+    );
+
+    res.json({
+      success: true,
+      preferences: { ...GROUP_PREFERENCE_DEFAULTS, ...(user?.groupPreferences || {}) },
+    });
   } catch (error) {
     next(error);
   }

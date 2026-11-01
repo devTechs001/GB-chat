@@ -1,5 +1,6 @@
 // models/Notification.js
 import mongoose from 'mongoose';
+import { sendToUser } from '../services/webPushService.js';
 
 /**
  * In-app notification feed.
@@ -64,9 +65,38 @@ notificationSchema.methods.markRead = async function markRead() {
   return this;
 };
 
+/**
+ * Where a notification should take the user when they tap it.
+ * Falls back to the type's natural screen when the caller did not set one.
+ */
+const deepLinkFor = (notification) => {
+  if (notification.actionUrl) return notification.actionUrl;
+  if (notification.chatId) return `/chats/${notification.chatId}`;
+  if (notification.storyId) return `/stories`;
+  if (notification.callId) return `/calls`;
+  if (notification.groupId) return `/groups/${notification.groupId}`;
+  return { contact_request: '/contacts', security: '/settings' }[notification.type] || '/notifications';
+};
+
 notificationSchema.statics.createFor = async function createFor(payload) {
   try {
-    return await this.create(payload);
+    const notification = await this.create(payload);
+
+    // Best-effort Web Push to every browser this user has registered. The
+    // in-app feed is the source of truth; a push-service outage must never
+    // fail the action that produced the notification, so this is not awaited.
+    if (notification) {
+      sendToUser(notification.user, {
+        title: notification.title,
+        body: notification.body,
+        url: deepLinkFor(notification),
+        tag: `notification-${notification.type}-${notification._id}`,
+        type: notification.type,
+        data: { notificationId: String(notification._id), type: notification.type },
+      }).catch(() => {});
+    }
+
+    return notification;
   } catch (error) {
     // Notifications must never break the main action
     console.error('Failed to create notification:', error.message);

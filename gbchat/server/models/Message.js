@@ -55,6 +55,20 @@ const messageSchema = new mongoose.Schema(
       },
       poll: { type: mongoose.Schema.Types.ObjectId, ref: "Poll" },
     },
+    /**
+     * Client-generated idempotency key.
+     *
+     * The offline outbox replays messages when the connection returns; without
+     * this, a retry that actually reached the server duplicates the bubble.
+     * `sendMessage` returns the existing message when (chat, sender, key) was
+     * already stored.
+     */
+    clientMessageId: {
+      type: String,
+      trim: true,
+      maxlength: 64,
+      index: true,
+    },
     replyTo: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
     forwardedFrom: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
     forwardCount: { type: Number, default: 0 },
@@ -110,5 +124,11 @@ const messageSchema = new mongoose.Schema(
 messageSchema.index({ chat: 1, createdAt: -1 });
 messageSchema.index({ sender: 1 });
 messageSchema.index({ "content.text": "text" });
+// Idempotency: one message per (chat, sender, clientMessageId). Sparse so the
+// vast majority of messages (no key) are unaffected.
+messageSchema.index(
+  { chat: 1, sender: 1, clientMessageId: 1 },
+  { unique: true, partialFilterExpression: { clientMessageId: { $type: "string" } } }
+);
 
 export default mongoose.model("Message", messageSchema);

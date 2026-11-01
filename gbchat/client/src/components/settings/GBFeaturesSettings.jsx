@@ -1,3 +1,4 @@
+import { getToken } from '../../lib/token'
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -41,7 +42,7 @@ const GBFeaturesSettings = () => {
 
   const fetchGBFeatures = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await axios.get('/api/gb-features', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -56,7 +57,7 @@ const GBFeaturesSettings = () => {
 
   const toggleFeature = async (section, feature) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await axios.post(
         '/api/gb-features/toggle',
         { section, feature },
@@ -72,7 +73,7 @@ const GBFeaturesSettings = () => {
   const updateSection = async (section, data) => {
     try {
       setSaving(true);
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await axios.put(
         '/api/gb-features',
         { section, data },

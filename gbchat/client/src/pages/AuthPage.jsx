@@ -30,7 +30,7 @@ const AuthPage = () => {
   }
 
   const features = [
-    { icon: LockClosedIcon, title: 'End-to-end encryption', desc: 'Only you and the recipient can read messages' },
+    { icon: LockClosedIcon, title: 'Encrypted in transit', desc: 'TLS on every request, plus PIN-locked chats' },
     { icon: PaintBrushIcon, title: 'Custom avatars', desc: 'Create a profile picture that is yours' },
     { icon: ClockIcon, title: 'Scheduled messages', desc: 'Send at the moment that matters' },
     { icon: DevicePhoneMobileIcon, title: 'Cross platform', desc: 'Link up to four devices' },

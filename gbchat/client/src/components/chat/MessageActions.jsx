@@ -1,3 +1,4 @@
+import { getToken } from '../../lib/token'
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
@@ -24,7 +25,7 @@ const MessageActions = ({ message, isMine, onReply, onReact, className, chatId, 
   const handleStar = async () => {
     try {
       setIsStarring(true)
-      const token = localStorage.getItem('token')
+      const token = getToken()
       await axios.post(
         '/api/gb-features/star',
         { messageId, chatId },
@@ -41,7 +42,7 @@ const MessageActions = ({ message, isMine, onReply, onReact, className, chatId, 
   const handlePin = async () => {
     try {
       setIsPinning(true)
-      const token = localStorage.getItem('token')
+      const token = getToken()
       await axios.post(
         '/api/gb-features/pin',
         { messageId, chatId },

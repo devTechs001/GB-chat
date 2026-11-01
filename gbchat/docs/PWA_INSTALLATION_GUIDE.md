@@ -46,9 +46,25 @@ GBChat now supports **Progressive Web App (PWA)** installation, allowing you to 
 
 ## 🎨 Generating App Icons
 
+> **Current icon set (2026 refresh).** `public/icons/icon.svg` is the single
+> source; every PNG (72 → 512, plus `favicon-32x32`, `icon-180x180`,
+> `apple-touch-icon.png`) is rendered from it. There are **two** artworks:
+> `icon.svg` (rounded tile, for `purpose: "any"` and desktop/browser use) and
+> `icon-maskable.svg` (full-bleed background, art inside the 80 % safe circle,
+> for `purpose: "maskable"`). Android crops icons to a circle/squircle; feeding
+> it the rounded-tile art double-rounds the corners and shaves the bubble.
+
 You need PNG icons in multiple sizes. Here's how to generate them:
 
 ### Option 1: Use an Online Generator
+Regenerate everything after editing the SVG (uses `@resvg/resvg-js`, no native
+build):
+
+```bash
+cd /tmp && mkdir -p iconbuild && cd iconbuild && npm i @resvg/resvg-js
+# see the snippet below, then copy the PNGs into client/public/icons/
+```
+
 1. Go to [PWA Icon Generator](https://www.pwa-icon.com/)
 2. Upload your logo (512x512 recommended)
 3. Download all sizes

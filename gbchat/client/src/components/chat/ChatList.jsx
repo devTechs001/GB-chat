@@ -98,7 +98,7 @@ const ChatList = ({ onChatSelect, className }) => {
     { id: 'calls', label: 'Calls', icon: PhoneIcon, tone: 'text-green-500', onClick: () => navigate('/calls') },
     { id: 'groups', label: 'Groups', icon: UsersIcon, tone: 'text-blue-500', onClick: () => navigate('/groups') },
     { id: 'contacts', label: 'Contacts', icon: BookOpenIcon, tone: 'text-purple-500', onClick: () => navigate('/contacts') },
-    { id: 'media', label: 'Starred', icon: StarIcon, tone: 'text-rose-500', onClick: () => navigate('/profile') },
+    { id: 'media', label: 'Starred', icon: StarIcon, tone: 'text-rose-500', onClick: () => navigate('/profile/me') },
   ]
 
   const totalUnread = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
@@ -161,10 +161,12 @@ const ChatList = ({ onChatSelect, className }) => {
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="search"
+            data-search-input="chats"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search conversations..."
+            placeholder="Search conversations…  ⌘K"
             aria-label="Search conversations"
+            title="Search conversations (Ctrl/⌘ + K)"
             className="w-full pl-10 pr-10 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-gray-900 text-sm focus:ring-2 focus:ring-primary-500/40 focus:outline-none text-gray-900 dark:text-white placeholder-gray-400 transition-all"
           />
           {searchQuery && (

@@ -39,8 +39,8 @@ const useNotification = () => {
       if (permission === 'granted' && settings.desktop) {
         new Notification(notification.title, {
           body: notification.body,
-          icon: notification.icon || '/favicon.svg',
-          badge: '/favicon.svg',
+          icon: notification.icon || '/icons/icon-192x192.png',
+          badge: '/icons/favicon-32x32.png',
           tag: notification.tag,
           silent: !settings.sound,
         })

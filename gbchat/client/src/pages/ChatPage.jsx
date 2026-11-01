@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
-import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import ChatList from '../components/chat/ChatList'
+import HomeWelcome from '../components/chat/HomeWelcome'
 import ChatArea from '../components/chat/ChatArea'
 import StoryBar from '../components/stories/StoryBar'
 import ErrorBoundary from '../components/common/ErrorBoundary'
-import EmptyState from '../components/layout/EmptyState'
 import FeatureFAB from '../components/enhanced/FeatureFAB'
 import ContactPermissions from '../components/enhanced/ContactPermissions'
 import StarredMessages from '../components/chat/StarredMessages'
@@ -162,18 +161,10 @@ const ChatPage = () => {
             />
           </ErrorBoundary>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-6">
-            <div className="max-w-md text-center">
-              <EmptyState
-                icon={ChatBubbleLeftRightIcon}
-                title="GBChat for Web"
-                description="Pick a conversation on the left to start messaging. Your chats are synced across up to 4 linked devices."
-              />
-              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                End-to-end encrypted · Private by design
-              </p>
-            </div>
-          </div>
+          <HomeWelcome
+            onNewChat={() => setShowNewChatModal(true)}
+            onSelectChat={selectChat}
+          />
         )}
       </section>
 

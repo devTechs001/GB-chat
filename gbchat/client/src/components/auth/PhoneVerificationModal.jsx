@@ -18,7 +18,7 @@ const PhoneVerificationModal = ({ isOpen, onClose, onSuccess }) => {
     const newErrors = {};
     if (!phone) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^[\+]?[\d\s\-\(\)]{10,}$/.test(phone)) {
+    } else if (!/^[+]?[0-9\s\-()]{10,}$/.test(phone)) {
       newErrors.phone = 'Invalid phone number format';
     }
     setErrors(newErrors);

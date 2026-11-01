@@ -109,3 +109,9 @@ files/
 *~
 .DS_Store
 Thumbs.db
+
+# Local SQLite backups (one .db per user) and their WAL sidecars
+/data/
+*.db
+*.db-wal
+*.db-shm

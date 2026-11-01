@@ -103,6 +103,19 @@ const GroupsPage = () => {
   const [showAnnouncementCreator, setShowAnnouncementCreator] = useState(false)
   const [showEventCreator, setShowEventCreator] = useState(false)
   const [showMoreOptions, setShowMoreOptions] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [showGroupSettings, setShowGroupSettings] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [groupPrefs, setGroupPrefs] = useState({
+    whoCanAddMe: 'everyone',
+    muteNewGroups: false,
+    autoArchiveLargeGroups: true,
+    largeGroupThreshold: 100,
+    showGroupNotifications: true,
+    defaultAnnouncementReplies: false,
+  })
+  const [loadingPrefs, setLoadingPrefs] = useState(false)
 
   const { fetchChats, setActiveChat } = useChatStore()
   const { user } = useAuthStore()
@@ -531,8 +544,52 @@ const GroupsPage = () => {
 
   // More Options handlers
   const handleImportGroups = () => {
-    toast('Import groups is not available yet')
     setShowMoreOptions(false)
+    setShowImportModal(true)
+  }
+
+  /**
+   * Import format (one group per line, comma separated):
+   *   Team Standup, weekly sync, +254700000001, someone@example.com
+   * Members may be phone numbers, emails or user ids — the server resolves
+   * them and reports anything it could not find.
+   */
+  const runImport = async () => {
+    const lines = importText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+
+    if (!lines.length) {
+      toast.error('Add at least one group — one per line')
+      return
+    }
+
+    const groups = lines.map((line) => {
+      const [name, ...rest] = line.split(',').map((part) => part.trim())
+      const description = rest.length > 1 ? rest.shift() : ''
+      return { name, description, members: rest.filter(Boolean) }
+    })
+
+    setImporting(true)
+    try {
+      const { data } = await api.post('/groups/import', { groups })
+      const created = data?.created || []
+      const skipped = data?.skipped || []
+      if (created.length) {
+        toast.success(`Imported ${created.length} group${created.length === 1 ? '' : 's'}`)
+      }
+      if (skipped.length) {
+        toast.error(`${skipped.length} group(s) skipped: ${skipped[0]?.reason || 'invalid entry'}`)
+      }
+      setImportText('')
+      setShowImportModal(false)
+      fetchGroups?.()
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Import failed')
+    } finally {
+      setImporting(false)
+    }
   }
 
   const handleExportGroupsFromMore = () => {
@@ -540,15 +597,34 @@ const GroupsPage = () => {
     setShowMoreOptions(false)
   }
 
-  const handleGroupSettings = () => {
-    toast('Global group settings are not available yet')
+  const openGroupSettings = async () => {
     setShowMoreOptions(false)
+    setShowGroupSettings(true)
+    setLoadingPrefs(true)
+    try {
+      const { data } = await api.get('/groups/preferences')
+      if (data?.preferences) setGroupPrefs((prev) => ({ ...prev, ...data.preferences }))
+    } catch {
+      /* keep the local defaults when offline */
+    } finally {
+      setLoadingPrefs(false)
+    }
+  }
+
+  const saveGroupPreferences = async (patch) => {
+    const next = { ...groupPrefs, ...patch }
+    setGroupPrefs(next)
+    try {
+      await api.put('/groups/preferences', patch)
+      toast.success('Group settings saved')
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not save group settings')
+    }
   }
 
   const handleHelpSupport = () => {
-    toast('Opening help & support')
     setShowMoreOptions(false)
-    // In a real app, this would navigate to help page or open support chat
+    navigate('/settings?section=help')
   }
 
   // Filter and sort groups
@@ -588,10 +664,11 @@ const GroupsPage = () => {
         return (b.unreadCount || 0) - (a.unreadCount || 0)
       case 'members':
         return (b.members?.length || 0) - (a.members?.length || 0)
-      case 'activity':
+      case 'activity': {
         const aActivity = a.messageCount || 0
         const bActivity = b.messageCount || 0
         return bActivity - aActivity
+      }
       default:
         return 0
     }
@@ -1357,7 +1434,7 @@ const GroupsPage = () => {
                   <span className="text-gray-700 dark:text-gray-300">Export Groups</span>
                 </button>
                 <button 
-                  onClick={handleGroupSettings}
+                  onClick={openGroupSettings}
                   className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <span className="text-gray-700 dark:text-gray-300">Group Settings</span>
@@ -1376,6 +1453,156 @@ const GroupsPage = () => {
                   className="w-full"
                 >
                   Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Groups Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Import groups</h3>
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  aria-label="Close"
+                  className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                One group per line: <span className="font-mono">name, description, member, member…</span>
+                <br />
+                Members can be phone numbers, emails or user ids.
+              </p>
+
+              <textarea
+                value={importText}
+                onChange={(event) => setImportText(event.target.value)}
+                rows={7}
+                placeholder={'Team Standup, weekly sync, +254700000001\nDesign Guild, , amina@example.com'}
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+              />
+
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={() => setShowImportModal(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" loading={importing} onClick={runImport}>
+                  Import
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Group Settings Modal */}
+      {showGroupSettings && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Group settings</h3>
+                <button
+                  onClick={() => setShowGroupSettings(false)}
+                  aria-label="Close"
+                  className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              {loadingPrefs ? (
+                <div className="space-y-3">
+                  {[0, 1, 2].map((row) => (
+                    <div key={row} className="h-14 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3">
+                    <label className="text-sm font-medium text-gray-900 dark:text-white" htmlFor="whoCanAddMe">
+                      Who can add me to groups
+                    </label>
+                    <select
+                      id="whoCanAddMe"
+                      value={groupPrefs.whoCanAddMe}
+                      onChange={(event) => saveGroupPreferences({ whoCanAddMe: event.target.value })}
+                      className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                    >
+                      <option value="everyone">Everyone</option>
+                      <option value="contacts">My contacts</option>
+                      <option value="nobody">Nobody</option>
+                    </select>
+                  </div>
+
+                  {[
+                    { key: 'muteNewGroups', label: 'Mute new groups automatically' },
+                    { key: 'autoArchiveLargeGroups', label: 'Archive groups larger than the threshold' },
+                    { key: 'showGroupNotifications', label: 'Show group notifications' },
+                    { key: 'defaultAnnouncementReplies', label: 'Allow replies to announcements by default' },
+                  ].map((row) => (
+                    <div
+                      key={row.key}
+                      className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3"
+                    >
+                      <span className="pr-3 text-sm text-gray-800 dark:text-gray-200">{row.label}</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={Boolean(groupPrefs[row.key])}
+                        onClick={() => saveGroupPreferences({ [row.key]: !groupPrefs[row.key] })}
+                        className={clsx(
+                          'relative h-6 w-11 flex-none rounded-full transition-colors',
+                          groupPrefs[row.key] ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+                        )}
+                      >
+                        <span
+                          className={clsx(
+                            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                            groupPrefs[row.key] ? 'translate-x-5' : 'translate-x-0.5'
+                          )}
+                        />
+                      </button>
+                    </div>
+                  ))}
+
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3">
+                    <label className="text-sm font-medium text-gray-900 dark:text-white" htmlFor="largeGroupThreshold">
+                      Large group threshold ({groupPrefs.largeGroupThreshold} members)
+                    </label>
+                    <input
+                      id="largeGroupThreshold"
+                      type="range"
+                      min="20"
+                      max="500"
+                      step="10"
+                      value={groupPrefs.largeGroupThreshold}
+                      onChange={(event) =>
+                        setGroupPrefs({ ...groupPrefs, largeGroupThreshold: Number(event.target.value) })
+                      }
+                      onMouseUp={(event) =>
+                        saveGroupPreferences({ largeGroupThreshold: Number(event.target.value) })
+                      }
+                      onTouchEnd={(event) =>
+                        saveGroupPreferences({ largeGroupThreshold: Number(event.target.value) })
+                      }
+                      className="mt-2 w-full accent-primary-600"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end">
+                <Button variant="secondary" onClick={() => setShowGroupSettings(false)}>
+                  Done
                 </Button>
               </div>
             </div>

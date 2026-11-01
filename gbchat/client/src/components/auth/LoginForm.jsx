@@ -35,7 +35,7 @@ const LoginForm = ({ onForgotPassword }) => {
     } else if (loginMethod === 'phone') {
       if (!formData.phone) {
         newErrors.phone = 'Phone number is required'
-      } else if (!/^[\+]?[\d\s\-\(\)]{10,}$/.test(formData.phone)) {
+      } else if (!/^[+]?[0-9\s\-()]{10,}$/.test(formData.phone)) {
         newErrors.phone = 'Invalid phone number format'
       }
     }

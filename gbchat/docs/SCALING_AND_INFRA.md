@@ -115,7 +115,7 @@ then exit (15 s hard timeout) so replicas drain cleanly during a rollout.
 | `gbchat/client/Dockerfile` | multi-stage build → nginx serving the SPA, proxying `/api`, `/uploads`, `/socket.io` |
 | `gbchat/client/nginx.conf` | SPA fallback, asset caching, WebSocket upgrade, SPA-safe routing |
 | `gbchat/docker/nginx-lb.conf` | internal LB: `ip_hash` sticky upstream over `server1`/`server2`, edge rate limits (`30 r/s` API, `5 r/min` login) |
-| `gbchat/docker-compose.yml` | mongodb + redis + 2 API replicas + nginx LB + client |
+| `gbchat/docker-compose.yml` | mongodb + redis + 2 API replicas + nginx LB + client + background worker |
 
 ```bash
 cd gbchat
@@ -148,3 +148,22 @@ Adding capacity:
 Because Socket.IO rooms, rate-limit counters and presence all live in Redis, any
 number of nodes can serve the same users; sticky sessions are only needed while
 the long-polling fallback handshake is in flight.
+
+### 4.1 Background jobs
+
+Cron jobs must not run once per replica. Two supported layouts:
+
+| Layout | Config | Notes |
+| --- | --- | --- |
+| In-process | `SCHEDULER_ENABLED` unset/`true` | `services/schedulerService.js` starts inside the API, but every tick takes `SET NX PX` lock `gbchat:lock:scheduler` (55 s TTL), so only one replica actually runs it. |
+| Dedicated worker (default in Compose) | API: `SCHEDULER_ENABLED=false`; run `node services/worker.js` | `worker` service shares the API image. Jobs: story expiry, scheduled channel posts (atomic claim), 30-day notification pruning, stale-call cleanup. |
+
+`node services/worker.js --once` runs a single cycle and exits — handy for a
+Kubernetes CronJob. Without Redis the lock helper returns `true`, which is
+correct for a single-node deployment.
+
+```bash
+cd gbchat/server
+npm run worker          # long-running
+node services/worker.js --once
+```

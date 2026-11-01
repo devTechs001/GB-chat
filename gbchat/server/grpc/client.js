@@ -2,6 +2,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { PROTO_PATH } from './server.js';
+import { currentRequestId } from '../middleware/observability.js';
 
 /**
  * Thin gRPC client used by REST controllers / services to talk to the
@@ -24,11 +25,19 @@ const target = process.env.GRPC_TARGET || `127.0.0.1:${process.env.GRPC_PORT || 
 
 let clients = null;
 
-const metadata = () => {
+/** Exported for tests: the metadata every internal call is sent with. */
+export const buildMetadata = () => {
   const meta = new grpc.Metadata();
   if (process.env.GRPC_AUTH_TOKEN) {
     meta.set('authorization', `Bearer ${process.env.GRPC_AUTH_TOKEN}`);
   }
+
+  // Trace propagation: an internal call made while serving an HTTP request
+  // carries that request's id, so the gRPC server's logs line up with the
+  // REST access log. Calls made outside a request simply omit the header.
+  const requestId = currentRequestId();
+  if (requestId) meta.set('x-request-id', requestId);
+
   return meta;
 };
 
@@ -53,7 +62,7 @@ export const getGrpcClients = () => {
 const call = (client, method, payload, { timeout = 1500 } = {}) =>
   new Promise((resolve, reject) => {
     if (!client) return reject(new Error('gRPC client disabled'));
-    client[method](payload, metadata(), { deadline: Date.now() + timeout }, (error, response) => {
+    client[method](payload, buildMetadata(), { deadline: Date.now() + timeout }, (error, response) => {
       if (error) reject(error);
       else resolve(response);
     });
@@ -103,7 +112,9 @@ export const grpcNotify = async ({ userIds = [], title, body, type = 'system', d
       event: event || '',
     });
   } catch (error) {
-    console.warn('[grpc] Send notification failed:', error.message);
+    console.warn(
+      `[grpc] Send notification failed: ${error.message} id=${currentRequestId() || '-'}`
+    );
     return null;
   }
 };
@@ -119,4 +130,5 @@ export const grpcStatus = async () => {
   };
 };
 
+export { buildMetadata as metadata };
 export default getGrpcClients;

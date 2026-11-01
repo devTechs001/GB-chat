@@ -32,6 +32,23 @@ import {
   QrCodeIcon,
   SparklesIcon,
   ClockIcon,
+  CheckIcon,
+  ArrowDownTrayIcon,
+  ArrowTopRightOnSquareIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+  SignalIcon,
+  DocumentIcon,
+  BuildingOffice2Icon,
+  EnvelopeIcon,
+  IdentificationIcon,
+  BriefcaseIcon,
+  EyeIcon,
+  UserPlusIcon,
+  StarIcon,
+  LanguageIcon,
+  SunIcon,
 } from '@heroicons/react/24/outline'
 import Avatar from '../components/common/Avatar'
 import Button from '../components/common/Button'
@@ -42,6 +59,58 @@ import useAuthStore from '../store/useAuthStore'
 import { formatDistanceToNow, format } from 'date-fns'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
+
+/* ------------------------------------------------------------------ */
+/* Cover gradients + presence + profile completeness                   */
+/* ------------------------------------------------------------------ */
+
+const COVER_GRADIENTS = {
+  aurora: 'from-primary-500 via-primary-600 to-emerald-500',
+  sunset: 'from-orange-400 via-rose-500 to-purple-600',
+  ocean: 'from-sky-400 via-blue-600 to-indigo-700',
+  forest: 'from-emerald-400 via-green-600 to-teal-700',
+  midnight: 'from-slate-700 via-indigo-900 to-black',
+  rose: 'from-pink-400 via-rose-500 to-red-600',
+  graphite: 'from-gray-500 via-gray-700 to-gray-900',
+}
+
+const PRESENCE = {
+  online: { label: 'Online', dot: 'bg-green-500', chip: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', icon: SignalIcon },
+  busy: { label: 'Busy', dot: 'bg-red-500', chip: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', icon: SignalIcon },
+  away: { label: 'Away', dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', icon: SignalIcon },
+  offline: { label: 'Offline', dot: 'bg-gray-400', chip: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300', icon: SignalIcon },
+}
+
+/** Human label for an IANA zone: "Africa/Nairobi" → "Nairobi". */
+const zoneLabel = (zone) => (zone ? zone.split('/').pop().replace(/_/g, ' ') : '')
+
+/** Current wall-clock time in the profile owner's zone ('' when unknown). */
+const localTimeIn = (zone) => {
+  if (!zone) return ''
+  try {
+    return new Intl.DateTimeFormat('en', {
+      timeZone: zone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date())
+  } catch {
+    return ''
+  }
+}
+
+const coverClass = (profile) =>
+  COVER_GRADIENTS[profile?.coverGradient] || COVER_GRADIENTS.aurora
+
+/** Fields that make a profile feel complete — used for the completion meter. */
+const COMPLETION_FIELDS = [
+  { key: 'avatar', label: 'Profile photo' },
+  { key: 'fullName', label: 'Full name' },
+  { key: 'username', label: 'Username' },
+  { key: 'about', label: 'About / bio' },
+  { key: 'phone', label: 'Phone number' },
+  { key: 'location', label: 'Location' },
+]
 
 /* ------------------------------------------------------------------ */
 /* Small building blocks                                               */
@@ -91,7 +160,9 @@ const InfoRow = ({ icon: Icon, label, children }) => (
     </span>
     <div className="min-w-0 flex-1">
       <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
-      <div className="text-sm font-medium text-gray-900 dark:text-white break-words">{children}</div>
+      <div data-selectable className="text-sm font-medium text-gray-900 dark:text-white break-words">
+        {children}
+      </div>
     </div>
   </div>
 )
@@ -149,6 +220,9 @@ const ProfilePage = () => {
   const [showRingtones, setShowRingtones] = useState(false)
   const [showPermissions, setShowPermissions] = useState(false)
   const [showQr, setShowQr] = useState(false)
+  const [highlights, setHighlights] = useState([])
+  const [lightbox, setLightbox] = useState(null) // index into mediaItems
+  const [scrolled, setScrolled] = useState(false)
   const [prefs, setPrefs] = useState({
     customNotifications: false,
     messageTone: 'Note',
@@ -165,6 +239,13 @@ const ProfilePage = () => {
     website: '',
     location: '',
     pronouns: '',
+    statusText: '',
+    coverGradient: 'aurora',
+    jobTitle: '',
+    timezone:
+      typeof Intl !== 'undefined'
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+        : '',
   })
 
   const targetId = userId && userId !== 'me' ? userId : currentUser?._id || currentUser?.id
@@ -227,6 +308,11 @@ const ProfilePage = () => {
         .get(`/users/${targetId}/media`)
         .then(({ data }) => setMedia(Array.isArray(data?.media) ? data.media : []))
         .catch(() => setMedia([]))
+
+      api
+        .get('/stories/highlights', { params: { userId: targetId } })
+        .then(({ data }) => setHighlights(Array.isArray(data?.highlights) ? data.highlights : []))
+        .catch(() => setHighlights([]))
     }
   }, [currentUser, isMe, normalizeProfile, targetId, userId])
 
@@ -244,7 +330,12 @@ const ProfilePage = () => {
       website: profile.website || '',
       location: profile.location || '',
       pronouns: profile.pronouns || '',
+      statusText: profile.statusText || '',
+      coverGradient: profile.coverGradient || 'aurora',
+      jobTitle: profile.jobTitle || '',
+      timezone: profile.timezone || form.timezone || '',
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   /* ---------------- actions ---------------- */
@@ -382,6 +473,74 @@ const ProfilePage = () => {
 
   const togglePref = (key) => setPrefs((prev) => ({ ...prev, [key]: !prev[key] }))
 
+  /** Presence switch — optimistic, then persisted server-side. */
+  const changeStatus = async (status) => {
+    const previous = profile?.status
+    setProfile((prev) => (prev ? { ...prev, status, isOnline: status === 'online' } : prev))
+    try {
+      await api.patch('/users/status', { status })
+      const fresh = useAuthStore.getState().user
+      if (fresh) useAuthStore.setState({ user: { ...fresh, status } })
+      toast.success(`Status set to ${PRESENCE[status]?.label || status}`)
+    } catch {
+      setProfile((prev) => (prev ? { ...prev, status: previous } : prev))
+      toast.error('Could not update your status')
+    }
+  }
+
+  /** Copy any value, with a consistent toast. */
+  const copyValue = async (value, label = 'Copied') => {
+    try {
+      await navigator.clipboard.writeText(value)
+      toast.success(label)
+    } catch {
+      toast.error('Copy is not available in this browser')
+    }
+  }
+
+  /** Download the contact as a vCard 3.0 file — works offline, no API. */
+  const downloadVCard = () => {
+    const name = profile.name || 'GBChat contact'
+    const lines = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${name}`,
+      `N:${name};;;;`,
+    ]
+    if (profile.phone) lines.push(`TEL;TYPE=CELL:${profile.phone}`)
+    if (profile.email) lines.push(`EMAIL;TYPE=INTERNET:${profile.email}`)
+    if (profile.website) lines.push(`URL:${profile.website}`)
+    if (profile.about) lines.push(`NOTE:${String(profile.about).replace(/\n/g, ' ')}`)
+    lines.push(`UID:${profile._id || targetId || 'gbchat'}`)
+    lines.push(`REV:${new Date().toISOString()}`)
+    lines.push('END:VCARD')
+
+    try {
+      const blob = new Blob([lines.join('\r\n')], { type: 'text/vcard;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${name.replace(/\s+/g, '-').toLowerCase()}.vcf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Contact card saved')
+    } catch {
+      toast.error('Could not create the contact card')
+    }
+  }
+
+  const openLightbox = (index) => setLightbox(index)
+  const closeLightbox = () => setLightbox(null)
+  const stepLightbox = (delta) =>
+    setLightbox((current) => {
+      if (current === null) return current
+      const total = mediaItems.length
+      if (!total) return null
+      return (current + delta + total) % total
+    })
+
   const menuItems = isMe
     ? [
         { label: 'Edit profile', action: 'edit' },
@@ -408,12 +567,67 @@ const ProfilePage = () => {
     () => media.filter((item) => !item.url && item.text && /https?:\/\//i.test(item.text)),
     [media]
   )
-  const mediaItems = useMemo(() => media.filter((item) => item.url), [media])
+  const mediaItems = useMemo(
+    () => media.filter((item) => item.url && item.kind !== 'document'),
+    [media]
+  )
+  const documents = useMemo(
+    () => media.filter((item) => item.url && item.kind === 'document'),
+    [media]
+  )
   const groups = profile?.commonGroups || []
 
   const coverStyle = profile?.coverPhoto
     ? { backgroundImage: `url(${profile.coverPhoto})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : undefined
+
+  const presence = PRESENCE[profile?.status] || PRESENCE.offline
+
+  /** Completion is only meaningful for your own profile. */
+  const completion = useMemo(() => {
+    if (!isMe) return null
+    const filled = COMPLETION_FIELDS.filter((field) => {
+      const value = field.key === 'avatar' ? profile?.avatar : profile?.[field.key]
+      return Boolean(value && String(value).trim())
+    })
+    return {
+      percent: Math.round((filled.length / COMPLETION_FIELDS.length) * 100),
+      missing: COMPLETION_FIELDS.filter((field) => !filled.includes(field)),
+    }
+  }, [isMe, profile])
+
+  const badges = useMemo(() => {
+    const list = []
+    if (profile?.isVerified || profile?.verified) {
+      list.push({ id: 'verified', label: 'Verified', icon: CheckBadgeIcon, tone: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' })
+    }
+    if (profile?.role === 'admin') {
+      list.push({ id: 'admin', label: 'Admin', icon: ShieldCheckIcon, tone: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' })
+    }
+    if (profile?.contact) {
+      list.push({ id: 'contact', label: 'In your contacts', icon: UserPlusIcon, tone: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' })
+    }
+    if (stats?.mutualGroups > 0) {
+      list.push({
+        id: 'mutual',
+        label: `${stats.mutualGroups} shared group${stats.mutualGroups === 1 ? '' : 's'}`,
+        icon: UserGroupIcon,
+        tone: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+      })
+    }
+    if (stats?.profileViews > 0) {
+      list.push({
+        id: 'views',
+        label: `${stats.profileViews} profile view${stats.profileViews === 1 ? '' : 's'}`,
+        icon: EyeIcon,
+        tone: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+      })
+    }
+    return list
+  }, [profile, stats])
+
+  const localTime = localTimeIn(profile?.timezone)
+  const activeLightboxItem = lightbox !== null ? mediaItems[lightbox] : null
 
   if (loading) return <Skeleton />
 
@@ -433,21 +647,66 @@ const ProfilePage = () => {
   }
 
   const tabs = [
-    { id: 'media', label: 'Media', icon: PhotoIcon },
-    { id: 'links', label: 'Links', icon: LinkIcon },
-    { id: 'groups', label: 'Groups', icon: UserGroupIcon },
-    { id: 'about', label: 'About', icon: DocumentTextIcon },
+    { id: 'media', label: 'Media', icon: PhotoIcon, count: mediaItems.length },
+    { id: 'stories', label: 'Stories', icon: SparklesIcon, count: highlights.length },
+    { id: 'docs', label: 'Docs', icon: DocumentIcon, count: documents.length },
+    { id: 'links', label: 'Links', icon: LinkIcon, count: links.length },
+    { id: 'groups', label: 'Groups', icon: UserGroupIcon, count: groups.length },
+    { id: 'about', label: 'About', icon: IdentificationIcon },
   ]
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto overscroll-contain bg-gray-50 pb-10 dark:bg-dark-bg">
+    <div
+      onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 96)}
+      className="h-full min-h-0 overflow-y-auto overscroll-contain bg-gray-50 pb-10 dark:bg-dark-bg"
+    >
+      {/* Compact sticky bar (appears once the hero scrolls away) */}
+      <AnimatePresence>
+        {scrolled && (
+          <motion.div
+            initial={{ y: -48, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -48, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200/70 bg-white/90 px-3 py-2 backdrop-blur-xl dark:border-gray-800 dark:bg-gray-900/90"
+          >
+            <button
+              onClick={() => navigate(-1)}
+              aria-label="Back"
+              className="rounded-lg p-1.5 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{profile.name}</p>
+              <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">
+                {profile.username ? `@${profile.username}` : presence.label}
+              </p>
+            </div>
+            {!isMe && (
+              <Button
+                size="sm"
+                variant="primary"
+                icon={<ChatBubbleLeftRightIcon className="h-4 w-4" />}
+                onClick={handleMessage}
+              >
+                <span className="hidden sm:inline">Message</span>
+              </Button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ---------------- Cover + header ---------------- */}
       <div className="relative">
         <div
           style={coverStyle}
-          className="h-44 w-full bg-gradient-to-br from-primary-500 via-primary-600 to-emerald-500 dark:from-primary-700 dark:via-primary-800 dark:to-emerald-800"
+          className={clsx(
+            'h-44 w-full bg-gradient-to-br',
+            !profile.coverPhoto && coverClass(profile)
+          )}
         >
-          <div className="h-full w-full bg-black/5 dark:bg-black/10" />
+          <div className="h-full w-full bg-gradient-to-t from-black/25 via-transparent to-black/10" />
         </div>
 
         <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 py-3">
@@ -537,10 +796,39 @@ const ProfilePage = () => {
             </motion.div>
 
             <div className="flex items-center gap-2 pb-1">
-              {profile.isOnline && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                  <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                  Online
+              {isMe ? (
+                <Dropdown
+                  position="right"
+                  trigger={
+                    <button
+                      type="button"
+                      className={clsx(
+                        'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
+                        presence.chip
+                      )}
+                    >
+                      <span className={clsx('h-1.5 w-1.5 rounded-full', presence.dot)} />
+                      {presence.label}
+                      <ChevronDownIcon className="h-3 w-3 opacity-70" />
+                    </button>
+                  }
+                  items={[
+                    { label: 'Online', action: 'online' },
+                    { label: 'Busy', action: 'busy' },
+                    { label: 'Away', action: 'away' },
+                    { label: 'Invisible (offline)', action: 'offline' },
+                  ]}
+                  onSelect={changeStatus}
+                />
+              ) : (
+                <span
+                  className={clsx(
+                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                    presence.chip
+                  )}
+                >
+                  <span className={clsx('h-1.5 w-1.5 rounded-full', presence.dot)} />
+                  {presence.label}
                 </span>
               )}
               {profile.verified && (
@@ -585,8 +873,17 @@ const ProfilePage = () => {
               )
             )}
 
+            {profile.statusText && (
+              <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                <ClockIcon className="h-3.5 w-3.5" />
+                {profile.statusText}
+              </p>
+            )}
+
             <p className="mt-2 max-w-prose text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-              {profile.about || profile.bio || (isMe ? 'Add a short bio to introduce yourself.' : '')}
+              <span data-selectable>
+                {profile.about || profile.bio || (isMe ? 'Add a short bio to introduce yourself.' : '')}
+              </span>
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
@@ -662,13 +959,66 @@ const ProfilePage = () => {
         </div>
       </div>
 
+      {/* ---------------- Profile completion (own profile only) ---------------- */}
+      {completion && completion.percent < 100 && (
+        <div className="mt-3 px-4">
+          <div className="surface-card rounded-2xl px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
+                  <SparklesIcon className="h-4 w-4 text-amber-500" />
+                  Profile {completion.percent}% complete
+                </p>
+                <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                  Missing: {completion.missing.map((field) => field.label).join(', ')}
+                </p>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
+                Finish
+              </Button>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${completion.percent}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className="h-full rounded-full bg-gradient-to-r from-primary-500 to-emerald-500"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- Badges ---------------- */}
+      {badges.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5 px-4">
+          {badges.map((badge) => {
+            const Icon = badge.icon
+            return (
+              <span
+                key={badge.id}
+                className={clsx(
+                  'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium',
+                  badge.tone
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {badge.label}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
       {/* ---------------- Stats ---------------- */}
       <div className="mt-3 px-4">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
           <StatTile icon={ChatBubbleLeftEllipsisIcon} label="Chats" value={stats?.chats} tone="text-green-500" />
           <StatTile icon={UserGroupIcon} label="Groups" value={stats?.groups} tone="text-blue-500" />
+          <StatTile icon={UserPlusIcon} label="Shared" value={stats?.mutualGroups} tone="text-cyan-500" />
           <StatTile icon={PhotoIcon} label="Media" value={stats?.media} tone="text-purple-500" />
           <StatTile icon={SparklesIcon} label="Stories" value={stats?.stories} tone="text-amber-500" />
+          <StatTile icon={EyeIcon} label="Views" value={stats?.profileViews} tone="text-rose-500" />
         </div>
       </div>
 
@@ -702,7 +1052,7 @@ const ProfilePage = () => {
       {/* ---------------- Tabs ---------------- */}
       <div className="mt-3 px-4">
         <div className="surface-card overflow-hidden rounded-3xl">
-          <div className="flex border-b border-gray-200/70 dark:border-gray-800">
+          <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200/70 dark:border-gray-800">
             {tabs.map((tab) => {
               const Icon = tab.icon
               const active = activeTab === tab.id
@@ -711,14 +1061,19 @@ const ProfilePage = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={clsx(
-                    'relative flex flex-1 items-center justify-center gap-1.5 px-2 py-3 text-sm font-medium transition-colors',
+                    'relative flex min-w-[76px] flex-1 items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors',
                     active
                       ? 'text-primary-600 dark:text-primary-400'
                       : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   )}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <span className="rounded-full bg-gray-100 px-1.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                      {tab.count}
+                    </span>
+                  )}
                   {active && (
                     <motion.span
                       layoutId="profile-tab-underline"
@@ -742,10 +1097,12 @@ const ProfilePage = () => {
                 {activeTab === 'media' && (
                   mediaItems.length ? (
                     <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-                      {mediaItems.map((item) => (
-                        <div
+                      {mediaItems.map((item, index) => (
+                        <button
+                          type="button"
                           key={item._id}
-                          className="group relative aspect-square overflow-hidden rounded-xl bg-gray-200 dark:bg-gray-700"
+                          onClick={() => openLightbox(index)}
+                          className="group relative aspect-square overflow-hidden rounded-xl bg-gray-200 focus:outline-none focus-visible:ring-2 focus:ring-primary-500 dark:bg-gray-700"
                         >
                           <img
                             src={item.thumbnail || item.url}
@@ -753,11 +1110,97 @@ const ProfilePage = () => {
                             loading="lazy"
                             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                           />
-                        </div>
+                          {item.kind === 'video' && (
+                            <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                              <VideoCameraIcon className="h-3 w-3" />
+                              Video
+                            </span>
+                          )}
+                          <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+                        </button>
                       ))}
                     </div>
                   ) : (
                     <EmptyState icon={PhotoIcon} title="No media yet" hint="Photos and videos you share will appear here." />
+                  )
+                )}
+
+                {activeTab === 'stories' && (
+                  highlights.length ? (
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                      {highlights.map((highlight) => (
+                        <button
+                          type="button"
+                          key={highlight._id}
+                          onClick={() => navigate('/stories')}
+                          className="group flex flex-col items-center gap-1.5"
+                        >
+                          <span
+                            className={clsx(
+                              'relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br p-[2px]',
+                              highlight.color || COVER_GRADIENTS.aurora
+                            )}
+                          >
+                            <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white dark:bg-gray-900">
+                              {highlight.coverImage ? (
+                                <img
+                                  src={highlight.coverImage}
+                                  alt={highlight.title}
+                                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                />
+                              ) : (
+                                <SparklesIcon className="h-6 w-6 text-primary-500" />
+                              )}
+                            </span>
+                          </span>
+                          <span className="w-full truncate text-center text-[11px] font-medium text-gray-700 dark:text-gray-300">
+                            {highlight.title}
+                          </span>
+                          <span className="text-[10px] text-gray-400">
+                            {highlight.storyCount || 0} {highlight.storyCount === 1 ? 'story' : 'stories'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      icon={SparklesIcon}
+                      title="No highlights"
+                      hint={isMe ? 'Turn your best stories into highlights from the Stories page.' : 'This person has not saved any highlights yet.'}
+                    />
+                  )
+                )}
+
+                {activeTab === 'docs' && (
+                  documents.length ? (
+                    <ul className="divide-y divide-gray-200/70 dark:divide-gray-800">
+                      {documents.map((doc) => (
+                        <li key={doc._id} className="flex items-center gap-3 py-3">
+                          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300">
+                            <DocumentIcon className="h-5 w-5" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                              {doc.filename || doc.text || 'Document'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {doc.createdAt ? formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true }) : ''}
+                            </p>
+                          </div>
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20"
+                          >
+                            Open
+                            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <EmptyState icon={DocumentIcon} title="No documents" hint="Files shared in your chats appear here." />
                   )
                 )}
 
@@ -812,11 +1255,56 @@ const ProfilePage = () => {
                     {profile.about && (
                       <div className="pb-3">
                         <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">About</p>
-                        <p className="mt-1 text-sm text-gray-800 dark:text-gray-200">{profile.about}</p>
+                        <p data-selectable className="mt-1 text-sm text-gray-800 dark:text-gray-200">
+                          {profile.about}
+                        </p>
                       </div>
                     )}
-                    {profile.phone && <InfoRow icon={PhoneIcon} label="Phone">{profile.phone}</InfoRow>}
-                    {profile.email && <InfoRow icon={AtSymbolIcon} label="Email">{profile.email}</InfoRow>}
+                    {profile.phone && (
+                      <InfoRow icon={PhoneIcon} label="Phone">
+                        <span className="flex items-center justify-between gap-2">
+                          <span>{profile.phone}</span>
+                          <span className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => copyValue(profile.phone, 'Phone number copied')}
+                              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                              aria-label="Copy phone number"
+                            >
+                              <ClipboardDocumentIcon className="h-4 w-4" />
+                            </button>
+                            <a
+                              href={`tel:${profile.phone}`}
+                              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                              aria-label="Call this number"
+                            >
+                              <PhoneIcon className="h-4 w-4" />
+                            </a>
+                          </span>
+                        </span>
+                      </InfoRow>
+                    )}
+                    {profile.email && (
+                      <InfoRow icon={EnvelopeIcon} label="Email">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="truncate">{profile.email}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyValue(profile.email, 'Email copied')}
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                            aria-label="Copy email"
+                          >
+                            <ClipboardDocumentIcon className="h-4 w-4" />
+                          </button>
+                        </span>
+                      </InfoRow>
+                    )}
+                    {profile.jobTitle && (
+                      <InfoRow icon={BriefcaseIcon} label="Work">{profile.jobTitle}</InfoRow>
+                    )}
+                    {profile.pronouns && (
+                      <InfoRow icon={BuildingOffice2Icon} label="Pronouns">{profile.pronouns}</InfoRow>
+                    )}
                     {profile.website && (
                       <InfoRow icon={LinkIcon} label="Website">
                         <a
@@ -830,6 +1318,32 @@ const ProfilePage = () => {
                       </InfoRow>
                     )}
                     {profile.location && <InfoRow icon={MapPinIcon} label="Location">{profile.location}</InfoRow>}
+                    {profile.timezone && (
+                      <InfoRow icon={ClockIcon} label="Local time">
+                        <span className="flex flex-wrap items-center gap-x-1.5">
+                          <SunIcon className="h-4 w-4 text-amber-500" />
+                          <span className="tabular-nums">{localTime || '—'}</span>
+                          <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                            ({zoneLabel(profile.timezone)})
+                          </span>
+                        </span>
+                      </InfoRow>
+                    )}
+                    {profile.username && (
+                      <InfoRow icon={AtSymbolIcon} label="Username">
+                        <span className="flex items-center justify-between gap-2">
+                          <span>@{profile.username}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyValue(`@${profile.username}`, 'Username copied')}
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                            aria-label="Copy username"
+                          >
+                            <ClipboardDocumentIcon className="h-4 w-4" />
+                          </button>
+                        </span>
+                      </InfoRow>
+                    )}
                     {profile.createdAt && (
                       <InfoRow icon={CalendarIcon} label="Member since">
                         {format(new Date(profile.createdAt), 'd MMMM yyyy')}
@@ -840,10 +1354,30 @@ const ProfilePage = () => {
                         {stats.messagesSent}
                       </InfoRow>
                     )}
+                    {stats?.mutualGroups > 0 && (
+                      <InfoRow icon={UserGroupIcon} label="Groups in common">
+                        {stats.mutualGroups}
+                      </InfoRow>
+                    )}
+                    {stats?.profileViews > 0 && (
+                      <InfoRow icon={EyeIcon} label="Profile views">
+                        {stats.profileViews}
+                      </InfoRow>
+                    )}
+                    <InfoRow icon={ArrowDownTrayIcon} label="Contact card">
+                      <button
+                        type="button"
+                        onClick={downloadVCard}
+                        className="inline-flex items-center gap-1 text-primary-600 hover:underline dark:text-primary-400"
+                      >
+                        Save as .vcf
+                        <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </InfoRow>
                     <InfoRow icon={FingerPrintIcon} label="Security">
                       <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
                         <CheckBadgeIcon className="w-4 h-4" />
-                        End-to-end encrypted chats
+                        Chats are encrypted in transit (TLS) and PIN-lockable
                       </span>
                     </InfoRow>
                   </div>
@@ -911,6 +1445,61 @@ const ProfilePage = () => {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Work"
+              value={form.jobTitle}
+              onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
+              placeholder="Product designer"
+            />
+            <Field
+              label="Timezone"
+              value={form.timezone}
+              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+              placeholder="Africa/Nairobi"
+              hint="IANA zone — shows your local time"
+            />
+          </div>
+
+          <Field
+            label="Status"
+            value={form.statusText}
+            onChange={(e) => setForm({ ...form, statusText: e.target.value })}
+            placeholder="In a meeting"
+            hint="Shown under your name, next to your presence"
+          />
+
+          <div>
+            <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Cover gradient
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {Object.keys(COVER_GRADIENTS).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setForm({ ...form, coverGradient: key })}
+                  aria-label={`${key} cover`}
+                  aria-pressed={form.coverGradient === key}
+                  className={clsx(
+                    'relative h-9 w-12 overflow-hidden rounded-lg bg-gradient-to-br ring-2 transition',
+                    COVER_GRADIENTS[key],
+                    form.coverGradient === key
+                      ? 'ring-primary-500'
+                      : 'ring-transparent hover:ring-gray-300 dark:hover:ring-gray-600'
+                  )}
+                >
+                  {form.coverGradient === key && (
+                    <CheckIcon className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-gray-400">
+              Used when no cover photo is uploaded.
+            </p>
+          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setEditOpen(false)}>
               Cancel
@@ -920,6 +1509,74 @@ const ProfilePage = () => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* ---------------- Media lightbox ---------------- */}
+      <Modal
+        isOpen={Boolean(activeLightboxItem)}
+        onClose={closeLightbox}
+        title={activeLightboxItem ? `Media ${lightbox + 1} of ${mediaItems.length}` : 'Media'}
+        size="lg"
+      >
+        {activeLightboxItem && (
+          <div className="space-y-3">
+            <div className="relative flex max-h-[60vh] items-center justify-center overflow-hidden rounded-2xl bg-black">
+              {activeLightboxItem.kind === 'video' ? (
+                <video
+                  src={activeLightboxItem.url}
+                  poster={activeLightboxItem.thumbnail}
+                  controls
+                  className="max-h-[60vh] w-full"
+                />
+              ) : (
+                <img
+                  src={activeLightboxItem.url}
+                  alt={activeLightboxItem.text || 'Shared media'}
+                  className="max-h-[60vh] w-full object-contain"
+                />
+              )}
+
+              {mediaItems.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => stepLightbox(-1)}
+                    aria-label="Previous media"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white backdrop-blur transition hover:bg-black/70"
+                  >
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => stepLightbox(1)}
+                    aria-label="Next media"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white backdrop-blur transition hover:bg-black/70"
+                  >
+                    <ChevronRightIcon className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+              <span className="truncate">
+                {activeLightboxItem.createdAt
+                  ? formatDistanceToNow(new Date(activeLightboxItem.createdAt), { addSuffix: true })
+                  : ''}
+              </span>
+              <a
+                href={activeLightboxItem.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                className="inline-flex items-center gap-1 font-medium text-primary-600 hover:underline dark:text-primary-400"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4" />
+                Download
+              </a>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* ---------------- QR modal ---------------- */}

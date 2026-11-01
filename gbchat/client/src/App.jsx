@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import useAuthStore from './store/useAuthStore'
 import useThemeStore from './store/useThemeStore'
@@ -13,6 +13,11 @@ import InstallPrompt from './components/common/InstallPrompt'
 import AppLock from './components/auth/AppLock'
 import AppUpdateChecker from './components/common/AppUpdateChecker'
 import IncomingCallOverlay from './components/calls/IncomingCallOverlay'
+import ScrollToTop from './components/common/ScrollToTop'
+import { RoutedErrorBoundary } from './components/common/RouteErrorBoundary'
+import ShortcutSheet from './components/common/ShortcutSheet'
+import useGlobalShortcuts from './hooks/useGlobalShortcuts'
+import { syncPushSubscription } from './lib/push'
 
 // Lazy load pages for better performance
 const AuthPage = React.lazy(() => import('./pages/AuthPage'))
@@ -25,13 +30,49 @@ const ContactsPage = React.lazy(() => import('./pages/ContactsPage'))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'))
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'))
+const HomePage = React.lazy(() => import('./pages/HomePage'))
+const BackupPage = React.lazy(() => import('./pages/BackupPage'))
 const TermsAndConditions = React.lazy(() => import('./pages/legal/TermsAndConditions'))
 const PrivacyPolicy = React.lazy(() => import('./pages/legal/PrivacyPolicy'))
+
+/**
+ * Legacy `/chat?chatId=<id>` → `/chats?chat=<id>` (the conversation route).
+ * Kept forever: notification rows and shared links shipped with the old shape.
+ */
+function LegacyChatRedirect() {
+  const location = useLocation()
+  const { chatId: pathChatId } = useParams()
+  const params = new URLSearchParams(location.search)
+  const chatId = params.get('chatId') || params.get('chat') || pathChatId
+  const messageId = params.get('messageId') || params.get('message')
+
+  const next = new URLSearchParams()
+  if (chatId) next.set('chat', chatId)
+  if (messageId) next.set('message', messageId)
+
+  return <Navigate to={`/chats${next.toString() ? `?${next.toString()}` : ''}`} replace />
+}
 
 function App() {
   const { user, isAuthenticated, isLoading, isDemo, checkAuth } = useAuthStore()
   const { theme, initTheme } = useThemeStore()
   const { connect, disconnect } = useSocket()
+  useGlobalShortcuts()
+
+  // If this browser already holds a push subscription (returning visitor, or a
+  // different account on a shared device) make sure the server has it. Silent:
+  // never prompts for permission, so it cannot annoy anyone on load.
+  useEffect(() => {
+    if (!isAuthenticated) return
+    let cancelled = false
+    const timer = setTimeout(() => {
+      if (!cancelled) syncPushSubscription()
+    }, 2500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [isAuthenticated])
 
   // State for onboarding flow
   const [showSplash, setShowSplash] = useState(true)
@@ -180,9 +221,13 @@ function App() {
         />
       )}
 
+      <ScrollToTop />
+      <ShortcutSheet />
+
       <AnimatePresence mode="wait">
         <React.Suspense fallback={<Loader fullScreen />}>
-          <Routes>
+          <RoutedErrorBoundary>
+            <Routes>
             {/* Public route - redirect to home if already authenticated */}
             <Route
               path="/auth"
@@ -196,22 +241,37 @@ function App() {
             >
               <Route index element={<ChatPage />} />
               <Route path="chats" element={<ChatPage />} />
+              {/* Deep link: /chats/:chatId opens that conversation */}
+              <Route path="chats/:chatId" element={<ChatPage />} />
               <Route path="stories" element={<StoriesPage />} />
               <Route path="channels" element={<ChannelsPage />} />
               <Route path="groups" element={<GroupsPage />} />
               <Route path="calls" element={<CallsPage />} />
               <Route path="contacts" element={<ContactsPage />} />
+              <Route path="channels/:channelId" element={<ChannelsPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              {/* /settings/notifications, /settings/privacy, … deep links */}
+              <Route path="settings/:section" element={<SettingsPage />} />
+              {/* Own profile: /profile redirects to /profile/me */}
+              <Route path="profile" element={<Navigate to="/profile/me" replace />} />
               <Route path="profile/:userId" element={<ProfilePage />} />
+              <Route path="backup" element={<BackupPage />} />
+              {/* Legacy /chat?chatId=… links (old notifications, bookmarks) */}
+              <Route path="chat" element={<LegacyChatRedirect />} />
+              <Route path="chat/:chatId" element={<LegacyChatRedirect />} />
             </Route>
+
+            {/* Public marketing / welcome page */}
+            <Route path="/welcome" element={<HomePage />} />
 
             {/* Public legal pages */}
             <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
 
             {/* 404 */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </RoutedErrorBoundary>
         </React.Suspense>
       </AnimatePresence>
     </>

@@ -2,6 +2,7 @@
 import Channel from "../models/Channel.js";
 import Message from "../models/Message.js";
 import crypto from "crypto";
+import { parsePagination, buildPageMeta, setPaginationHeaders } from "../utils/pagination.js";
 
 export const createChannel = async (req, res, next) => {
   try {
@@ -34,10 +35,23 @@ export const getChannels = async (req, res, next) => {
     if (category) query.category = category;
     if (search) query.name = { $regex: search, $options: "i" };
 
-    const channels = await Channel.find(query)
-      .populate("owner", "fullName avatar")
-      .sort({ subscriberCount: -1 })
-      .limit(50);
+    // Still a bare array — the discovery page consumes it directly — but it now
+    // honours ?page/?limit and reports totals in headers, so "Load more" works.
+    const { page, limit } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 100 });
+
+    const [channels, total] = await Promise.all([
+      Channel.find(query)
+        .populate("owner", "fullName avatar")
+        .sort({ subscriberCount: -1, createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Channel.countDocuments(query),
+    ]);
+
+    setPaginationHeaders(
+      res,
+      buildPageMeta({ page, limit, total, returned: channels.length })
+    );
 
     res.json(channels);
   } catch (error) {
@@ -47,10 +61,19 @@ export const getChannels = async (req, res, next) => {
 
 export const getMyChannels = async (req, res, next) => {
   try {
-    const channels = await Channel.find({
-      "subscribers.user": req.user._id,
-    }).populate("owner", "fullName avatar");
+    const { page, limit } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 100 });
+    const filter = { "subscribers.user": req.user._id };
 
+    const [channels, total] = await Promise.all([
+      Channel.find(filter)
+        .populate("owner", "fullName avatar")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Channel.countDocuments(filter),
+    ]);
+
+    setPaginationHeaders(res, buildPageMeta({ page, limit, total, returned: channels.length }));
     res.json(channels);
   } catch (error) {
     next(error);
@@ -283,6 +306,202 @@ export const likeChannelPost = async (req, res, next) => {
 
     await post.save();
     res.json({ liked: idx === -1, likes: post.reactions.length });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/* Scheduled posts                                                     */
+/* ------------------------------------------------------------------ */
+
+const isChannelAdmin = (channel, userId) =>
+  channel.owner.toString() === userId.toString() ||
+  channel.admins.some((admin) => admin.toString() === userId.toString());
+
+/**
+ * Promote every due scheduled post to a real message.
+ *
+ * This runs lazily whenever a channel or its schedule is read, which keeps the
+ * feature working on a single node without a cron worker. When more than one
+ * node is deployed the update is atomic per entry (`findOneAndUpdate` with a
+ * `status: 'pending'` guard), so a post can never be published twice.
+ */
+export const publishDueScheduledPosts = async (channel, io) => {
+  const now = new Date()
+  const due = (channel.scheduledPosts || []).filter(
+    (post) => post.status === "pending" && post.scheduledFor <= now
+  );
+  if (!due.length) return 0;
+
+  let published = 0;
+
+  for (const entry of due) {
+    const claimed = await Channel.findOneAndUpdate(
+      { _id: channel._id, "scheduledPosts._id": entry._id, "scheduledPosts.status": "pending" },
+      { $set: { "scheduledPosts.$.status": "published", "scheduledPosts.$.publishedAt": now } },
+      { new: true }
+    );
+    if (!claimed) continue;
+
+    const message = await Message.create({
+      chat: channel._id,
+      sender: entry.createdBy || channel.owner,
+      type: entry.type || "text",
+      content: {
+        text: entry.text,
+        media: entry.mediaUrl ? { url: entry.mediaUrl } : undefined,
+      },
+    });
+
+    await Channel.updateOne(
+      { _id: channel._id },
+      {
+        $push: { posts: message._id },
+        $set: { "scheduledPosts.$[entry].messageId": message._id },
+      },
+      { arrayFilters: [{ "entry._id": entry._id }] }
+    );
+
+    if (io) {
+      channel.subscribers.forEach((subscriber) => {
+        io.to(subscriber.user.toString()).emit("channelPost", {
+          channelId: channel._id,
+          message,
+        });
+      });
+    }
+
+    published += 1;
+  }
+
+  return published;
+};
+
+// @desc    Queue a post for future publishing
+// @route   POST /api/channels/:id/posts/schedule
+// @access  Private (channel admin)
+export const scheduleChannelPost = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+    if (!isChannelAdmin(channel, req.user._id)) {
+      return res.status(403).json({ message: "Only admins can schedule posts" });
+    }
+
+    const { text, type = "text", mediaUrl = "", scheduledFor } = req.body;
+    if (!text && !mediaUrl) {
+      return res.status(400).json({ message: "A post needs text or media" });
+    }
+
+    const when = new Date(scheduledFor);
+    if (Number.isNaN(when.getTime())) {
+      return res.status(400).json({ message: "scheduledFor must be a valid date" });
+    }
+    if (when.getTime() < Date.now() - 60_000) {
+      return res.status(400).json({ message: "scheduledFor must be in the future" });
+    }
+
+    channel.scheduledPosts.push({
+      text,
+      type,
+      mediaUrl,
+      scheduledFor: when,
+      createdBy: req.user._id,
+    });
+    await channel.save();
+
+    const entry = channel.scheduledPosts[channel.scheduledPosts.length - 1];
+    res.status(201).json({ success: true, scheduledPost: entry });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    List scheduled posts (publishing anything already due)
+// @route   GET /api/channels/:id/posts/scheduled
+// @access  Private (channel admin)
+export const getScheduledChannelPosts = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+    if (!isChannelAdmin(channel, req.user._id)) {
+      return res.status(403).json({ message: "Only admins can view the schedule" });
+    }
+
+    await publishDueScheduledPosts(channel, req.app.get("io"));
+
+    const fresh = await Channel.findById(req.params.id).select("scheduledPosts");
+    const scheduled = (fresh?.scheduledPosts || []).sort(
+      (a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor)
+    );
+
+    res.json({
+      success: true,
+      scheduled: scheduled.map((post) => ({
+        _id: post._id,
+        text: post.text,
+        type: post.type,
+        mediaUrl: post.mediaUrl,
+        scheduledFor: post.scheduledFor,
+        status: post.status === "cancelled" ? "draft" : post.status,
+        messageId: post.messageId,
+        publishedAt: post.publishedAt,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Publish a scheduled post immediately
+// @route   POST /api/channels/:id/posts/scheduled/:postId/publish
+// @access  Private (channel admin)
+export const publishScheduledChannelPost = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+    if (!isChannelAdmin(channel, req.user._id)) {
+      return res.status(403).json({ message: "Only admins can publish posts" });
+    }
+
+    const entry = channel.scheduledPosts.id(req.params.postId);
+    if (!entry) return res.status(404).json({ message: "Scheduled post not found" });
+    if (entry.status === "published") {
+      return res.status(409).json({ message: "Post was already published" });
+    }
+
+    // Force it due, then reuse the shared publishing path.
+    entry.scheduledFor = new Date();
+    await channel.save();
+    await publishDueScheduledPosts(channel, req.app.get("io"));
+
+    res.json({ success: true, published: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Cancel / delete a scheduled post
+// @route   DELETE /api/channels/:id/posts/scheduled/:postId
+// @access  Private (channel admin)
+export const deleteScheduledChannelPost = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+    if (!isChannelAdmin(channel, req.user._id)) {
+      return res.status(403).json({ message: "Only admins can edit the schedule" });
+    }
+
+    const entry = channel.scheduledPosts.id(req.params.postId);
+    if (!entry) return res.status(404).json({ message: "Scheduled post not found" });
+    if (entry.status === "published") {
+      return res.status(409).json({ message: "Published posts can only be deleted from the feed" });
+    }
+
+    entry.deleteOne();
+    await channel.save();
+    res.json({ success: true });
   } catch (error) {
     next(error);
   }

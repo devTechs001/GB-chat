@@ -2,6 +2,7 @@
 import Message from "../models/Message.js";
 import Chat from "../models/Chat.js";
 import cloudinary from "../config/cloudinary.js";
+import { sendToUsers } from "../services/webPushService.js";
 
 export const getMessages = async (req, res, next) => {
   try {
@@ -65,6 +66,7 @@ export const sendMessage = async (req, res, next) => {
       mentions,
       selfDestruct,
       scheduledAt,
+      clientMessageId,
     } = req.body;
 
     // Handle non-ObjectId chat IDs (mock/sample data)
@@ -92,6 +94,26 @@ export const sendMessage = async (req, res, next) => {
       );
       if (participant.role === "member") {
         return res.status(403).json({ message: "Only admins can message" });
+      }
+    }
+
+    // Idempotency: a replayed outbox item must not create a second message.
+    const idempotencyKey =
+      typeof clientMessageId === "string" && clientMessageId.trim()
+        ? clientMessageId.trim().slice(0, 64)
+        : undefined;
+
+    if (idempotencyKey) {
+      const existing = await Message.findOne({
+        chat: chatId,
+        sender: req.user._id,
+        clientMessageId: idempotencyKey,
+      })
+        .populate("sender", "fullName avatar")
+        .populate({ path: "replyTo", populate: { path: "sender", select: "fullName" } });
+
+      if (existing) {
+        return res.status(200).json({ message: existing, duplicate: true });
       }
     }
 
@@ -131,6 +153,7 @@ export const sendMessage = async (req, res, next) => {
         media: Object.keys(mediaData).length > 0 ? mediaData : undefined,
       },
       replyTo: replyTo || undefined,
+      clientMessageId: idempotencyKey,
       mentions: mentions || [],
       isScheduled: !!scheduledAt,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
@@ -139,7 +162,24 @@ export const sendMessage = async (req, res, next) => {
         : undefined,
     };
 
-    let message = await Message.create(messageData);
+    let message;
+    try {
+      message = await Message.create(messageData);
+    } catch (createError) {
+      // Two replays racing each other: the unique index rejects the loser, and
+      // we answer with the message that won instead of a 500.
+      if (createError.code === 11000 && idempotencyKey) {
+        const existing = await Message.findOne({
+          chat: chatId,
+          sender: req.user._id,
+          clientMessageId: idempotencyKey,
+        })
+          .populate("sender", "fullName avatar")
+          .populate({ path: "replyTo", populate: { path: "sender", select: "fullName" } });
+        if (existing) return res.status(200).json({ message: existing, duplicate: true });
+      }
+      throw createError;
+    }
 
     message = await Message.findById(message._id)
       .populate("sender", "fullName avatar")
@@ -172,6 +212,36 @@ export const sendMessage = async (req, res, next) => {
           });
         }
       });
+
+      // Web Push for everyone else. The service worker drops the notification
+      // when a focused tab is already showing that chat, so this is safe to
+      // fire even when the recipient is online. Muted chats are skipped here;
+      // the participant turned notifications off for this conversation.
+      const pushTargets = chat.participants
+        .filter(
+          (p) =>
+            p.user.toString() !== req.user._id.toString() &&
+            !p.isMuted &&
+            !(p.muteUntil && new Date(p.muteUntil) > new Date())
+        )
+        .map((p) => p.user);
+
+      if (pushTargets.length) {
+        const senderName = message.sender?.fullName || "New message";
+        const preview =
+          type === "text"
+            ? String(message.content?.text || "").slice(0, 140)
+            : `Sent ${type === "media" ? "an attachment" : `a ${type}`}`;
+
+        sendToUsers(pushTargets, {
+          title: chat.type === "group" ? chat.groupInfo?.name || senderName : senderName,
+          body: chat.type === "group" ? `${senderName}: ${preview}` : preview,
+          url: `/chats/${chatId}`,
+          tag: `chat-${chatId}`,
+          type: "message",
+          data: { chatId: String(chatId), messageId: String(message._id) },
+        }).catch(() => {});
+      }
     }
 
     res.status(201).json(message);
@@ -485,6 +555,26 @@ export const sendVoiceMessage = async (req, res, next) => {
     );
     if (!isParticipant)
       return res.status(403).json({ message: "Not a participant" });
+
+    // Idempotency: a replayed outbox item must not create a second message.
+    const idempotencyKey =
+      typeof clientMessageId === "string" && clientMessageId.trim()
+        ? clientMessageId.trim().slice(0, 64)
+        : undefined;
+
+    if (idempotencyKey) {
+      const existing = await Message.findOne({
+        chat: chatId,
+        sender: req.user._id,
+        clientMessageId: idempotencyKey,
+      })
+        .populate("sender", "fullName avatar")
+        .populate({ path: "replyTo", populate: { path: "sender", select: "fullName" } });
+
+      if (existing) {
+        return res.status(200).json({ message: existing, duplicate: true });
+      }
+    }
 
     let mediaData = {};
     if (req.file) {

@@ -10,29 +10,30 @@ import { SparklesIcon as SparklesSolid } from '@heroicons/react/24/solid'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 
 const languages = [
-  { code: 'auto', name: 'Auto Detect', flag: '🌐' },
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'es', name: 'Spanish', flag: '🇪🇸' },
-  { code: 'fr', name: 'French', flag: '🇫🇷' },
-  { code: 'de', name: 'German', flag: '🇩🇪' },
-  { code: 'it', name: 'Italian', flag: '🇮🇹' },
-  { code: 'pt', name: 'Portuguese', flag: '🇵🇹' },
-  { code: 'ru', name: 'Russian', flag: '🇷🇺' },
-  { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
-  { code: 'ko', name: 'Korean', flag: '🇰🇷' },
-  { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
-  { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
-  { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
-  { code: 'bn', name: 'Bengali', flag: '🇧🇩' },
-  { code: 'ur', name: 'Urdu', flag: '🇵🇰' },
-  { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
-  { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
-  { code: 'th', name: 'Thai', flag: '🇹🇭' },
-  { code: 'id', name: 'Indonesian', flag: '🇮🇩' },
-  { code: 'ms', name: 'Malay', flag: '🇲🇾' },
-  { code: 'sw', name: 'Swahili', flag: '🇰🇪' },
+  { code: 'auto', name: 'Auto detect', flag: null },
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'fr', name: 'French' },
+  { code: 'de', name: 'German' },
+  { code: 'it', name: 'Italian' },
+  { code: 'pt', name: 'Portuguese' },
+  { code: 'ru', name: 'Russian' },
+  { code: 'ja', name: 'Japanese' },
+  { code: 'ko', name: 'Korean' },
+  { code: 'zh', name: 'Chinese' },
+  { code: 'ar', name: 'Arabic' },
+  { code: 'hi', name: 'Hindi' },
+  { code: 'bn', name: 'Bengali' },
+  { code: 'ur', name: 'Urdu' },
+  { code: 'tr', name: 'Turkish' },
+  { code: 'vi', name: 'Vietnamese' },
+  { code: 'th', name: 'Thai' },
+  { code: 'id', name: 'Indonesian' },
+  { code: 'ms', name: 'Malay' },
+  { code: 'sw', name: 'Swahili' },
 ]
 
 const InputTranslator = ({ onTranslate, inputValue, disabled = false }) => {
@@ -161,7 +162,7 @@ const InputTranslator = ({ onTranslate, inputValue, disabled = false }) => {
                 >
                   {languages.map((lang) => (
                     <option key={lang.code} value={lang.code}>
-                      {lang.flag} {lang.name}
+                      {lang.name}
                     </option>
                   ))}
                 </select>
@@ -195,7 +196,7 @@ const InputTranslator = ({ onTranslate, inputValue, disabled = false }) => {
                 ) : (
                   <>
                     <SparklesSolid className="w-4 h-4" />
-                    <span>Translate to {languages.find(l => l.code === targetLang)?.flag}</span>
+                    <span>Translate to {languages.find((l) => l.code === targetLang)?.name || 'English'}</span>
                   </>
                 )}
               </button>
@@ -221,7 +222,7 @@ const InputTranslator = ({ onTranslate, inputValue, disabled = false }) => {
                     >
                       {languages.slice(1).map((lang) => (
                         <option key={lang.code} value={lang.code}>
-                          {lang.flag} {lang.name}
+                          {lang.name}
                         </option>
                       ))}
                     </select>
@@ -253,7 +254,8 @@ const InputTranslator = ({ onTranslate, inputValue, disabled = false }) => {
                       }}
                       className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
                     >
-                      📋 Copy
+                      <ClipboardDocumentIcon className="w-4 h-4 inline-block mr-1" />
+                      Copy
                     </button>
                   </div>
                 </motion.div>

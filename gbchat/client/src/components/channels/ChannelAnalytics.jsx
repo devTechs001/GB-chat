@@ -22,6 +22,7 @@ import {
   ArrowDownTrayIcon,
   ClockIcon,
   GlobeAltIcon,
+  LightBulbIcon,
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import Button from '../common/Button'
@@ -59,11 +60,11 @@ const ChannelAnalytics = ({ channel, onClose }) => {
     ],
     audience: {
       topCountries: [
-        { country: 'United States', percentage: 35, flag: '🇺🇸' },
-        { country: 'United Kingdom', percentage: 18, flag: '🇬🇧' },
-        { country: 'India', percentage: 15, flag: '🇮🇳' },
-        { country: 'Canada', percentage: 12, flag: '🇨🇦' },
-        { country: 'Australia', percentage: 8, flag: '🇦🇺' },
+        { country: 'United States', percentage: 35, code: 'US' },
+        { country: 'United Kingdom', percentage: 18, code: 'GB' },
+        { country: 'India', percentage: 15, code: 'IN' },
+        { country: 'Canada', percentage: 12, code: 'CA' },
+        { country: 'Australia', percentage: 8, code: 'AU' },
       ],
       ageGroups: [
         { range: '18-24', percentage: 25 },
@@ -329,7 +330,9 @@ const AudienceTab = ({ analytics }) => {
         <div className="space-y-3">
           {analytics.topCountries.map((country, index) => (
             <div key={index} className="flex items-center gap-3">
-              <span className="text-xl">{country.flag}</span>
+              <span className="flex h-6 w-8 items-center justify-center rounded-md bg-gray-200 text-[10px] font-bold tracking-wide text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                {country.code}
+              </span>
               <div className="flex-1">
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="text-gray-700 dark:text-gray-300">{country.country}</span>
@@ -485,8 +488,9 @@ const ActivityTab = ({ analytics }) => {
 
       {/* Best Time to Post */}
       <div className="p-4 bg-gradient-to-br from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20 rounded-xl border border-primary-100 dark:border-primary-800">
-        <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-          💡 Best Time to Post
+        <h4 className="mb-2 flex items-center gap-2 font-medium text-gray-900 dark:text-white">
+          <LightBulbIcon className="h-4 w-4 text-amber-500" />
+          Best Time to Post
         </h4>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Based on your audience activity, the best times to post are:

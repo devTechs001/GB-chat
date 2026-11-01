@@ -16,22 +16,32 @@ export const protect = async (req, res, next) => {
     }
 
     if (!token) {
-      return res
-        .status(401)
-        .json({ message: "Not authorized, no token provided" });
+      return res.status(401).json({
+        success: false,
+        code: "NO_TOKEN",
+        message: "Not authorized, no token provided",
+      });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select("-password");
 
     if (!user) {
-      return res.status(401).json({ message: "User not found" });
+      return res.status(401).json({
+        success: false,
+        code: "USER_NOT_FOUND",
+        message: "User not found",
+      });
     }
 
     req.user = user;
     next();
   } catch (error) {
     console.error("Auth middleware error:", error.message);
-    return res.status(401).json({ message: "Not authorized, token invalid" });
+    return res.status(401).json({
+      success: false,
+      code: error.name === "TokenExpiredError" ? "TOKEN_EXPIRED" : "INVALID_TOKEN",
+      message: "Not authorized, token invalid",
+    });
   }
 };
