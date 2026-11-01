@@ -977,9 +977,16 @@ const useChatStore = create((set, get) => ({
       }
     }
 
+    // Idempotency key: survives the outbox, so a replay cannot duplicate.
+    const clientMessageId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `cmid-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+
     // Optimistic message — replaced by the server response below
     const optimistic = {
       _id: `temp-${Date.now()}`,
+      clientMessageId,
       chat: chatId,
       content: messageContent,
       type: messageType,
@@ -1020,6 +1027,7 @@ const useChatStore = create((set, get) => ({
         form.append('media', rawFile, rawFile.name || 'attachment')
         form.append('text', content || '')
         form.append('type', messageType)
+        form.append('clientMessageId', clientMessageId)
         if (replyTo?._id) form.append('replyTo', replyTo._id)
         ;({ data } = await api.post(`/messages/${chatId}`, form, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -1029,6 +1037,7 @@ const useChatStore = create((set, get) => ({
           text: content || '',
           type: messageType,
           replyTo: replyTo?._id,
+          clientMessageId,
         }))
       }
 
@@ -1046,7 +1055,7 @@ const useChatStore = create((set, get) => ({
       const offline = !apiError?.response
       if (offline) {
         await offlineDb
-          .queueMessage({ chatId, text: content || '', type: messageType })
+          .queueMessage({ chatId, text: content || '', type: messageType, clientMessageId })
           .catch(() => {})
       }
 

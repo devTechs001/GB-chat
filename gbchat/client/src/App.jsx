@@ -14,6 +14,9 @@ import AppLock from './components/auth/AppLock'
 import AppUpdateChecker from './components/common/AppUpdateChecker'
 import IncomingCallOverlay from './components/calls/IncomingCallOverlay'
 import ScrollToTop from './components/common/ScrollToTop'
+import { RoutedErrorBoundary } from './components/common/RouteErrorBoundary'
+import ShortcutSheet from './components/common/ShortcutSheet'
+import useGlobalShortcuts from './hooks/useGlobalShortcuts'
 
 // Lazy load pages for better performance
 const AuthPage = React.lazy(() => import('./pages/AuthPage'))
@@ -53,6 +56,7 @@ function App() {
   const { user, isAuthenticated, isLoading, isDemo, checkAuth } = useAuthStore()
   const { theme, initTheme } = useThemeStore()
   const { connect, disconnect } = useSocket()
+  useGlobalShortcuts()
 
   // State for onboarding flow
   const [showSplash, setShowSplash] = useState(true)
@@ -202,10 +206,12 @@ function App() {
       )}
 
       <ScrollToTop />
+      <ShortcutSheet />
 
       <AnimatePresence mode="wait">
         <React.Suspense fallback={<Loader fullScreen />}>
-          <Routes>
+          <RoutedErrorBoundary>
+            <Routes>
             {/* Public route - redirect to home if already authenticated */}
             <Route
               path="/auth"
@@ -247,8 +253,9 @@ function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
 
             {/* 404 */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </RoutedErrorBoundary>
         </React.Suspense>
       </AnimatePresence>
     </>

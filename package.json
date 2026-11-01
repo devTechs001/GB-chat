@@ -11,7 +11,8 @@
     "check:endpoints": "node scripts/check-endpoints.mjs",
     "client:dev": "cd gbchat/client && npm run dev",
     "client:build": "cd gbchat/client && npm run build",
-    "audit:endpoints": "node scripts/audit-endpoints.mjs"
+    "audit:endpoints": "node scripts/audit-endpoints.mjs",
+    "lint:client": "cd gbchat/client && npm run lint"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

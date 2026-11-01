@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import {
   ArrowDownTrayIcon,
+  ArrowPathIcon,
   ArrowLeftIcon,
   ArrowUpTrayIcon,
   CircleStackIcon,
@@ -215,6 +216,24 @@ const BackupPage = () => {
     }
   }
 
+  /** Drop cache older than 30 days / beyond 500 messages per chat. */
+  const pruneCache = async () => {
+    setBusy('prune')
+    try {
+      const result = await offlineDb.prune({ maxAgeDays: 30, maxPerChat: 500 })
+      await load()
+      toast.success(
+        result?.removed
+          ? `Removed ${result.removed} cached message${result.removed === 1 ? '' : 's'}`
+          : 'Cache is already tidy'
+      )
+    } catch {
+      toast.error('Could not prune the cache')
+    } finally {
+      setBusy('')
+    }
+  }
+
   const clearBrowserCache = async () => {
     if (!window.confirm('Clear the offline cache on this device? Queued messages will be lost.')) return
     setBusy('clear')
@@ -396,6 +415,15 @@ const BackupPage = () => {
                 onClick={() => fileInputRef.current?.click()}
               >
                 Restore from file
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={busy === 'prune'}
+                icon={<ArrowPathIcon className="h-4 w-4" />}
+                onClick={pruneCache}
+              >
+                Prune old
               </Button>
               <Button
                 variant="secondary"

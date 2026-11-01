@@ -3,6 +3,7 @@ import os from 'os';
 import mongoose from 'mongoose';
 import asyncHandler from 'express-async-handler';
 import { redisStatus } from '../config/redis.js';
+import { metricsAsPrometheus, metricsSnapshot, resetMetrics } from '../middleware/observability.js';
 import { rateLimitInfo } from '../middleware/rateLimiter.js';
 import { grpcStatus, grpcGetPresence, grpcNotify } from '../grpc/client.js';
 import { NODE_ID } from '../grpc/server.js';
@@ -93,4 +94,28 @@ export const internalNotify = asyncHandler(async (req, res) => {
     return res.status(503).json({ success: false, message: 'Notification fan-out unavailable' });
   }
   res.json({ success: true, ack });
+});
+
+/* ------------------------------------------------------------------ */
+/* Observability                                                       */
+/* ------------------------------------------------------------------ */
+
+// @desc    Per-route latency + error metrics for this process
+// @route   GET /api/system/metrics
+// @access  Private (operators). `?format=prom` returns Prometheus text.
+export const systemMetrics = asyncHandler(async (req, res) => {
+  if ((req.query.format || '') === 'prom') {
+    res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    return res.send(metricsAsPrometheus());
+  }
+
+  res.json({ success: true, ...metricsSnapshot() });
+});
+
+// @desc    Clear the in-process counters (useful after a deploy / test run)
+// @route   POST /api/system/metrics/reset
+// @access  Private
+export const resetSystemMetrics = asyncHandler(async (req, res) => {
+  resetMetrics();
+  res.json({ success: true, message: 'Metrics reset' });
 });

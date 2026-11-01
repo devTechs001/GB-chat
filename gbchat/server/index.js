@@ -57,6 +57,7 @@ import gbSettingsRoutes from "./routes/gbSettingsRoutes.js";
 // New routes: Permissions, Backup, and Recovery
 import permissionRoutes from "./routes/permissionRoutes.js";
 import backupRoutes from "./routes/backupRoutes.js";
+import { metricsMiddleware, requestId } from "./middleware/observability.js";
 import localBackupRoutes from "./routes/localBackupRoutes.js";
 import offlineRoutes from "./routes/offlineRoutes.js";
 import recoveryRoutes from "./routes/recoveryRoutes.js";
@@ -93,6 +94,10 @@ app.use(helmet({
 app.set("trust proxy", process.env.TRUST_PROXY || 1);
 
 app.use(cors(corsOptions));
+// Every response carries an id; anything logged for this request can be
+// matched to it. Metrics are recorded on `finish`, so they include 4xx/5xx.
+app.use(requestId);
+app.use(metricsMiddleware);
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 

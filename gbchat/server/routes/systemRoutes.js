@@ -4,6 +4,8 @@ import {
   liveness,
   readiness,
   systemInfo,
+  systemMetrics,
+  resetSystemMetrics,
   presenceLookup,
   internalNotify,
 } from '../controllers/systemController.js';
@@ -17,6 +19,8 @@ router.get('/ready', readiness);
 
 // Diagnostics (admin/operator surface — requires auth)
 router.get('/info', protect, systemInfo);
+router.get('/metrics', protect, systemMetrics);
+router.post('/metrics/reset', protect, resetSystemMetrics);
 router.get('/presence/:userId', protect, presenceLookup);
 router.post('/notify', protect, internalNotify);
 

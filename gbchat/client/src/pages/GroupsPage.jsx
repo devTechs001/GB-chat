@@ -664,10 +664,11 @@ const GroupsPage = () => {
         return (b.unreadCount || 0) - (a.unreadCount || 0)
       case 'members':
         return (b.members?.length || 0) - (a.members?.length || 0)
-      case 'activity':
+      case 'activity': {
         const aActivity = a.messageCount || 0
         const bActivity = b.messageCount || 0
         return bActivity - aActivity
+      }
       default:
         return 0
     }

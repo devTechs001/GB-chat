@@ -47,9 +47,13 @@ const useOfflineSync = ({ autoFlush = true } = {}) => {
 
         for (const item of items) {
           try {
+            // Reuse the key written when the message was composed, so a retry
+            // that already reached the server returns that message instead of
+            // creating a duplicate.
             await api.post(`/messages/${item.chatId}`, {
               text: item.text || '',
               type: item.type || 'text',
+              clientMessageId: item.clientMessageId,
             })
             await offlineDb.removeOutboxItem(item.id)
             sent += 1
@@ -83,6 +87,8 @@ const useOfflineSync = ({ autoFlush = true } = {}) => {
 
   useEffect(() => {
     refresh()
+    // Housekeeping: once a day, drop cache older than 30 days / 500 msgs per chat.
+    offlineDb.pruneIfDue().catch(() => {})
 
     const goOnline = () => {
       setOnline(true)

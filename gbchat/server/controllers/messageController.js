@@ -65,6 +65,7 @@ export const sendMessage = async (req, res, next) => {
       mentions,
       selfDestruct,
       scheduledAt,
+      clientMessageId,
     } = req.body;
 
     // Handle non-ObjectId chat IDs (mock/sample data)
@@ -92,6 +93,26 @@ export const sendMessage = async (req, res, next) => {
       );
       if (participant.role === "member") {
         return res.status(403).json({ message: "Only admins can message" });
+      }
+    }
+
+    // Idempotency: a replayed outbox item must not create a second message.
+    const idempotencyKey =
+      typeof clientMessageId === "string" && clientMessageId.trim()
+        ? clientMessageId.trim().slice(0, 64)
+        : undefined;
+
+    if (idempotencyKey) {
+      const existing = await Message.findOne({
+        chat: chatId,
+        sender: req.user._id,
+        clientMessageId: idempotencyKey,
+      })
+        .populate("sender", "fullName avatar")
+        .populate({ path: "replyTo", populate: { path: "sender", select: "fullName" } });
+
+      if (existing) {
+        return res.status(200).json({ message: existing, duplicate: true });
       }
     }
 
@@ -131,6 +152,7 @@ export const sendMessage = async (req, res, next) => {
         media: Object.keys(mediaData).length > 0 ? mediaData : undefined,
       },
       replyTo: replyTo || undefined,
+      clientMessageId: idempotencyKey,
       mentions: mentions || [],
       isScheduled: !!scheduledAt,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
@@ -139,7 +161,24 @@ export const sendMessage = async (req, res, next) => {
         : undefined,
     };
 
-    let message = await Message.create(messageData);
+    let message;
+    try {
+      message = await Message.create(messageData);
+    } catch (createError) {
+      // Two replays racing each other: the unique index rejects the loser, and
+      // we answer with the message that won instead of a 500.
+      if (createError.code === 11000 && idempotencyKey) {
+        const existing = await Message.findOne({
+          chat: chatId,
+          sender: req.user._id,
+          clientMessageId: idempotencyKey,
+        })
+          .populate("sender", "fullName avatar")
+          .populate({ path: "replyTo", populate: { path: "sender", select: "fullName" } });
+        if (existing) return res.status(200).json({ message: existing, duplicate: true });
+      }
+      throw createError;
+    }
 
     message = await Message.findById(message._id)
       .populate("sender", "fullName avatar")
@@ -485,6 +524,26 @@ export const sendVoiceMessage = async (req, res, next) => {
     );
     if (!isParticipant)
       return res.status(403).json({ message: "Not a participant" });
+
+    // Idempotency: a replayed outbox item must not create a second message.
+    const idempotencyKey =
+      typeof clientMessageId === "string" && clientMessageId.trim()
+        ? clientMessageId.trim().slice(0, 64)
+        : undefined;
+
+    if (idempotencyKey) {
+      const existing = await Message.findOne({
+        chat: chatId,
+        sender: req.user._id,
+        clientMessageId: idempotencyKey,
+      })
+        .populate("sender", "fullName avatar")
+        .populate({ path: "replyTo", populate: { path: "sender", select: "fullName" } });
+
+      if (existing) {
+        return res.status(200).json({ message: existing, duplicate: true });
+      }
+    }
 
     let mediaData = {};
     if (req.file) {

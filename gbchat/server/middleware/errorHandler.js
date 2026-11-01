@@ -1,6 +1,7 @@
 // server/middleware/errorHandler.js
 export const errorHandler = (err, req, res, next) => {
-  console.error("Error:", err);
+  // The id is echoed to the client, so a user report maps to one log line.
+  console.error(`Error${req.id ? ` [${req.id}]` : ""}:`, err);
 
   if (err.name === "ValidationError") {
     const messages = Object.values(err.errors).map((val) => val.message);
@@ -29,6 +30,7 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   const status = err.statusCode || 500;
+  res.setHeader("x-request-id", req.id || "");
   res.status(status).json({
     success: false,
     code: err.code && typeof err.code === "string" ? err.code : status >= 500 ? "INTERNAL_ERROR" : "REQUEST_FAILED",
