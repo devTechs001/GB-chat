@@ -2,6 +2,7 @@
 import Channel from "../models/Channel.js";
 import Message from "../models/Message.js";
 import crypto from "crypto";
+import { parsePagination, buildPageMeta, setPaginationHeaders } from "../utils/pagination.js";
 
 export const createChannel = async (req, res, next) => {
   try {
@@ -34,10 +35,23 @@ export const getChannels = async (req, res, next) => {
     if (category) query.category = category;
     if (search) query.name = { $regex: search, $options: "i" };
 
-    const channels = await Channel.find(query)
-      .populate("owner", "fullName avatar")
-      .sort({ subscriberCount: -1 })
-      .limit(50);
+    // Still a bare array — the discovery page consumes it directly — but it now
+    // honours ?page/?limit and reports totals in headers, so "Load more" works.
+    const { page, limit } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 100 });
+
+    const [channels, total] = await Promise.all([
+      Channel.find(query)
+        .populate("owner", "fullName avatar")
+        .sort({ subscriberCount: -1, createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Channel.countDocuments(query),
+    ]);
+
+    setPaginationHeaders(
+      res,
+      buildPageMeta({ page, limit, total, returned: channels.length })
+    );
 
     res.json(channels);
   } catch (error) {
@@ -47,10 +61,19 @@ export const getChannels = async (req, res, next) => {
 
 export const getMyChannels = async (req, res, next) => {
   try {
-    const channels = await Channel.find({
-      "subscribers.user": req.user._id,
-    }).populate("owner", "fullName avatar");
+    const { page, limit } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 100 });
+    const filter = { "subscribers.user": req.user._id };
 
+    const [channels, total] = await Promise.all([
+      Channel.find(filter)
+        .populate("owner", "fullName avatar")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Channel.countDocuments(filter),
+    ]);
+
+    setPaginationHeaders(res, buildPageMeta({ page, limit, total, returned: channels.length }));
     res.json(channels);
   } catch (error) {
     next(error);

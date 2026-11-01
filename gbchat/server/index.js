@@ -1,4 +1,7 @@
 // server/index.js
+// Must be the first import: loads .env before anything else reads process.env.
+import "./config/env.js";
+
 import express from "express";
 import { createServer } from "http";
 import dotenv from "dotenv";
@@ -42,6 +45,7 @@ import privacyRoutes from "./routes/privacyRoutes.js";
 import gbFeaturesRoutes from "./routes/gbFeaturesRoutes.js";
 import chatLockRoutes from "./routes/chatLockRoutes.js";
 import deviceRoutes from "./routes/deviceRoutes.js";
+import pushRoutes from "./routes/pushRoutes.js";
 
 // Settings routes
 import appearanceRoutes from "./routes/appearanceRoutes.js";
@@ -147,6 +151,7 @@ app.use("/api/privacy", privacyRoutes);
 app.use("/api/gb-features", gbFeaturesRoutes);
 app.use("/api/chat-lock", chatLockRoutes);
 app.use("/api/devices", deviceRoutes);
+app.use("/api/push", pushRoutes);
 
 // Settings routes
 app.use("/api/appearance", appearanceRoutes);

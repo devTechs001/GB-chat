@@ -3,6 +3,7 @@ import Chat from "../models/Chat.js";
 import User from "../models/User.js";
 import Message from "../models/Message.js";
 import crypto from "crypto";
+import { parsePagination, buildPageMeta } from "../utils/pagination.js";
 
 export const createGroup = async (req, res, next) => {
   try {
@@ -67,7 +68,11 @@ export const createGroup = async (req, res, next) => {
 
 export const getGroups = async (req, res, next) => {
   try {
-    const { search, archived, starred, limit = 100 } = req.query;
+    const { search, archived, starred } = req.query;
+    // Paging happens after the in-memory filters (search / archived / starred)
+    // so a page always has `limit` *matching* groups. 200 is the ceiling the
+    // endpoint already imposed, so nothing that worked before disappears.
+    const { page, limit } = parsePagination(req.query, { defaultLimit: 100, maxLimit: 200 });
 
     const query = {
       type: "group",
@@ -81,7 +86,7 @@ export const getGroups = async (req, res, next) => {
         populate: { path: "sender", select: "fullName avatar" },
       })
       .sort({ updatedAt: -1 })
-      .limit(Math.min(Number(limit) || 100, 200));
+      .limit(200);
 
     const me = (chat) =>
       chat.participants.find(
@@ -118,14 +123,18 @@ export const getGroups = async (req, res, next) => {
         return true;
       });
 
+    const pageSlice = filtered.slice((page - 1) * limit, page * limit);
+
     res.json({
       success: true,
-      groups: filtered,
+      groups: pageSlice,
       stats: {
         totalGroups: normalized.length,
         adminOf: normalized.filter((g) => g.isAdmin).length,
         totalMembers: normalized.reduce((sum, g) => sum + g.memberCount, 0),
       },
+      // Additive: clients that ignore `meta` behave exactly as before.
+      meta: buildPageMeta({ page, limit, total: filtered.length, returned: pageSlice.length }),
     });
   } catch (error) {
     next(error);

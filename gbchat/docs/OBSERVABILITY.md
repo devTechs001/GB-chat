@@ -86,8 +86,8 @@ scrape_configs:
 
 * Nothing is persisted — restarting the process resets counters (that is fine
   for "what is happening right now"; use the log lines for history).
-* No tracing between services. The gRPC fan-out gets the request id only if a
-  caller passes it; wiring that through `proto/gbchat.proto` is a next step.
+* No distributed tracing beyond the request id: that id *is* forwarded on
+  internal gRPC calls (see below), but there are no spans or timings per hop.
 * `POST /api/system/metrics/reset` clears counters without authentication
   beyond `protect`; treat it as a debugging affordance, not an admin API.
 
@@ -101,3 +101,49 @@ route changes.
 
 The boundary previously existed only around the two chat panes, so a crash in
 Profile, Stories, Channels or Settings blanked the entire app.
+
+## Trace propagation into gRPC
+
+`requestId` runs the rest of the request inside an `AsyncLocalStorage` store, so
+the id survives `await`s without being threaded through function arguments.
+`grpc/client.js` reads it when building call metadata:
+
+```
+HTTP request (x-request-id: trace-abc) → ALS store → grpc.Send metadata
+                                                     → payload.requestId
+```
+
+Consequences:
+
+* an internal fan-out appears in the gRPC node's payload and logs with the same
+  id the HTTP client was given;
+* calls made outside a request (a cron job, a boot-time probe) send no id at all
+  rather than a fabricated one;
+* concurrent requests never cross ids — covered by
+  `test/grpcTrace.test.mjs`.
+
+## Browser crash digest
+
+The route error boundary and two global handlers (`window.onerror`,
+`unhandledrejection`) POST to `POST /api/system/client-error`:
+
+```json
+{ "message": "…", "stack": "…", "route": "/channels",
+  "component": "…", "kind": "boundary|error|unhandledrejection",
+  "userAgent": "…", "requestId": "…" }
+```
+
+* **Public intake.** A crash on the login screen still matters, so the endpoint
+  does not require a token. It is throttled by the global limiter, validates that
+  `message` or `stack` is present, and truncates every field (500/4000/200
+  chars) so one client cannot fill the buffer.
+* **Bounded in memory.** The last `CLIENT_ERROR_BUFFER` (default 100) reports,
+  plus grouped counts by fingerprint (message + first stack frame, with
+  `line:col` stripped so a deploy that shifts lines does not split a group).
+  A restart clears them — reports are diagnostics, not records.
+* **Operator view.** `GET /api/system/client-errors?limit=25` returns
+  `{ total, bufferSize, reports, groups }`; `DELETE` clears it. The client
+  surfaces both on Settings → **System health**, next to the live metrics.
+* **Client side.** Reports are deduped per session (same crash once a minute)
+  and sent with `keepalive` so they survive the tab closing mid-unload.
+

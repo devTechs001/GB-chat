@@ -2,6 +2,7 @@
 import Message from "../models/Message.js";
 import Chat from "../models/Chat.js";
 import cloudinary from "../config/cloudinary.js";
+import { sendToUsers } from "../services/webPushService.js";
 
 export const getMessages = async (req, res, next) => {
   try {
@@ -211,6 +212,36 @@ export const sendMessage = async (req, res, next) => {
           });
         }
       });
+
+      // Web Push for everyone else. The service worker drops the notification
+      // when a focused tab is already showing that chat, so this is safe to
+      // fire even when the recipient is online. Muted chats are skipped here;
+      // the participant turned notifications off for this conversation.
+      const pushTargets = chat.participants
+        .filter(
+          (p) =>
+            p.user.toString() !== req.user._id.toString() &&
+            !p.isMuted &&
+            !(p.muteUntil && new Date(p.muteUntil) > new Date())
+        )
+        .map((p) => p.user);
+
+      if (pushTargets.length) {
+        const senderName = message.sender?.fullName || "New message";
+        const preview =
+          type === "text"
+            ? String(message.content?.text || "").slice(0, 140)
+            : `Sent ${type === "media" ? "an attachment" : `a ${type}`}`;
+
+        sendToUsers(pushTargets, {
+          title: chat.type === "group" ? chat.groupInfo?.name || senderName : senderName,
+          body: chat.type === "group" ? `${senderName}: ${preview}` : preview,
+          url: `/chats/${chatId}`,
+          tag: `chat-${chatId}`,
+          type: "message",
+          data: { chatId: String(chatId), messageId: String(message._id) },
+        }).catch(() => {});
+      }
     }
 
     res.status(201).json(message);

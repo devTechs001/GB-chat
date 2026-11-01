@@ -15,12 +15,25 @@
  * and each keeps a 200-sample reservoir (a fixed array, not an endless list).
  */
 import crypto from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 const MAX_ROUTES = 200;
 const RESERVOIR = 200;
 const SLOW_MS = Number(process.env.SLOW_REQUEST_MS || 1000);
 
 const startedAt = new Date();
+
+/**
+ * Carries the current request id through async boundaries (awaits, timers,
+ * gRPC callbacks) without threading an argument through every function.
+ */
+const requestStore = new AsyncLocalStorage();
+
+/** The id of the request currently being served, or null outside a request. */
+export const currentRequestId = () => requestStore.getStore()?.id || null;
+
+/** Full context: { id, method, path, startedAt }. Null outside a request. */
+export const currentRequestContext = () => requestStore.getStore() || null;
 
 /** key -> { count, errors, totalMs, maxMs, samples: number[], lastStatus, lastAt } */
 const routes = new Map();
@@ -104,7 +117,13 @@ export const requestId = (req, res, next) => {
 
   req.id = id;
   res.setHeader("x-request-id", id);
-  next();
+
+  // Run the rest of the request inside the store so outbound calls (gRPC,
+  // webhooks, logs) can pick the id up without being passed it explicitly.
+  requestStore.run(
+    { id, method: req.method, path: req.originalUrl || req.url, startedAt: Date.now() },
+    next
+  );
 };
 
 export const metricsMiddleware = (req, res, next) => {

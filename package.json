@@ -12,7 +12,8 @@
     "client:dev": "cd gbchat/client && npm run dev",
     "client:build": "cd gbchat/client && npm run build",
     "audit:endpoints": "node scripts/audit-endpoints.mjs",
-    "lint:client": "cd gbchat/client && npm run lint"
+    "lint:client": "cd gbchat/client && npm run lint",
+    "test:server": "cd gbchat/server && npm test"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

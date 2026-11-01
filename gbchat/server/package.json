@@ -14,7 +14,10 @@
     "worker": "node services/worker.js",
     "start:cluster": "node cluster.js",
     "dev:cluster": "NODE_ENV=development CLUSTER=true node cluster.js",
-    "grpc:check": "node scripts/grpc-check.js"
+    "grpc:check": "node scripts/grpc-check.js",
+    "test": "node --test test/*.test.mjs",
+    "test:watch": "node --test --watch test/*.test.mjs",
+    "generate:vapid": "node scripts/generate-vapid-keys.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -48,7 +51,7 @@
     "socket.io": "^4.7.2",
     "stripe": "^14.18.0",
     "twilio": "^5.0.0",
-    "web-push": "^3.6.6"
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

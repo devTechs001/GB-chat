@@ -7,6 +7,7 @@ import { metricsAsPrometheus, metricsSnapshot, resetMetrics } from '../middlewar
 import { rateLimitInfo } from '../middleware/rateLimiter.js';
 import { grpcStatus, grpcGetPresence, grpcNotify } from '../grpc/client.js';
 import { NODE_ID } from '../grpc/server.js';
+import { recordClientError, clientErrorSnapshot, resetClientErrors } from '../services/errorDigest.js';
 
 const STARTED_AT = new Date();
 
@@ -118,4 +119,48 @@ export const systemMetrics = asyncHandler(async (req, res) => {
 export const resetSystemMetrics = asyncHandler(async (req, res) => {
   resetMetrics();
   res.json({ success: true, message: 'Metrics reset' });
+});
+
+
+/* ------------------------------------------------------------------ */
+/* Browser error reporting                                             */
+/* ------------------------------------------------------------------ */
+
+// @desc    Accept a crash report from the web client
+// @route   POST /api/system/client-error
+// @access  Public (anonymous — a crash on the login screen still matters)
+export const reportClientError = asyncHandler(async (req, res) => {
+  const body = req.body || {};
+
+  // Cheap validation: a real report has a message. Anything else is noise.
+  if (!body.message && !body.stack) {
+    return res.status(400).json({ success: false, message: 'message or stack is required' });
+  }
+
+  const report = recordClientError({
+    ...body,
+    userAgent: body.userAgent || req.headers['user-agent'],
+    requestId: body.requestId || req.id,
+  });
+
+  console.warn(
+    `[client-error] ${report.kind} ${report.route || '-'} :: ${report.message} id=${req.id}`
+  );
+
+  res.status(202).json({ success: true, id: report.id });
+});
+
+// @desc    Recent browser crashes, newest first, plus grouped counts
+// @route   GET /api/system/client-errors
+// @access  Private
+export const getClientErrors = asyncHandler(async (req, res) => {
+  res.json({ success: true, ...clientErrorSnapshot({ limit: req.query.limit }) });
+});
+
+// @desc    Clear the browser-crash buffer
+// @route   DELETE /api/system/client-errors
+// @access  Private
+export const clearClientErrors = asyncHandler(async (req, res) => {
+  resetClientErrors();
+  res.json({ success: true, message: 'Client error buffer cleared' });
 });

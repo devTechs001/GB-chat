@@ -78,6 +78,9 @@ const ChannelsPage = () => {
   const { channelId } = useParams()
   const [channels, setChannels] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
   const [filter, setFilter] = useState('all') // all, subscribed, trending
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreate, setShowCreate] = useState(false)
@@ -100,17 +103,26 @@ const ChannelsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, schedulerChannelId])
 
-  const fetchChannels = async () => {
+  const fetchChannels = async ({ page = 1, append = false } = {}) => {
+    setLoadingMore(page > 1)
     try {
-      const { data } = await api.get('/channels')
-      // Handle both array and object responses
+      // The endpoint returns a bare array and reports totals in headers, so the
+      // grid keeps its shape while "Load more" knows whether a next page exists.
+      const response = await api.get('/channels', { params: { page, limit: 50 } })
+      const data = response.data
       const channelsArray = Array.isArray(data) ? data : (data.channels || [])
-      setChannels(channelsArray)
+      const hasMore = response.headers?.['x-has-more'] === 'true'
+
+      setChannels((prev) => (append ? [...prev, ...channelsArray] : channelsArray))
+      setPage(page)
+      setHasMore(hasMore)
     } catch (error) {
       console.error('Failed to fetch channels:', error)
-      setChannels(SAMPLE_CHANNELS)
+      if (!append) setChannels(SAMPLE_CHANNELS)
+      setHasMore(false)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -345,6 +357,18 @@ const ChannelsPage = () => {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+
+                {hasMore && (
+                  <div className="col-span-full flex justify-center pt-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => fetchChannels({ page: page + 1, append: true })}
+                      disabled={loadingMore}
+                    >
+                      {loadingMore ? 'Loading…' : 'Load more channels'}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>

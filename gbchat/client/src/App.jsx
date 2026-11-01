@@ -17,6 +17,7 @@ import ScrollToTop from './components/common/ScrollToTop'
 import { RoutedErrorBoundary } from './components/common/RouteErrorBoundary'
 import ShortcutSheet from './components/common/ShortcutSheet'
 import useGlobalShortcuts from './hooks/useGlobalShortcuts'
+import { syncPushSubscription } from './lib/push'
 
 // Lazy load pages for better performance
 const AuthPage = React.lazy(() => import('./pages/AuthPage'))
@@ -57,6 +58,21 @@ function App() {
   const { theme, initTheme } = useThemeStore()
   const { connect, disconnect } = useSocket()
   useGlobalShortcuts()
+
+  // If this browser already holds a push subscription (returning visitor, or a
+  // different account on a shared device) make sure the server has it. Silent:
+  // never prompts for permission, so it cannot annoy anyone on load.
+  useEffect(() => {
+    if (!isAuthenticated) return
+    let cancelled = false
+    const timer = setTimeout(() => {
+      if (!cancelled) syncPushSubscription()
+    }, 2500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [isAuthenticated])
 
   // State for onboarding flow
   const [showSplash, setShowSplash] = useState(true)

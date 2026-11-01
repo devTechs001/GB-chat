@@ -2,7 +2,7 @@
 // Bump CACHE_VERSION whenever the shell or the icon set changes: `activate`
 // drops every cache that does not match, so a new icon is never masked by a
 // stale cached copy.
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `gbchat-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_NAME = `gbchat-static-${CACHE_VERSION}`;
 const API_CACHE_NAME = `gbchat-api-${CACHE_VERSION}`;
@@ -162,20 +162,28 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Push notification event
+// Push notification event (server-sent Web Push)
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+
   const title = data.title || 'GBChat';
+  const url = data.url || '/chats';
+
   const options = {
     body: data.body || 'New message',
     // 192px art renders correctly as the notification icon; the small badge
     // needs a flat, square image on Android.
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/favicon-32x32.png',
+    icon: data.icon || '/icons/icon-192x192.png',
+    badge: data.badge || '/icons/favicon-32x32.png',
+    tag: data.tag || undefined,
+    renotify: Boolean(data.tag),
     vibrate: [200, 100, 200],
-    data: {
-      url: data.url || '/chats',
-    },
+    data: { url, ...data.data, type: data.type || 'system' },
     actions: [
       { action: 'open', title: 'Open' },
       { action: 'close', title: 'Close' },
@@ -183,7 +191,20 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    (async () => {
+      // The server cannot know whether this device is looking at the app, so it
+      // always sends. Suppress the banner when a focused window is already
+      // open — otherwise every message double-notifies the active tab.
+      if (!data.force) {
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const focused = windows.find((client) => client.focused || client.visibilityState === 'visible');
+        if (focused) {
+          focused.postMessage({ type: 'PUSH_RECEIVED', payload: data });
+          return;
+        }
+      }
+      await self.registration.showNotification(title, options);
+    })()
   );
 });
 
@@ -191,23 +212,32 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'open' || !event.action) {
-    event.waitUntil(
-      clients.matchAll({ type: 'window' }).then((clientList) => {
-        const url = event.notification.data?.url || '/';
-        
-        // Check if there's already a window open
-        for (const client of clientList) {
-          if (client.url === url && 'focus' in client) {
-            return client.focus();
+  if (event.action === 'close') return;
+
+  const target = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+      // Prefer an app window already showing that route, then any app window.
+      const exact = clientList.find((client) => client.url.endsWith(target));
+      const anyApp = clientList.find((client) => new URL(client.url).origin === self.location.origin);
+      const existing = exact || anyApp;
+
+      if (existing) {
+        if ('navigate' in existing) {
+          try {
+            await existing.navigate(target);
+          } catch {
+            /* navigation may be blocked; focusing is still useful */
           }
         }
-        
-        // Open new window
-        if (clients.openWindow) {
-          return clients.openWindow(url);
-        }
-      })
-    );
-  }
+        return existing.focus();
+      }
+
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+      return undefined;
+    })()
+  );
 });

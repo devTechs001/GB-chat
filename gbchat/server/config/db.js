@@ -1,6 +1,15 @@
 // server/config/db.js
 import mongoose from "mongoose";
 
+/**
+ * When the database is unreachable, every query that needs it waits for mongoose
+ * to buffer it — 10 s by default. That is a *very* slow 401/503 for the caller:
+ * a request to a DB-backed route looked like a hang, and the metrics reported it
+ * as a 10-second error. Cap the buffer so the request fails fast with the normal
+ * error envelope instead.
+ */
+mongoose.set("bufferTimeoutMS", Number(process.env.MONGO_BUFFER_TIMEOUT_MS || 2000));
+
 export const connectDB = async () => {
   const nodeEnv = process.env.NODE_ENV || 'development';
   const isDev = nodeEnv === 'development';

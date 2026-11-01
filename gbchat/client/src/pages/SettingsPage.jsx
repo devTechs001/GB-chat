@@ -14,6 +14,7 @@ import {
   XMarkIcon,
   ChevronRightIcon,
   ArrowLeftIcon,
+  SignalIcon,
 } from '@heroicons/react/24/outline'
 import AccountSettings from '../components/settings/AccountSettings'
 import NotificationSettings from '../components/settings/NotificationSettings'
@@ -24,6 +25,7 @@ import StorageSettings from '../components/settings/StorageSettings'
 import AboutSection from '../components/settings/AboutSection'
 import HelpCenter from '../components/settings/HelpCenter'
 import GBFeaturesSettings from '../components/settings/GBFeaturesSettings'
+import SystemHealth from '../components/settings/SystemHealth'
 import PageHeader from '../components/layout/PageHeader'
 import clsx from 'clsx'
 
@@ -36,6 +38,7 @@ const SECTIONS = [
   { id: 'storage', label: 'Storage', description: 'Data usage & cache cleaner', icon: CloudArrowUpIcon, component: StorageSettings },
   { id: 'help', label: 'Help', description: 'Guides and support', icon: QuestionMarkCircleIcon, component: HelpCenter },
   { id: 'about', label: 'About', description: 'Version & legal', icon: InformationCircleIcon, component: AboutSection },
+  { id: 'system', label: 'System health', description: 'Live metrics & browser crash reports', icon: SignalIcon, component: SystemHealth },
 ]
 
 /**

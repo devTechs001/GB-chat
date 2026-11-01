@@ -7,6 +7,7 @@ import {
   ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import { reportClientError } from '../../lib/errorReporter'
 
 /**
  * RouteErrorBoundary — one crash must not blank the whole app.
@@ -32,6 +33,17 @@ class RouteErrorBoundary extends React.Component {
   componentDidCatch(error, info) {
     this.setState({ info })
     console.error('[RouteErrorBoundary]', error, info?.componentStack)
+
+    // Send it to the server so a crash in one user's browser is visible
+    // operationally (GET /api/system/client-errors), not just in their console.
+    reportClientError({
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      component: info?.componentStack,
+      kind: 'boundary',
+      force: true,
+    })
   }
 
   componentDidUpdate(prevProps) {

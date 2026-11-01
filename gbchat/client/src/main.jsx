@@ -4,7 +4,12 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App'
+import { installGlobalErrorHandlers } from './lib/errorReporter'
 import './index.css'
+
+// Catch anything that escapes React (a thrown promise rejection, a listener)
+// and report it to the server instead of only the user's console.
+installGlobalErrorHandlers()
 
 const queryClient = new QueryClient({
   defaultOptions: {

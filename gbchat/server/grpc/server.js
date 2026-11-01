@@ -197,6 +197,11 @@ export const startGrpcServer = async ({ io } = {}) => {
 
       const eventName = event || 'notification';
 
+      // The trace id the caller attached (see grpc/client.js metadata()). Lets
+      // an operator follow one HTTP request through the fan-out node.
+      const traceId = call.metadata?.get?.('x-request-id')?.[0] || '-';
+      payload.requestId = traceId;
+
       try {
         if (!userIds.length) {
           io.emit(eventName, payload);
