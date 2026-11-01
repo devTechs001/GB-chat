@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MagnifyingGlassIcon,
@@ -6,6 +7,19 @@ import {
   FunnelIcon,
   XMarkIcon,
   ChatBubbleLeftRightIcon,
+  InboxIcon,
+  EnvelopeOpenIcon,
+  UserGroupIcon,
+  ArchiveBoxIcon,
+  ArrowDownOnSquareIcon,
+  ArrowsUpDownIcon,
+  BarsArrowDownIcon,
+  BoltIcon,
+  PhoneIcon,
+  UsersIcon,
+  BookOpenIcon,
+  CalendarDaysIcon,
+  StarIcon,
 } from '@heroicons/react/24/outline'
 import useChatStore from '../../store/useChatStore'
 import ChatListItem from './ChatListItem'
@@ -16,6 +30,7 @@ import EmptyState from '../layout/EmptyState'
 import clsx from 'clsx'
 
 const ChatList = ({ onChatSelect, className }) => {
+  const navigate = useNavigate()
   const { chats, searchQuery, setSearchQuery, loading: isLoading, error, fetchChats } = useChatStore()
   const [filter, setFilter] = useState('all') // all, unread, groups, archived
   const [sortBy, setSortBy] = useState('date') // date, name, unread
@@ -64,10 +79,26 @@ const ChatList = ({ onChatSelect, className }) => {
   }, [chats, filter, searchQuery, sortBy])
 
   const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'unread', label: 'Unread' },
-    { id: 'groups', label: 'Groups' },
-    { id: 'archived', label: 'Archived' },
+    { id: 'all', label: 'All', icon: InboxIcon },
+    { id: 'unread', label: 'Unread', icon: EnvelopeOpenIcon },
+    { id: 'groups', label: 'Groups', icon: UserGroupIcon },
+    { id: 'archived', label: 'Archived', icon: ArchiveBoxIcon },
+  ]
+
+  const sortOptions = [
+    { id: 'date', label: 'Newest', icon: ArrowDownOnSquareIcon },
+    { id: 'name', label: 'Name', icon: BarsArrowDownIcon },
+    { id: 'unread', label: 'Unread first', icon: ArrowsUpDownIcon },
+  ]
+
+  /* Icon shortcuts — the "home" navigation strip under the search field */
+  const shortcuts = [
+    { id: 'new', label: 'New chat', icon: PlusIcon, tone: 'text-primary-600 dark:text-primary-400', onClick: () => setShowNewChatModal(true) },
+    { id: 'stories', label: 'Stories', icon: BoltIcon, tone: 'text-amber-500', onClick: () => navigate('/stories') },
+    { id: 'calls', label: 'Calls', icon: PhoneIcon, tone: 'text-green-500', onClick: () => navigate('/calls') },
+    { id: 'groups', label: 'Groups', icon: UsersIcon, tone: 'text-blue-500', onClick: () => navigate('/groups') },
+    { id: 'contacts', label: 'Contacts', icon: BookOpenIcon, tone: 'text-purple-500', onClick: () => navigate('/contacts') },
+    { id: 'media', label: 'Starred', icon: StarIcon, tone: 'text-rose-500', onClick: () => navigate('/profile') },
   ]
 
   const totalUnread = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
@@ -94,22 +125,22 @@ const ChatList = ({ onChatSelect, className }) => {
                 <FunnelIcon className="w-5 h-5" />
               </button>
               <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 w-36 opacity-0 invisible group-hover:opacity-100 group-hover:visible focus-within:opacity-100 focus-within:visible transition-all z-50">
-                {[
-                  { id: 'date', label: 'Newest' },
-                  { id: 'name', label: 'Name' },
-                  { id: 'unread', label: 'Unread first' },
-                ].map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => setSortBy(option.id)}
-                    className={clsx(
-                      'w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
-                      sortBy === option.id && 'text-primary-600 dark:text-primary-400 font-medium'
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+                {sortOptions.map((option) => {
+                  const Icon = option.icon
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => setSortBy(option.id)}
+                      className={clsx(
+                        'w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 inline-flex items-center gap-2',
+                        sortBy === option.id && 'text-primary-600 dark:text-primary-400 font-medium'
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {option.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -149,22 +180,50 @@ const ChatList = ({ onChatSelect, className }) => {
 
         {/* Filters */}
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-          {filters.map((filterItem) => (
-            <button
-              key={filterItem.id}
-              onClick={() => setFilter(filterItem.id)}
-              className={clsx(
-                'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
-                filter === filterItem.id
-                  ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/30'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              )}
-            >
-              {filterItem.label}
-            </button>
-          ))}
+          {filters.map((filterItem) => {
+            const Icon = filterItem.icon
+            return (
+              <button
+                key={filterItem.id}
+                onClick={() => setFilter(filterItem.id)}
+                className={clsx(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
+                  filter === filterItem.id
+                    ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/30'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {filterItem.label}
+              </button>
+            )
+          })}
         </div>
       </PageHeader>
+
+      {/* Home shortcut icons */}
+      <div className="flex-shrink-0 border-b border-gray-100 dark:border-gray-800 px-3 py-2">
+        <div className="grid grid-cols-6 gap-1">
+          {shortcuts.map((shortcut) => {
+            const Icon = shortcut.icon
+            return (
+              <button
+                key={shortcut.id}
+                type="button"
+                onClick={shortcut.onClick}
+                className="flex flex-col items-center gap-1 rounded-xl py-2 tap-target transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800/70">
+                  <Icon className={clsx('w-5 h-5', shortcut.tone)} />
+                </span>
+                <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">
+                  {shortcut.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* Chat List - Scrollable */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">

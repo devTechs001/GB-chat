@@ -38,6 +38,37 @@ const userSchema = new mongoose.Schema(
       default: "Hey there! I'm using GBChat",
       maxlength: 500,
     },
+    // ---- Public profile (all optional, additive) -------------------------
+    username: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      sparse: true,
+      unique: true,
+      minlength: 3,
+      maxlength: 30,
+      match: [/^[a-z0-9._]+$/, "Username can only contain letters, numbers, dots and underscores"],
+    },
+    website: {
+      type: String,
+      default: "",
+      maxlength: 200,
+    },
+    location: {
+      type: String,
+      default: "",
+      maxlength: 100,
+    },
+    /** Banner image shown behind the avatar on the profile page */
+    coverPhoto: {
+      type: String,
+      default: "",
+    },
+    pronouns: {
+      type: String,
+      default: "",
+      maxlength: 30,
+    },
     status: {
       type: String,
       enum: ["online", "offline", "busy", "away"],
@@ -219,6 +250,12 @@ userSchema.methods.toPublicProfile = function () {
   return {
     _id: this._id,
     fullName: this.fullName,
+    username: this.username,
+    website: this.website,
+    location: this.location,
+    coverPhoto: this.coverPhoto,
+    pronouns: this.pronouns,
+    isVerified: this.isVerified,
     email: this.email,
     phone: this.phone,
     avatar: this.avatar,

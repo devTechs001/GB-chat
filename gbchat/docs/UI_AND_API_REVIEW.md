@@ -198,3 +198,75 @@ All emoji used as UI chrome were replaced with Heroicons across auth/feature gri
 * Headless SSR render (happy-dom + Vite SSR) of every page and the new panels — ChatPage, StoriesPage, CallsPage, GroupsPage, ContactsPage, ProfilePage, SettingsPage, AuthPage, Splash, NotificationCenter, IncomingCallOverlay, StoryViewer, CallInterface, MediaGallery, AppPermissions, ContactList, NewCallModal, NewChatModal — **all render**.
 * Store-level assertions: theme switch writes `data-mode`/`--app-surface`; reacting to story *A* leaves story *B* untouched (`myReaction` isolated); viewing story *B* only marks *B* as viewed.
 * Demo mode (`Explore demo` on the auth screen) exercises the whole UI without a backend; it never writes sample data into a real session.
+
+---
+
+## 5. Round 3 — profile redesign, home icons, rate limiting, gRPC, scaling, Docker
+
+### 5.1 Profile page (`client/src/pages/ProfilePage.jsx`, rewritten)
+* **Cover banner** (`coverPhoto`, uploadable by the owner) with glass back /
+  cover / menu controls, plus an identity card that overlaps the banner.
+* **Identity block** — avatar with a ring and upload action, online + verified
+  pills (now reading the real `isVerified` flag), `@username` with copy-to-
+  clipboard, pronouns chip, bio, location / website / join month.
+* **Stats strip** — chats, groups, media and stories from the new
+  `GET /api/users/:id/stats` (one aggregate call instead of five).
+* **Quick action grid** — owner: edit, QR, alerts, privacy, share, archive;
+  other user: chat, call, video, mute, block, report.
+* **Tabs** (animated underline + transitions)
+  * *Media* — real thumbnails from `GET /api/users/:id/media`;
+  * *Links* — URLs extracted from the shared messages in that same response;
+  * *Groups* — common groups from `GET /api/users/:id`;
+  * *About* — phone, email, website, location, member since, messages sent and
+    an encryption note.
+* **Edit sheet** — full name, username (validated + uniqueness checked on the
+  server), about, phone, pronouns, location, website → `PATCH /api/users/profile`.
+* **QR / share sheet**, **notification sheet** (custom tones) and **privacy
+  sheet** (disappearing messages, chat lock, hide last seen) with real switches.
+* **Bug fix** — the previous version referenced `XMarkIcon` without importing it,
+  so both modals crashed on open. Skeleton loading replaces the spinner.
+
+Server additions (all additive):
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/users/:id/stats` | contacts, chats, groups, messages, media, stories, member since |
+| `GET /api/users/:id/media` | shared images/videos + link messages (last 24–60) |
+| `GET /api/users/:id` | now also returns `commonGroups`, `sharedMedia`, `contact`, `isVerified`, `username`, `website`, `location`, `coverPhoto`, `pronouns` |
+| `PATCH /api/users/profile` | accepts `username`, `website`, `location`, `coverPhoto`, `pronouns` |
+
+`models/User.js` gained optional `username`, `website`, `location`,
+`coverPhoto`, `pronouns` (no existing field changed).
+
+### 5.2 Icons on the home screen (`components/chat/ChatList.jsx`)
+* Filter chips carry icons (`Inbox`, `EnvelopeOpen`, `UserGroup`, `ArchiveBox`).
+* Sort menu items carry icons (`ArrowDownOnSquare`, `BarsArrowDown`, `ArrowsUpDown`).
+* New six-icon shortcut strip under the search field: new chat, stories, calls,
+  groups, contacts, starred — every one navigates to a real route.
+* Message-type icons in list rows (photo/video/voice/document) already came from
+  round 2 and are unchanged; no emoji is used as chrome.
+
+### 5.3 Rate limiting
+See `docs/SCALING_AND_INFRA.md` §1. Eight policies, Redis-backed store when
+available, per-user/IP keys (IPv6 `/64` normalised), 429 JSON with `retryAfter`,
+probe routes skipped, `trust proxy` aware. Sockets get a token bucket and the
+client surfaces `rateLimited` as a toast.
+
+### 5.4 gRPC + multi-server + Docker
+See `docs/SCALING_AND_INFRA.md` §2–4: internal gRPC API (protocol in
+`server/proto/gbchat.proto`), Redis Socket.IO adapter, node cluster entry point,
+`/api/system/{live,ready,info,presence,notify}` diagnostics, graceful shutdown,
+and a Docker Compose stack with two API replicas behind a sticky nginx LB.
+
+### 5.5 Verification (round 3)
+* `npm run check:endpoints` → **397 server routes / 105 client calls / 0 unmatched**
+  (the checker now also understands mounts that carry middleware:
+  `app.use("/api/messages", writeLimiter, messageRoutes)`).
+* `npx vite build` → success.
+* gRPC self-test (`startGrpcServer` + client, temp port 50999): `Ping` healthy,
+  `SetStatus`/`GetPresence` return the record, `Send` → `{accepted: true,
+  delivered_to: 1}`.
+* jsdom + React 18 render of the redesigned ProfilePage: name, username, bio,
+  stats, four tabs, quick actions, verified pill and location all present, 18
+  interactive controls — **ALL GREEN**.
+* Server module graph loads to the MongoDB connect step (no Mongo in CI); every
+  new file passes `node --check`.

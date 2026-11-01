@@ -180,14 +180,44 @@ export const getMe = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-    const { fullName, about, avatar, phone, theme, privacy, notifications } =
-      req.body;
+    const {
+      fullName,
+      about,
+      avatar,
+      phone,
+      theme,
+      privacy,
+      notifications,
+      username,
+      website,
+      location,
+      coverPhoto,
+      pronouns,
+    } = req.body;
 
     const updateData = {};
     if (fullName) updateData.fullName = fullName;
     if (about !== undefined) updateData.about = about;
     if (avatar) updateData.avatar = avatar;
     if (phone) updateData.phone = phone;
+    // Public-profile fields (all optional)
+    if (website !== undefined) updateData.website = String(website).slice(0, 200);
+    if (location !== undefined) updateData.location = String(location).slice(0, 100);
+    if (coverPhoto !== undefined) updateData.coverPhoto = coverPhoto;
+    if (pronouns !== undefined) updateData.pronouns = String(pronouns).slice(0, 30);
+    if (username !== undefined) {
+      const handle = String(username).trim().toLowerCase().replace(/^@/, "");
+      if (handle && !/^[a-z0-9._]{3,30}$/.test(handle)) {
+        return res.status(400).json({
+          message: "Username must be 3–30 characters: letters, numbers, dots or underscores",
+        });
+      }
+      if (handle) {
+        const taken = await User.findOne({ username: handle, _id: { $ne: req.user._id } });
+        if (taken) return res.status(409).json({ message: "That username is already taken" });
+      }
+      updateData.username = handle || undefined;
+    }
     if (theme) updateData.theme = { ...req.user.theme, ...theme };
     if (privacy) updateData.privacy = { ...req.user.privacy, ...privacy };
     if (notifications)
@@ -198,6 +228,7 @@ export const updateProfile = async (req, res, next) => {
 
     const user = await User.findByIdAndUpdate(req.user._id, updateData, {
       new: true,
+      runValidators: true,
     });
 
     // Emit real-time profile update to all connected clients
@@ -206,9 +237,13 @@ export const updateProfile = async (req, res, next) => {
       io.emit('user:profileUpdated', {
         userId: user._id,
         fullName: user.fullName,
+        username: user.username,
         about: user.about,
         phone: user.phone,
         avatar: user.avatar,
+        coverPhoto: user.coverPhoto,
+        website: user.website,
+        location: user.location,
         status: user.status,
       });
     }

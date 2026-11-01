@@ -10,6 +10,8 @@ import {
   getBlockedUsers,
   updateStatus,
   getOnlineUsers,
+  getProfileStats,
+  getUserMedia,
 } from "../controllers/userController.js";
 import {
   updateProfile,
@@ -33,6 +35,8 @@ router.put("/privacy-settings", updatePrivacySettings);
 router.get("/search", searchUsers);
 router.get("/online", getOnlineUsers);
 router.get("/blocked", getBlockedUsers);
+router.get("/:id/stats", getProfileStats);
+router.get("/:id/media", getUserMedia);
 router.get("/:id", getUserProfile);
 router.post("/avatar", uploadAvatarDisk.single("avatar"), uploadAvatar);
 router.delete("/avatar", removeAvatar);

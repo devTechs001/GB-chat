@@ -174,6 +174,34 @@ const attachHandlers = (socket) => {
     toast.error(reason || 'Call could not be connected')
   })
 
+  // ---- Server notifications (including ones fanned out over gRPC) --------
+  const handleServerNotification = (payload) => {
+    if (!payload) return
+    const store = useNotificationStore.getState()
+    store.addNotification?.({
+      title: payload.title || 'Notification',
+      body: payload.body || payload.message || '',
+      type: payload.type || 'system',
+      data: payload.data || payload.data_json || {},
+      chatId: payload.chatId || payload.chat_id,
+    })
+  }
+
+  socket.on('notification', handleServerNotification)
+  socket.on('notification:new', handleServerNotification)
+
+  // ---- Abuse protection feedback ----------------------------------------
+  socket.on('rateLimited', ({ message, retryAfterMs } = {}) => {
+    const wait = retryAfterMs ? ` Retry in ${Math.ceil(retryAfterMs / 1000)}s.` : ''
+    toast.error(`${message || 'Slow down'}.${wait}`)
+  })
+
+  // Connection state recovery: Socket.IO replays missed events automatically
+  // when `connectionStateRecovery` is enabled on the server.
+  socket.on('recovered', ({ missed } = {}) => {
+    if (missed) toast.success(`Reconnected — restored ${missed} missed event(s)`)
+  })
+
   // WebRTC signaling is consumed by hooks/usePeerConnection via
   // `socket.on('webrtc:*')`; nothing to do here.
 }

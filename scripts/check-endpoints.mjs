@@ -42,8 +42,14 @@ const normalize = (routePath) =>
 // ---------------------------------------------------------------- server side
 const indexSource = read(path.join(serverDir, 'index.js'))
 const mounts = new Map()
-for (const match of indexSource.matchAll(/app\.use\(\s*["']([^"']+)["']\s*,\s*(\w+)\s*\)/g)) {
-  mounts.set(match[2], match[1])
+// A mount may carry middleware before the router, e.g.
+//   app.use("/api/messages", writeLimiter, messageRoutes)
+// so map every identifier in the argument list; only `*Routes` names are used.
+for (const match of indexSource.matchAll(/app\.use\(\s*["']([^"']+)["']\s*,([^)]*)\)/g)) {
+  for (const arg of match[2].split(',')) {
+    const name = arg.trim()
+    if (/^[A-Za-z_$][\w$]*$/.test(name)) mounts.set(name, match[1])
+  }
 }
 
 const serverRoutes = new Set()
