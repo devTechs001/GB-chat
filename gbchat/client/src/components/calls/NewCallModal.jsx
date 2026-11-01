@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   MagnifyingGlassIcon,
@@ -10,6 +10,8 @@ import {
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import useCallStore from '../../store/useCallStore';
+import api, { isDemoMode } from '../../lib/api';
+import { ListSkeleton } from '../common/Skeleton';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -18,7 +20,7 @@ const NewCallModal = ({ isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [callType, setCallType] = useState('audio'); // audio or video
 
-  // Sample contacts for demo
+  // Demo-only contacts (real sessions load /api/contacts)
   const sampleContacts = [
     { _id: 'u1', name: 'John Doe', avatar: null, phone: '+1234567890', online: true },
     { _id: 'u2', name: 'Jane Smith', avatar: null, phone: '+0987654321', online: true },
@@ -28,22 +30,57 @@ const NewCallModal = ({ isOpen, onClose }) => {
     { _id: 'u6', name: 'Emily Brown', avatar: null, phone: '+4433221100', online: true },
   ];
 
-  const [contacts, setContacts] = useState(sampleContacts);
+  const [contacts, setContacts] = useState(isDemoMode() ? sampleContacts : []);
+  const [loadingContacts, setLoadingContacts] = useState(!isDemoMode());
 
-  const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.phone.includes(searchQuery)
+  useEffect(() => {
+    if (!isOpen || isDemoMode()) return;
+    let cancelled = false;
+    setLoadingContacts(true);
+    api
+      .get('/contacts')
+      .then(({ data }) => {
+        if (cancelled) return;
+        const list = Array.isArray(data?.contacts) ? data.contacts : [];
+        setContacts(
+          list.map((contact) => ({
+            _id: contact._id,
+            userId: contact.contactUserId,
+            name: contact.name,
+            avatar: contact.avatar,
+            phone: contact.phoneNumber || contact.phone || '',
+            online: Boolean(contact.isOnline),
+          }))
+        );
+      })
+      .catch(() => !cancelled && setContacts([]))
+      .finally(() => !cancelled && setLoadingContacts(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  const filteredContacts = contacts.filter(
+    (contact) =>
+      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (contact.phone || '').includes(searchQuery)
   );
 
-  const handleStartCall = (user) => {
-    initiateCall({ userId: user._id, type: callType });
-    toast.success(`Starting ${callType} call with ${user.name}...`);
-    onClose();
-    setSearchQuery('');
+  const handleStartCall = async (user) => {
+    const participantId = user.userId || user.contactUserId || user._id;
+    const result = await initiateCall({
+      participantId,
+      type: callType,
+      peer: { _id: participantId, name: user.name, avatar: user.avatar },
+    });
+    if (result.success) {
+      onClose();
+      setSearchQuery('');
+    }
   };
 
   const handleGroupCall = () => {
-    toast.info('Group call feature coming soon');
+    toast('Group calls are not available yet — start a 1:1 call instead');
   };
 
   return (
@@ -100,7 +137,9 @@ const NewCallModal = ({ isOpen, onClose }) => {
 
         {/* Contacts List */}
         <div className="max-h-80 overflow-y-auto space-y-2">
-          {filteredContacts.length === 0 ? (
+          {loadingContacts ? (
+            <ListSkeleton rows={5} avatar={false} />
+          ) : filteredContacts.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <PhoneIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p>No contacts found</p>

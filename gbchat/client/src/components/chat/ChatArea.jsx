@@ -442,7 +442,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                   {typeof replyTo.content === 'object' && replyTo.content !== null
                     ? replyTo.content.text || JSON.stringify(replyTo.content)
-                    : replyTo.content || `📎 ${replyTo.type || 'Media'} message`}
+                    : replyTo.content || `${replyTo.type || 'Media'} message`}
                 </p>
               </div>
             </div>

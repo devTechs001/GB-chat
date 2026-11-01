@@ -9,36 +9,94 @@ import {
   ChatBubbleLeftIcon,
 } from '@heroicons/react/24/outline'
 import ContactCard from './ContactCard'
+import Modal from '../common/Modal'
+import Input from '../common/Input'
 import SearchBar from '../common/SearchBar'
 import Button from '../common/Button'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { ListSkeleton } from '../common/Skeleton'
 
 const ContactList = ({ onContactSelect, onCreateChat }) => {
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState('all') // all, favorites, blocked
+  const [showAdd, setShowAdd] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState({ name: '', phoneNumber: '', email: '' })
 
   useEffect(() => {
     fetchContacts()
   }, [])
 
   const fetchContacts = async () => {
+    setLoading(true)
     try {
       const { data } = await api.get('/contacts')
-      setContacts(data.contacts)
+      setContacts(Array.isArray(data?.contacts) ? data.contacts : [])
     } catch (error) {
-      toast.error('Failed to load contacts')
+      toast.error(error.response?.data?.message || 'Could not load contacts')
+      setContacts([])
     } finally {
       setLoading(false)
     }
   }
 
   const handleAddContact = () => {
-    // Open add contact modal
-    console.log('Add contact')
+    setDraft({ name: '', phoneNumber: '', email: '' })
+    setShowAdd(true)
+  }
+
+  const submitContact = async (event) => {
+    event.preventDefault()
+    if (!draft.name.trim() || !draft.phoneNumber.trim()) {
+      toast.error('Name and phone number are required')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const { data } = await api.post('/contacts', {
+        name: draft.name.trim(),
+        phoneNumber: draft.phoneNumber.trim(),
+        email: draft.email.trim() || undefined,
+      })
+      setContacts((previous) => [...previous, data.contact])
+      setShowAdd(false)
+      toast.success('Contact added')
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Could not add contact')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteContact = async (contact) => {
+    if (!window.confirm(`Delete ${contact.name}?`)) return
+    try {
+      await api.delete(`/contacts/${contact._id}`)
+      setContacts((previous) => previous.filter((item) => item._id !== contact._id))
+      toast.success('Contact deleted')
+    } catch {
+      toast.error('Could not delete contact')
+    }
+  }
+
+  const handleToggleFavorite = async (contact) => {
+    try {
+      const { data } = await api.patch(`/contacts/${contact._id}/favorite`)
+      setContacts((previous) =>
+        previous.map((item) =>
+          item._id === contact._id
+            ? { ...item, isFavorite: data?.isFavorite ?? !item.isFavorite }
+            : item
+        )
+      )
+    } catch {
+      toast.error('Could not update favorite')
+    }
   }
 
   const filteredContacts = contacts.filter((contact) => {
@@ -51,8 +109,8 @@ const ContactList = ({ onContactSelect, onCreateChat }) => {
       const query = searchQuery.toLowerCase()
       return (
         contact.name.toLowerCase().includes(query) ||
-        contact.phone?.toLowerCase().includes(query) ||
-        contact.email?.toLowerCase().includes(query)
+        (contact.phoneNumber || contact.phone || '').toLowerCase().includes(query) ||
+        (contact.email || '').toLowerCase().includes(query)
       )
     }
 
@@ -85,8 +143,8 @@ const ContactList = ({ onContactSelect, onCreateChat }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
+      <div className="p-4">
+        <ListSkeleton rows={8} />
       </div>
     )
   }
@@ -180,6 +238,8 @@ const ContactList = ({ onContactSelect, onCreateChat }) => {
                           contact={contact}
                           onClick={() => onContactSelect(contact)}
                           onMessage={() => onCreateChat(contact)}
+                          onDelete={() => handleDeleteContact(contact)}
+                          onToggleFavorite={() => handleToggleFavorite(contact)}
                         />
                       </motion.div>
                     ))}
@@ -189,6 +249,40 @@ const ContactList = ({ onContactSelect, onCreateChat }) => {
           </div>
         )}
       </div>
+
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add contact">
+        <form onSubmit={submitContact} className="space-y-4">
+          <Input
+            label="Name"
+            value={draft.name}
+            onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+            placeholder="Jane Doe"
+            required
+          />
+          <Input
+            label="Phone number"
+            value={draft.phoneNumber}
+            onChange={(event) => setDraft({ ...draft, phoneNumber: event.target.value })}
+            placeholder="+254 700 000 000"
+            required
+          />
+          <Input
+            label="Email (optional)"
+            type="email"
+            value={draft.email}
+            onChange={(event) => setDraft({ ...draft, email: event.target.value })}
+            placeholder="jane@example.com"
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowAdd(false)} type="button">
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" disabled={saving}>
+              {saving ? 'Adding…' : 'Add contact'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

@@ -65,6 +65,73 @@ export const createGroup = async (req, res, next) => {
   }
 };
 
+export const getGroups = async (req, res, next) => {
+  try {
+    const { search, archived, starred, limit = 100 } = req.query;
+
+    const query = {
+      type: "group",
+      "participants.user": req.user._id,
+    };
+
+    const groups = await Chat.find(query)
+      .populate("participants.user", "fullName avatar status lastSeen")
+      .populate({
+        path: "lastMessage",
+        populate: { path: "sender", select: "fullName avatar" },
+      })
+      .sort({ updatedAt: -1 })
+      .limit(Math.min(Number(limit) || 100, 200));
+
+    const me = (chat) =>
+      chat.participants.find(
+        (p) => p.user && p.user._id.toString() === req.user._id.toString()
+      );
+
+    const normalized = groups.map((chat) => {
+      const membership = me(chat);
+      const plain = chat.toObject({ virtuals: true });
+      return {
+        ...plain,
+        isGroup: true,
+        myRole: membership?.role || "member",
+        isAdmin: membership?.role === "admin",
+        isArchived: Boolean(membership?.isArchived),
+        isStarred: Boolean(membership?.isStarred),
+        isMuted: Boolean(membership?.isMuted),
+        memberCount: chat.participants.length,
+        name: chat.groupInfo?.name || "Group",
+        avatar: chat.groupInfo?.avatar || "",
+      };
+    });
+
+    const filtered = normalized
+      .filter((group) => {
+        if (search) {
+          const needle = String(search).toLowerCase();
+          const haystack = `${group.name} ${group.groupInfo?.description || ""}`.toLowerCase();
+          if (!haystack.includes(needle)) return false;
+        }
+        if (archived === "true") return group.isArchived;
+        if (archived === "false") return !group.isArchived;
+        if (starred === "true") return group.isStarred;
+        return true;
+      });
+
+    res.json({
+      success: true,
+      groups: filtered,
+      stats: {
+        totalGroups: normalized.length,
+        adminOf: normalized.filter((g) => g.isAdmin).length,
+        totalMembers: normalized.reduce((sum, g) => sum + g.memberCount, 0),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateGroup = async (req, res, next) => {
   try {
     const { name, description, avatar } = req.body;

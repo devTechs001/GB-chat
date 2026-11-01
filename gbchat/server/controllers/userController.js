@@ -124,6 +124,40 @@ export const uploadAvatar = async (req, res, next) => {
   }
 };
 
+// @desc    Remove the current user's avatar
+// @route   DELETE /api/users/avatar
+export const removeAvatar = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const previous = user.avatar;
+
+    // Best-effort cleanup of locally stored files
+    if (previous && previous.startsWith('/uploads/')) {
+      try {
+        const fs = await import('fs');
+        const path = await import('path');
+        const filePath = path.join(process.cwd(), previous.replace(/^\//, ''));
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (cleanupError) {
+        console.warn('Avatar file cleanup skipped:', cleanupError.message);
+      }
+    }
+
+    user.avatar = '';
+    await user.save();
+
+    const safeUser = await User.findById(user._id).select(
+      'fullName email phone avatar about status theme privacy notifications'
+    );
+
+    res.json({ message: "Avatar removed", avatar: null, user: safeUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const blockUser = async (req, res, next) => {
   try {
     const { userId } = req.params;

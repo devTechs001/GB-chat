@@ -17,6 +17,9 @@ import {
   DocumentIcon,
   CalendarIcon,
   UsersIcon,
+  UserGroupIcon,
+  UserIcon,
+  ShieldCheckIcon,
   XMarkIcon,
   CheckCircleIcon,
   StarIcon,
@@ -188,9 +191,9 @@ const AnnouncementCreator = ({ isOpen, groupId, onClose, onSubmit }) => {
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'all', label: 'Everyone', icon: '👥' },
-                { id: 'admins', label: 'Admins Only', icon: '🛡️' },
-                { id: 'members', label: 'Members', icon: '👤' },
+                { id: 'all', label: 'Everyone', icon: 'users' },
+                { id: 'admins', label: 'Admins only', icon: 'shield' },
+                { id: 'members', label: 'Members', icon: 'user' },
               ].map((option) => (
                 <button
                   key={option.id}
@@ -202,7 +205,11 @@ const AnnouncementCreator = ({ isOpen, groupId, onClose, onSubmit }) => {
                       : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
                   )}
                 >
-                  <span className="text-lg block mb-1">{option.icon}</span>
+                  {(() => {
+                    const ICONS = { users: UserGroupIcon, shield: ShieldCheckIcon, user: UserIcon }
+                    const Icon = ICONS[option.icon] || UserGroupIcon
+                    return <Icon className="w-5 h-5 mx-auto mb-1 text-primary-500" />
+                  })()}
                   {option.label}
                 </button>
               ))}

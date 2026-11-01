@@ -83,7 +83,7 @@ const MainLayout = () => {
   }
 
   return (
-    <div className="h-full w-full flex bg-gray-100 dark:bg-gray-950 overflow-hidden">
+    <div className="h-full w-full flex overflow-hidden app-canvas">
       {/* ---------- Desktop sidebar ---------- */}
       <div className="hidden lg:flex flex-shrink-0 h-full">
         <Sidebar

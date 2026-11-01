@@ -12,6 +12,7 @@ import ServiceWorkerRegistration from './components/common/ServiceWorkerRegistra
 import InstallPrompt from './components/common/InstallPrompt'
 import AppLock from './components/auth/AppLock'
 import AppUpdateChecker from './components/common/AppUpdateChecker'
+import IncomingCallOverlay from './components/calls/IncomingCallOverlay'
 
 // Lazy load pages for better performance
 const AuthPage = React.lazy(() => import('./pages/AuthPage'))
@@ -20,6 +21,7 @@ const StoriesPage = React.lazy(() => import('./pages/StoriesPage'))
 const ChannelsPage = React.lazy(() => import('./pages/ChannelsPage'))
 const CallsPage = React.lazy(() => import('./pages/CallsPage'))
 const GroupsPage = React.lazy(() => import('./pages/GroupsPage'))
+const ContactsPage = React.lazy(() => import('./pages/ContactsPage'))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'))
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'))
@@ -134,21 +136,13 @@ function App() {
 
   // Apply theme to document
   useEffect(() => {
-    const { theme: currentTheme, getAvailableThemes } = useThemeStore.getState()
-    const themes = getAvailableThemes()
-    const themeData = themes[currentTheme]
-    if (themeData) {
-      document.documentElement.className = themeData.class
-      if (themeData.primary) {
-        document.documentElement.style.setProperty('--color-primary-500', themeData.primary)
-      }
-    }
-    document.documentElement.style.setProperty('color-scheme', currentTheme.includes('dark') ? 'dark' : 'light')
+    // applyTheme() owns palette + mode + surfaces for the whole app
+    useThemeStore.getState().initTheme()
   }, [theme])
 
   // Show splash during initialization
   if (!isInitialized || showSplash) {
-    return <Splash />
+    return <Splash message={isLoading ? 'Signing you in…' : undefined} />
   }
 
   // Show onboarding if needed
@@ -159,7 +153,7 @@ function App() {
   // Show loading while checking auth
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-bg">
+      <div className="min-h-screen flex items-center justify-center app-canvas">
         <Loader size="lg" />
       </div>
     )
@@ -171,6 +165,9 @@ function App() {
       <ServiceWorkerRegistration />
       <InstallPrompt />
       <AppUpdateChecker />
+
+      {/* Global call UI: incoming ring + active call */}
+      {isAuthenticated && <IncomingCallOverlay />}
 
       {/* App Lock Screen */}
       {appLockEnabled && showAppLock && (
@@ -203,6 +200,7 @@ function App() {
               <Route path="channels" element={<ChannelsPage />} />
               <Route path="groups" element={<GroupsPage />} />
               <Route path="calls" element={<CallsPage />} />
+              <Route path="contacts" element={<ContactsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="profile/:userId" element={<ProfilePage />} />
             </Route>

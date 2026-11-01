@@ -101,6 +101,7 @@ const StoryBar = ({ compact = false }) => {
                 className="flex-shrink-0"
               >
                 <StoryCard
+                  key={story._id}
                   story={story}
                   onClick={() => {
                     setViewingStory(story)

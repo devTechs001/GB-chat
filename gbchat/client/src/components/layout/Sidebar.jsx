@@ -16,6 +16,8 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import useAuthStore from '../../store/useAuthStore'
+import { UsersIcon } from '@heroicons/react/24/outline'
+import NotificationCenter from '../notifications/NotificationCenter'
 import useThemeStore from '../../store/useThemeStore'
 import useChatStore from '../../store/useChatStore'
 import Avatar from '../common/Avatar'
@@ -27,6 +29,7 @@ const NAV_ITEMS = [
   { name: 'Channels', href: '/channels', icon: SpeakerWaveIcon },
   { name: 'Groups', href: '/groups', icon: UserGroupIcon },
   { name: 'Calls', href: '/calls', icon: PhoneIcon },
+  { name: 'Contacts', href: '/contacts', icon: UsersIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
 
@@ -54,9 +57,7 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
 
   const isDarkTheme = useMemo(() => {
     const themes = getAvailableThemes ? getAvailableThemes() : {}
-    const themeClass = themes?.[theme]?.class || ''
-    if (themeClass) return themeClass.includes('dark')
-    return theme ? !theme.includes('light') : false
+    return (themes?.[theme]?.mode || 'light') === 'dark'
   }, [theme, getAvailableThemes])
 
   const toggleTheme = () => {
@@ -76,7 +77,7 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
   return (
     <aside
       className={clsx(
-        'h-full flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200/80 dark:border-gray-800',
+        'h-full flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200/80 dark:border-gray-800 theme-surface',
         isDrawer ? 'w-[280px]' : isCollapsed ? 'w-[76px]' : 'w-72',
         'transition-[width] duration-200 ease-out'
       )}
@@ -101,29 +102,33 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
             )}
           </NavLink>
 
-          {isDrawer ? (
-            <button
-              onClick={onClose}
-              aria-label="Close navigation"
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <XMarkIcon className="w-5 h-5" />
-            </button>
-          ) : (
-            !isCollapsed && (
+          <div className={clsx('flex items-center gap-0.5', isCollapsed && 'flex-col')}>
+            <NotificationCenter className={clsx(isCollapsed && 'mt-1')} />
+
+            {isDrawer ? (
               <button
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                onClick={onClose}
+                aria-label="Close navigation"
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                {isDarkTheme ? (
-                  <SunIcon className="w-5 h-5 text-yellow-500" />
-                ) : (
-                  <MoonIcon className="w-5 h-5" />
-                )}
+                <XMarkIcon className="w-5 h-5" />
               </button>
-            )
-          )}
+            ) : (
+              !isCollapsed && (
+                <button
+                  onClick={toggleTheme}
+                  aria-label="Toggle theme"
+                  className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  {isDarkTheme ? (
+                    <SunIcon className="w-5 h-5 text-yellow-500" />
+                  ) : (
+                    <MoonIcon className="w-5 h-5" />
+                  )}
+                </button>
+              )
+            )}
+          </div>
         </div>
       </div>
 

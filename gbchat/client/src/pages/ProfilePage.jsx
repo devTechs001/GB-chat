@@ -21,6 +21,8 @@ import Button from '../components/common/Button'
 import Dropdown from '../components/common/Dropdown'
 import Loader from '../components/common/Loader'
 import api from '../lib/api'
+import useAuthStore from '../store/useAuthStore'
+import { ArrowUpTrayIcon, PencilSquareIcon, UserCircleIcon } from '@heroicons/react/24/outline'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
@@ -28,6 +30,9 @@ import toast from 'react-hot-toast'
 const ProfilePage = () => {
   const { userId } = useParams()
   const navigate = useNavigate()
+  const { user: currentUser, updateAvatar } = useAuthStore()
+  const fileInputRef = React.useRef(null)
+  const [uploading, setUploading] = useState(false)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('media') // media, groups, links, docs
@@ -35,65 +40,145 @@ const ProfilePage = () => {
   const [showRingtones, setShowRingtones] = useState(false)
   const [showPermissions, setShowPermissions] = useState(false)
 
+  const isMe =
+    !userId ||
+    userId === 'me' ||
+    String(userId) === String(currentUser?._id) ||
+    String(userId) === String(currentUser?.id)
+
   useEffect(() => {
     fetchProfile()
-  }, [userId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, currentUser?._id])
+
+  /** Server returns the profile object directly; `fullName` is the display name. */
+  const normalizeProfile = (raw) => {
+    if (!raw) return null
+    return {
+      ...raw,
+      name: raw.fullName || raw.name || 'GBChat user',
+      isOnline: raw.status === 'online' || raw.isOnline,
+    }
+  }
 
   const fetchProfile = async () => {
+    setLoading(true)
+
+    // Viewing your own profile never needs the network
+    if (isMe && currentUser) {
+      setProfile(normalizeProfile(currentUser))
+      setLoading(false)
+      return
+    }
+
     try {
       const { data } = await api.get(`/users/${userId}`)
-      setProfile(data?.user || data)
+      setProfile(normalizeProfile(data?.user || data))
     } catch (error) {
-      // Offline / demo: fall back to the cached profile of the signed-in user
+      const status = error?.response?.status
+      // Fall back to the cached signed-in user when this is our own profile,
+      // otherwise to a chat participant we already know locally.
       let fallback = null
+
       try {
         const stored = JSON.parse(localStorage.getItem('auth-storage') || 'null')
-        const currentUser = stored?.state?.user
-        if (currentUser && String(currentUser._id || currentUser.id) === String(userId)) {
-          fallback = currentUser
+        const storedUser = stored?.state?.user
+        if (
+          storedUser &&
+          (String(storedUser._id || storedUser.id) === String(userId) || isMe)
+        ) {
+          fallback = storedUser
         }
       } catch {
         /* ignore malformed storage */
       }
-      if (fallback) {
-        setProfile(fallback)
+
+      if (!fallback && status === 404) {
+        setProfile(null)
+      } else if (fallback) {
+        setProfile(normalizeProfile(fallback))
       } else {
-        toast.error('Failed to load profile')
+        setProfile(null)
       }
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCall = (isVideo = false) => {
-    // Initiate call
-    console.log(`Starting ${isVideo ? 'video' : 'audio'} call with ${profile.name}`)
-  }
+  const handleAvatarPick = () => fileInputRef.current?.click()
 
-  const handleMessage = () => {
-    navigate(`/?chat=${userId}`)
-  }
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
 
-  const handleBlock = async () => {
-    if (confirm('Are you sure you want to block this user?')) {
-      try {
-        await api.post(`/users/${userId}/block`)
-        toast.success('User blocked')
-        navigate('/')
-      } catch (error) {
-        toast.error('Failed to block user')
-      }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be smaller than 5 MB')
+      return
+    }
+
+    setUploading(true)
+    const result = await updateAvatar(file)
+    setUploading(false)
+
+    if (result.success) {
+      const fresh = useAuthStore.getState().user
+      setProfile(normalizeProfile(fresh))
     }
   }
 
-  const menuItems = [
-    { label: 'Share Contact', action: 'share' },
-    { label: 'Export Chat', action: 'export' },
-    { label: 'Clear Chat', action: 'clear', danger: true },
-    { divider: true },
-    { label: 'Block User', action: 'block', danger: true },
-    { label: 'Report User', action: 'report', danger: true },
-  ]
+  const handleMessage = () => {
+    const targetId = profile?._id || userId
+    navigate(targetId ? `/?chat=${targetId}` : '/')
+  }
+
+  const handleCall = (isVideo = false) => {
+    if (!profile) return
+    window.dispatchEvent(
+      new CustomEvent('gbchat:start-call', {
+        detail: {
+          userId: profile._id || userId,
+          name: profile.name,
+          avatar: profile.avatar,
+          type: isVideo ? 'video' : 'audio',
+        },
+      })
+    )
+  }
+
+  const handleBlock = async () => {
+    if (!window.confirm('Block this contact? They will no longer be able to message you.')) return
+    try {
+      await api.post(`/users/${profile._id || userId}/block`)
+      toast.success('Contact blocked')
+      navigate('/chats')
+    } catch {
+      toast.error('Could not block this contact')
+    }
+  }
+
+  const handleReport = async () => {
+    try {
+      await api.post('/chats/' + (profile._id || userId) + '/report', { reason: 'profile-report' })
+      toast.success('Report submitted')
+    } catch {
+      toast.error('Could not submit report')
+    }
+  }
+
+  const handleEditProfile = () => navigate('/settings')
+
+  const menuItems = isMe
+    ? [{ label: 'Edit profile', action: 'edit' }, { label: 'Settings', action: 'settings' }]
+    : [
+        { label: 'Share contact', action: 'share' },
+        { label: 'Block user', action: 'block', danger: true },
+        { label: 'Report user', action: 'report', danger: true },
+      ]
 
   if (loading) {
     return (
@@ -105,8 +190,15 @@ const ProfilePage = () => {
 
   if (!profile) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <p className="text-gray-500">User not found</p>
+      <div className="h-full flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <UserCircleIcon className="w-14 h-14 text-gray-300 dark:text-gray-600" />
+        <div>
+          <p className="font-medium text-gray-900 dark:text-white">Profile unavailable</p>
+          <p className="text-sm text-gray-500">This account may have been deleted or you are offline.</p>
+        </div>
+        <Button variant="secondary" onClick={() => navigate('/chats')}>
+          Back to chats
+        </Button>
       </div>
     )
   }
@@ -123,7 +215,9 @@ const ProfilePage = () => {
           >
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
-          <h1 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Contact info</h1>
+          <h1 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+            {isMe ? 'My profile' : 'Contact info'}
+          </h1>
           <Dropdown
             trigger={
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
@@ -133,6 +227,8 @@ const ProfilePage = () => {
             items={menuItems}
             onSelect={(action) => {
               if (action === 'block') handleBlock()
+              if (action === 'report') handleReport()
+              if (action === 'edit' || action === 'settings') handleEditProfile()
             }}
           />
         </div>
@@ -142,19 +238,45 @@ const ProfilePage = () => {
       <div className="bg-white dark:bg-gray-900 p-6">
         <div className="flex flex-col items-center text-center">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring' }}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+            className="relative"
           >
             <Avatar
               src={profile.avatar}
-              alt={profile.fullName || profile.name || 'Contact'}
+              alt={profile.name}
               size="xl"
               status={profile.isOnline ? 'online' : 'offline'}
-              className="ring-4 ring-white dark:ring-gray-900"
+              className="ring-4 ring-white dark:ring-gray-900 shadow-lg"
             />
+
+            {isMe && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                <button
+                  type="button"
+                  onClick={handleAvatarPick}
+                  disabled={uploading}
+                  aria-label="Change profile photo"
+                  className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-primary-600 text-white flex items-center justify-center shadow-lg hover:bg-primary-700 disabled:opacity-60"
+                >
+                  {uploading ? (
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <ArrowUpTrayIcon className="w-4 h-4" />
+                  )}
+                </button>
+              </>
+            )}
           </motion.div>
-          
+
           <h2 className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">
             {profile.name}
           </h2>
@@ -180,28 +302,52 @@ const ProfilePage = () => {
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-2 mt-6">
-            <Button
-              variant="primary"
-              icon={<ChatBubbleLeftIcon className="w-5 h-5" />}
-              onClick={handleMessage}
-            >
-              Message
-            </Button>
-            <Button
-              variant="secondary"
-              icon={<PhoneIcon className="w-5 h-5" />}
-              onClick={() => handleCall(false)}
-            >
-              Call
-            </Button>
-            <Button
-              variant="secondary"
-              icon={<VideoCameraIcon className="w-5 h-5" />}
-              onClick={() => handleCall(true)}
-            >
-              Video
-            </Button>
+          <div className="flex flex-wrap justify-center gap-2 mt-6">
+            {isMe ? (
+              <>
+                <Button
+                  variant="primary"
+                  icon={<PencilSquareIcon className="w-5 h-5" />}
+                  onClick={handleEditProfile}
+                >
+                  Edit profile
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<ArrowUpTrayIcon className="w-5 h-5" />}
+                  onClick={handleAvatarPick}
+                  disabled={uploading}
+                >
+                  {uploading ? 'Uploading…' : 'Change photo'}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="primary"
+                icon={<ChatBubbleLeftIcon className="w-5 h-5" />}
+                onClick={handleMessage}
+              >
+                Message
+              </Button>
+            )}
+            {!isMe && (
+              <>
+                <Button
+                  variant="secondary"
+                  icon={<PhoneIcon className="w-5 h-5" />}
+                  onClick={() => handleCall(false)}
+                >
+                  Call
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<VideoCameraIcon className="w-5 h-5" />}
+                  onClick={() => handleCall(true)}
+                >
+                  Video
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

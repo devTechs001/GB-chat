@@ -9,13 +9,21 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  PlusIcon, 
-  PencilIcon, 
+import {
+  PlusIcon,
+  PencilIcon,
   StarIcon,
   HeartIcon,
   CameraIcon,
-  TrashIcon 
+  TrashIcon,
+  PaperAirplaneIcon,
+  CakeIcon,
+  UserGroupIcon,
+  UsersIcon,
+  BriefcaseIcon,
+  BoltIcon,
+  MusicalNoteIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
@@ -23,19 +31,31 @@ import Button from '../common/Button'
 import Modal from '../common/Modal'
 import clsx from 'clsx'
 
+/** Category key -> icon component (no emoji glyphs in the UI) */
+const CATEGORY_ICONS = {
+  travel: PaperAirplaneIcon,
+  food: CakeIcon,
+  friends: UserGroupIcon,
+  family: UsersIcon,
+  work: BriefcaseIcon,
+  fitness: BoltIcon,
+  music: MusicalNoteIcon,
+  memories: SparklesIcon,
+}
+
 const StoryHighlights = ({ highlights = [], onAddHighlight, onEditHighlight, onDeleteHighlight }) => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedHighlight, setSelectedHighlight] = useState(null)
 
   const defaultHighlightCategories = [
-    { id: 'travel', name: 'Travel', icon: '✈️', color: 'from-blue-400 to-blue-600' },
-    { id: 'food', name: 'Food', icon: '🍕', color: 'from-orange-400 to-orange-600' },
-    { id: 'friends', name: 'Friends', icon: '👥', color: 'from-green-400 to-green-600' },
-    { id: 'family', name: 'Family', icon: '👨‍👩‍👧‍👦', color: 'from-purple-400 to-purple-600' },
-    { id: 'work', name: 'Work', icon: '💼', color: 'from-gray-400 to-gray-600' },
-    { id: 'fitness', name: 'Fitness', icon: '💪', color: 'from-red-400 to-red-600' },
-    { id: 'music', name: 'Music', icon: '🎵', color: 'from-pink-400 to-pink-600' },
-    { id: 'memories', name: 'Memories', icon: '💫', color: 'from-yellow-400 to-yellow-600' },
+    { id: 'travel', name: 'Travel', icon: 'travel', color: 'from-blue-400 to-blue-600' },
+    { id: 'food', name: 'Food', icon: 'food', color: 'from-orange-400 to-orange-600' },
+    { id: 'friends', name: 'Friends', icon: 'friends', color: 'from-green-400 to-green-600' },
+    { id: 'family', name: 'Family', icon: 'family', color: 'from-purple-400 to-purple-600' },
+    { id: 'work', name: 'Work', icon: 'work', color: 'from-gray-400 to-gray-600' },
+    { id: 'fitness', name: 'Fitness', icon: 'fitness', color: 'from-red-400 to-red-600' },
+    { id: 'music', name: 'Music', icon: 'music', color: 'from-pink-400 to-pink-600' },
+    { id: 'memories', name: 'Memories', icon: 'memories', color: 'from-yellow-400 to-yellow-600' },
   ]
 
   return (
@@ -148,8 +168,11 @@ const HighlightCard = ({ highlight, onClick, onEdit, onDelete }) => {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl">
-            {highlight.icon || '⭐'}
+          <div className="w-full h-full flex items-center justify-center text-white">
+            {(() => {
+              const Icon = CATEGORY_ICONS[highlight.icon] || StarSolidIcon
+              return <Icon className="w-7 h-7" />
+            })()}
           </div>
         )}
 
@@ -239,7 +262,10 @@ const CreateHighlightModal = ({ categories, onClose, onSubmit }) => {
                     : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                 )}
               >
-                <span className="text-2xl">{category.icon}</span>
+                {(() => {
+                  const Icon = CATEGORY_ICONS[category.icon] || StarSolidIcon
+                  return <Icon className="w-6 h-6 text-primary-500" />
+                })()}
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                   {category.name}
                 </span>

@@ -1,6 +1,7 @@
 // server/routes/groupRoutes.js
 import express from "express";
 import {
+  getGroups,
   createGroup,
   getGroup,
   deleteGroup,
@@ -38,6 +39,7 @@ const router = express.Router();
 router.use(protect);
 
 // Group CRUD
+router.get("/", getGroups);
 router.post("/", createGroup);
 router.post("/export", exportGroups);
 router.post("/bulk-invite", bulkInvite);

@@ -1,229 +1,269 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import io from 'socket.io-client'
 import useAuthStore from '../store/useAuthStore'
 import useChatStore from '../store/useChatStore'
 import useNotificationStore from '../store/useNotificationStore'
+import useCallStore from '../store/useCallStore'
 import { toast } from 'react-hot-toast'
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
+/**
+ * Socket connection
+ * -----------------
+ * A single shared socket per browser tab. Previously every `useSocket()`
+ * call created its own connection (`forceNew: true`), which made the server's
+ * `onlineUsers` map point at the most recently created socket and broke
+ * delivery of messages, calls and WebRTC signaling to the "wrong" instance.
+ * Now handlers are attached once and every consumer talks to the same socket.
+ */
+const getSocketUrl = () => {
+  const configured = import.meta.env.VITE_SOCKET_URL
+  if (configured) return configured
+  // Same-origin by default: vite proxies /socket.io to the API server
+  if (typeof window !== 'undefined') return window.location.origin
+  return 'http://localhost:5000'
+}
+
+let sharedSocket = null
+let sharedUserId = null
+let handlersAttached = false
+let reconnectAttempts = 0
+const MAX_RECONNECT_ATTEMPTS = 8
+
+const getToken = () => {
+  try {
+    const direct = localStorage.getItem('token')
+    if (direct) return direct
+    const stored = JSON.parse(localStorage.getItem('auth-storage') || 'null')
+    return stored?.state?.token || null
+  } catch {
+    return null
+  }
+}
+
+const attachHandlers = (socket) => {
+  if (handlersAttached) return
+  handlersAttached = true
+
+  socket.on('connect', () => {
+    reconnectAttempts = 0
+    console.log('[Socket] connected', socket.id)
+  })
+
+  socket.on('disconnect', (reason) => {
+    console.log('[Socket] disconnected:', reason)
+    if (reason === 'io server disconnect') socket.connect()
+  })
+
+  socket.on('connect_error', (error) => {
+    console.warn('[Socket] connection error:', error.message)
+    reconnectAttempts += 1
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      toast.error('Realtime connection lost — some features may be delayed', {
+        id: 'socket-connection',
+      })
+    }
+  })
+
+  // ---- Profile ----
+  socket.on('user:profileUpdated', (profileData) => {
+    const { user, updateUserData } = useAuthStore.getState()
+    if (profileData?.userId === user?._id) updateUserData(profileData)
+    useChatStore.getState().updateContact?.(profileData?.userId, profileData)
+  })
+
+  const handleNewMessage = (message) => {
+    useChatStore.getState().receiveMessage?.(message)
+    if (!document.hasFocus()) {
+      useNotificationStore.getState().addNotification?.({
+        title: message?.sender?.fullName || message?.sender?.name || 'New message',
+        body: message?.content?.text || 'Sent you a message',
+        icon: message?.sender?.avatar,
+        tag: message?.chat,
+      })
+    }
+  }
+
+  // Server names (socket/handlers/chatHandler.js) + legacy aliases
+  socket.on('newMessage', ({ message }) => handleNewMessage(message))
+  socket.on('message:new', handleNewMessage)
+
+  socket.on('message:update', ({ messageId, updates }) => {
+    useChatStore.getState().updateMessageStatus?.(messageId, updates?.status)
+  })
+  socket.on('messagesDelivered', ({ messageIds }) => {
+    messageIds?.forEach((id) => useChatStore.getState().updateMessageStatus?.(id, 'delivered'))
+  })
+  socket.on('messagesRead', ({ messageIds }) => {
+    messageIds?.forEach((id) => useChatStore.getState().updateMessageStatus?.(id, 'read'))
+  })
+
+  // ---- Typing ----
+  socket.on('userTyping', ({ chatId, userId }) => {
+    useChatStore.getState().setTyping?.(chatId, userId, true)
+  })
+  socket.on('userStopTyping', ({ chatId, userId }) => {
+    useChatStore.getState().setTyping?.(chatId, userId, false)
+  })
+  socket.on('typing:start', ({ chatId, userId }) => {
+    useChatStore.getState().setTyping?.(chatId, userId, true)
+  })
+  socket.on('typing:stop', ({ chatId, userId }) => {
+    useChatStore.getState().setTyping?.(chatId, userId, false)
+  })
+
+  // ---- Presence ----
+  socket.on('onlineUsers', (users) => {
+    useChatStore.getState().setOnlineUsers?.(Array.isArray(users) ? users : [])
+  })
+  socket.on('users:online', (users) => {
+    useChatStore.getState().setOnlineUsers?.(Array.isArray(users) ? users : [])
+  })
+
+  const markOnline = (userId) => {
+    if (!userId) return
+    const store = useChatStore.getState()
+    const list = Array.isArray(store.onlineUsers) ? store.onlineUsers : []
+    store.setOnlineUsers?.([...new Set([...list, userId])])
+  }
+  const markOffline = (userId) => {
+    if (!userId) return
+    const store = useChatStore.getState()
+    const list = Array.isArray(store.onlineUsers) ? store.onlineUsers : []
+    store.setOnlineUsers?.(list.filter((id) => id !== userId))
+  }
+
+  socket.on('userOnline', (payload) => markOnline(payload?.userId || payload))
+  socket.on('user:online', (payload) => markOnline(payload?.userId || payload))
+  socket.on('userOffline', (payload) => markOffline(payload?.userId || payload))
+  socket.on('user:offline', (payload) => markOffline(payload?.userId || payload))
+
+  // ---- Calls ----
+  const callStore = () => useCallStore.getState()
+
+  const handleIncomingCall = (payload) => {
+    const call = payload?.call || payload
+    const normalized = {
+      ...call,
+      _id: call?._id || payload?.callId,
+      type: call?.type || payload?.type,
+      caller: call?.caller || payload?.caller,
+      isIncoming: true,
+    }
+    callStore().setIncomingCall?.(normalized)
+  }
+
+  socket.on('incomingCall', handleIncomingCall)
+  socket.on('call:incoming', handleIncomingCall)
+
+  socket.on('callAccepted', ({ callId }) => {
+    callStore().markAccepted?.(callId)
+  })
+
+  socket.on('callDeclined', () => {
+    callStore().clearActiveCall?.()
+    toast('Call declined')
+  })
+
+  socket.on('callEnded', () => {
+    callStore().clearActiveCall?.()
+    toast('Call ended')
+  })
+
+  socket.on('callFailed', ({ reason }) => {
+    callStore().clearActiveCall?.()
+    toast.error(reason || 'Call could not be connected')
+  })
+
+  // WebRTC signaling is consumed by hooks/usePeerConnection via
+  // `socket.on('webrtc:*')`; nothing to do here.
+}
 
 const useSocket = () => {
-  const socketRef = useRef(null)
-  const reconnectAttempts = useRef(0)
-  const maxReconnectAttempts = 5
-  const { user, updateUserData } = useAuthStore()
-  // Get token directly from localStorage for socket auth
-  const token = localStorage.getItem('token')
-  const {
-    receiveMessage,
-    setTyping,
-    setOnlineUsers,
-    updateMessageStatus,
-    updateContact,
-  } = useChatStore()
+  const socketRef = useRef(sharedSocket)
 
   const connect = useCallback((userId) => {
-    if (!userId) {
-      console.log('[Socket] No userId provided, skipping connection')
+    if (!userId) return
+    if (sharedSocket && sharedUserId === userId && sharedSocket.connected) {
+      socketRef.current = sharedSocket
       return
     }
 
-    if (socketRef.current?.connected) {
-      console.log('[Socket] Already connected')
+    if (sharedSocket && sharedUserId !== userId) {
+      sharedSocket.removeAllListeners()
+      sharedSocket.disconnect()
+      sharedSocket = null
+      handlersAttached = false
+    }
+
+    if (sharedSocket) {
+      socketRef.current = sharedSocket
       return
     }
 
-    // Clean up existing socket
-    if (socketRef.current) {
-      socketRef.current.removeAllListeners()
-      socketRef.current.disconnect()
-      socketRef.current = null
-    }
-
-    console.log('[Socket] Connecting to', SOCKET_URL, 'with userId:', userId)
-
-    socketRef.current = io(SOCKET_URL, {
-      auth: { token },
+    sharedUserId = userId
+    sharedSocket = io(getSocketUrl(), {
+      auth: { token: getToken() },
       query: { userId },
-      transports: ['websocket', 'polling'], // Allow fallback to polling
+      transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: maxReconnectAttempts,
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      randomizationFactor: 0.5,
       timeout: 20000,
-      forceNew: true,
+      withCredentials: true,
     })
 
-    // Connection events
-    socketRef.current.on('connect', () => {
-      console.log('✅ Socket connected:', socketRef.current.id)
-      reconnectAttempts.current = 0
-      toast.success('Connected', {
-        id: 'socket-connection',
-        duration: 2000,
-      })
-    })
-
-    socketRef.current.on('disconnect', (reason) => {
-      console.log('❌ Socket disconnected:', reason)
-      if (reason === 'io server disconnect') {
-        console.log('[Socket] Server disconnected, attempting reconnect...')
-        socketRef.current.connect()
-      }
-    })
-
-    socketRef.current.on('connect_error', (error) => {
-      console.error('❌ Socket connection error:', error.message)
-      reconnectAttempts.current++
-
-      if (reconnectAttempts.current >= maxReconnectAttempts) {
-        console.error('[Socket] Max reconnection attempts reached')
-        toast.error('Connection failed. Some features may not work.', {
-          id: 'socket-connection',
-          duration: 5000,
-        })
-        socketRef.current?.disconnect()
-      } else {
-        console.log(`[Socket] Reconnecting... Attempt ${reconnectAttempts.current}/${maxReconnectAttempts}`)
-      }
-    })
-
-    socketRef.current.on('error', (error) => {
-      console.error('[Socket] Error:', error)
-    })
-
-    // Real-time profile update event
-    socketRef.current.on('user:profileUpdated', (profileData) => {
-      console.log('[Socket] User profile updated:', profileData)
-
-      // Update auth store if it's the current user
-      if (profileData.userId === user?._id) {
-        updateUserData(profileData)
-      }
-
-      // Update contact in chat store
-      updateContact(profileData.userId, profileData)
-    })
-
-    // Chat events
-    socketRef.current.on('message:new', (message) => {
-      receiveMessage(message)
-      
-      // Show notification if not in focus
-      if (!document.hasFocus()) {
-        addNotification({
-          title: message.sender.name,
-          body: message.content,
-          icon: message.sender.avatar,
-          tag: message.chat,
-        })
-      }
-    })
-
-    socketRef.current.on('message:update', ({ messageId, updates }) => {
-      updateMessageStatus(messageId, updates.status)
-    })
-
-    socketRef.current.on('message:delete', ({ messageId }) => {
-      // Handle message deletion
-    })
-
-    // Typing events
-    socketRef.current.on('typing:start', ({ chatId, userId }) => {
-      setTyping(chatId, userId, true)
-    })
-
-    socketRef.current.on('typing:stop', ({ chatId, userId }) => {
-      setTyping(chatId, userId, false)
-    })
-
-    // Presence events
-    socketRef.current.on('users:online', (users) => {
-      setOnlineUsers(users)
-    })
-
-    socketRef.current.on('user:online', (userId) => {
-      setOnlineUsers((prev) => [...prev, userId])
-    })
-
-    socketRef.current.on('user:offline', (userId) => {
-      setOnlineUsers((prev) => prev.filter(id => id !== userId))
-    })
-
-    // Call events
-    socketRef.current.on('call:incoming', (callData) => {
-      // Handle incoming call
-      addNotification({
-        title: `Incoming ${callData.type} call`,
-        body: `${callData.caller.name} is calling...`,
-        actions: [
-          { action: 'answer', title: 'Answer' },
-          { action: 'decline', title: 'Decline' },
-        ],
-      })
-    })
-
-    // Group events
-    socketRef.current.on('group:update', (groupData) => {
-      // Handle group updates
-    })
-
-    socketRef.current.on('group:memberAdded', ({ groupId, member }) => {
-      // Handle new member
-    })
-
-    socketRef.current.on('group:memberRemoved', ({ groupId, memberId }) => {
-      // Handle member removal
-    })
-
-  }, [token, user])
+    attachHandlers(sharedSocket)
+    socketRef.current = sharedSocket
+  }, [])
 
   const disconnect = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.disconnect()
+    if (sharedSocket) {
+      sharedSocket.removeAllListeners()
+      sharedSocket.disconnect()
+      sharedSocket = null
+      sharedUserId = null
+      handlersAttached = false
       socketRef.current = null
     }
   }, [])
 
   const emit = useCallback((event, data) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data)
-    }
+    if (sharedSocket?.connected) sharedSocket.emit(event, data)
+    else console.warn('[Socket] emit skipped (not connected):', event)
   }, [])
 
-  const emitTyping = useCallback((chatId, isTyping) => {
-    emit('typing', { chatId, isTyping })
-  }, [emit])
+  const emitTyping = useCallback(
+    (chatId, isTyping) => {
+      emit(isTyping ? 'typing' : 'stopTyping', { chatId })
+    },
+    [emit]
+  )
 
-  const emitMessageRead = useCallback((messageIds) => {
-    emit('message:read', { messageIds })
-  }, [emit])
+  const sendMessage = useCallback(
+    (payload) => emit('sendMessage', payload),
+    [emit]
+  )
 
-  const joinRoom = useCallback((roomId) => {
-    emit('room:join', roomId)
-  }, [emit])
+  const emitMessageRead = useCallback(
+    ({ chatId, messageIds }) => emit('messageRead', { chatId, messageIds }),
+    [emit]
+  )
 
-  const leaveRoom = useCallback((roomId) => {
-    emit('room:leave', roomId)
-  }, [emit])
-
-  useEffect(() => {
-    return () => {
-      disconnect()
-    }
-  }, [disconnect])
+  const joinRoom = useCallback((roomId) => emit('joinChat', roomId), [emit])
+  const leaveRoom = useCallback((roomId) => emit('leaveChat', roomId), [emit])
 
   return {
-    socket: socketRef.current,
+    socket: sharedSocket,
     connect,
     disconnect,
     emit,
     emitTyping,
+    sendMessage,
     emitMessageRead,
     joinRoom,
     leaveRoom,
-    isConnected: socketRef.current?.connected || false,
+    isConnected: Boolean(sharedSocket?.connected),
   }
 }
 

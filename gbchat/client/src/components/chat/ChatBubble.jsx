@@ -261,7 +261,7 @@ const ChatBubble = ({
                 <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
                   {typeof message.replyTo.content === 'object' && message.replyTo.content !== null
                     ? message.replyTo.content.text || JSON.stringify(message.replyTo.content)
-                    : message.replyTo.content || `📎 ${message.replyTo.type || 'Media'} message`}
+                    : message.replyTo.content || `${message.replyTo.type || 'Media'} message`}
                 </p>
               </div>
             )}

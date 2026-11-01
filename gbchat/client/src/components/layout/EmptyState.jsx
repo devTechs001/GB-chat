@@ -1,4 +1,5 @@
 import React from 'react'
+import { SparklesIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 
 /**
@@ -24,7 +25,7 @@ const EmptyState = ({ icon: Icon, emoji, title, description, action, className, 
         {Icon ? (
           <Icon className={compact ? 'w-7 h-7' : 'w-10 h-10'} />
         ) : (
-          <span className={compact ? 'text-2xl' : 'text-3xl'}>{emoji || '✨'}</span>
+          <SparklesIcon className={compact ? 'w-6 h-6' : 'w-8 h-8'} />
         )}
       </div>
       {title && (

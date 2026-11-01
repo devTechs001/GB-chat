@@ -308,9 +308,11 @@ const useAuthStore = create(
           const { data } = await api.post('/users/avatar', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           })
-          const avatarUrl = data.avatar
+          const serverUser = data.user || data
+          const avatarUrl = serverUser.avatar
           const updatedUser = {
-            ...data,
+            ...useAuthStore.getState().user,
+            ...serverUser,
             avatar: avatarUrl
               ? avatarUrl + (avatarUrl.includes('?') ? '&' : '?') + 't=' + Date.now()
               : null
@@ -322,6 +324,23 @@ const useAuthStore = create(
           console.error('Avatar upload error:', error)
           toast.error(error.response?.data?.message || 'Upload failed')
           return { success: false, error: error.response?.data?.message }
+        }
+      },
+
+      removeAvatar: async () => {
+        try {
+          const { data } = await api.delete('/users/avatar')
+          set((state) => ({
+            user: {
+              ...(data?.user || state.user),
+              avatar: null,
+            },
+          }))
+          toast.success('Profile photo removed')
+          return { success: true }
+        } catch (error) {
+          toast.error(error.response?.data?.message || 'Could not remove the photo')
+          return { success: false, error }
         }
       },
 

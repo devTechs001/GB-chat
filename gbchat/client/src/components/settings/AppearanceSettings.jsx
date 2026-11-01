@@ -4,6 +4,14 @@ import {
   PhotoIcon,
   ArrowPathIcon,
   CheckIcon,
+  PaintBrushIcon,
+  ChatBubbleLeftRightIcon,
+  SparklesIcon,
+  FilmIcon,
+  TrashIcon,
+  ArrowUpCircleIcon,
+  MoonIcon,
+  SunIcon,
 } from '@heroicons/react/24/outline'
 import useThemeStore from '../../store/useThemeStore'
 import Button from '../common/Button'
@@ -25,6 +33,7 @@ const AppearanceSettings = () => {
     messageAnimation,
     setMessageAnimation,
     getAvailableThemes,
+    resetAppearance,
   } = useThemeStore()
 
   const [selectedWallpaper, setSelectedWallpaper] = useState(null)
@@ -54,19 +63,19 @@ const AppearanceSettings = () => {
   ]
 
   const messageStatusStyles = [
-    { id: 'default', name: 'Default', icon: '✓✓' },
-    { id: 'minimal', name: 'Minimal', icon: '✓' },
-    { id: 'dots', name: 'Dots', icon: '●●' },
-    { id: 'bars', name: 'Bars', icon: '▌▌' },
-    { id: 'circles', name: 'Circles', icon: '⦿⦿' },
+    { id: 'default', name: 'Default', icon: 'double' },
+    { id: 'minimal', name: 'Minimal', icon: 'single' },
+    { id: 'dots', name: 'Dots', icon: 'dot' },
+    { id: 'bars', name: 'Bars', icon: 'bar' },
+    { id: 'circles', name: 'Circles', icon: 'circle' },
   ]
 
   const chatEffects = [
-    { id: 'none', name: 'None', emoji: '🚫' },
-    { id: 'particles', name: 'Particles', emoji: '✨' },
-    { id: 'snow', name: 'Snow', emoji: '❄️' },
-    { id: 'hearts', name: 'Hearts', emoji: '💕' },
-    { id: 'stars', name: 'Stars', emoji: '⭐' },
+    { id: 'none', name: 'None', icon: SparklesIcon },
+    { id: 'particles', name: 'Particles', icon: SparklesIcon },
+    { id: 'snow', name: 'Snow', icon: MoonIcon },
+    { id: 'hearts', name: 'Hearts', icon: SparklesIcon },
+    { id: 'stars', name: 'Stars', icon: SunIcon },
   ]
 
   const messageAnimations = [
@@ -118,13 +127,8 @@ const AppearanceSettings = () => {
   }
 
   const handleResetToDefaults = () => {
-    if (confirm('Are you sure you want to reset all appearance settings to defaults?')) {
-      setTheme('light')
-      setFontSize('medium')
-      setChatWallpaper(null)
-      setBubbleStyle('modern')
-      setChatEffect('none')
-      setMessageAnimation('slide')
+    if (window.confirm('Reset all appearance settings to defaults?')) {
+      resetAppearance()
       toast.success('Appearance settings reset to defaults')
     }
   }
@@ -133,8 +137,9 @@ const AppearanceSettings = () => {
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          🎨 Appearance
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+          <PaintBrushIcon className="w-6 h-6 text-primary-500" />
+          Appearance
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
           Customize how GBChat looks — themes, effects, and more
@@ -143,9 +148,10 @@ const AppearanceSettings = () => {
 
       {/* Theme Selection Grid */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Themes
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Themes</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          {Object.keys(allThemes).length} themes — each one changes the whole app palette.
+        </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {Object.entries(allThemes).map(([themeId, themeData]) => (
             <motion.button
@@ -165,13 +171,27 @@ const AppearanceSettings = () => {
                   <CheckIcon className="w-3 h-3 text-white" />
                 </div>
               )}
-              {/* Color preview strip */}
+              {/* Palette preview: accent, surface, canvas */}
               <div
-                className="w-full h-8 rounded-lg mb-2"
-                style={{ background: `linear-gradient(135deg, ${themeData.primary}, ${themeData.background})` }}
-              />
+                className="w-full h-10 rounded-lg mb-2 flex overflow-hidden ring-1 ring-black/5"
+                style={{ background: themeData.background }}
+              >
+                <span className="w-1/4 h-full" style={{ background: themeData.primary }} />
+                <span
+                  className="w-1/4 h-full"
+                  style={{ background: themeData.surface }}
+                />
+                <span
+                  className="flex-1 h-full border-l border-black/10"
+                  style={{ background: themeData.surfaceAlt }}
+                />
+              </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-base">{themeData.emoji}</span>
+                {themeData.mode === 'dark' ? (
+                  <MoonIcon className="w-3.5 h-3.5 text-gray-400" />
+                ) : (
+                  <SunIcon className="w-3.5 h-3.5 text-amber-500" />
+                )}
                 <p className="font-medium text-gray-900 dark:text-white text-sm">
                   {themeData.name}
                 </p>
@@ -186,8 +206,9 @@ const AppearanceSettings = () => {
 
       {/* Bubble Style */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          💬 Bubble Style
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <ChatBubbleLeftRightIcon className="w-5 h-5 text-primary-500" />
+          Bubble style
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {bubbleStyles.map((style) => (
@@ -210,8 +231,9 @@ const AppearanceSettings = () => {
 
       {/* Chat Effects */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          ✨ Chat Effects
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <SparklesIcon className="w-5 h-5 text-primary-500" />
+          Chat effects
         </h3>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
           {chatEffects.map((effect) => (
@@ -225,7 +247,7 @@ const AppearanceSettings = () => {
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
               )}
             >
-              <span className="text-2xl block mb-1">{effect.emoji}</span>
+              <effect.icon className="w-6 h-6 mx-auto mb-1.5 text-primary-500" />
               <p className="text-xs font-medium text-gray-900 dark:text-white">{effect.name}</p>
             </button>
           ))}
@@ -234,8 +256,9 @@ const AppearanceSettings = () => {
 
       {/* Message Animations */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          🎬 Message Animations
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <FilmIcon className="w-5 h-5 text-primary-500" />
+          Message animations
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {messageAnimations.map((anim) => (
@@ -397,7 +420,8 @@ const AppearanceSettings = () => {
       {/* Wallpaper Customization */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          🖼️ Wallpaper Customization
+          <PhotoIcon className="w-5 h-5 text-primary-500" />
+          Wallpaper customization
         </h3>
         <div className="space-y-6">
           {/* Wallpaper Opacity */}
@@ -441,7 +465,8 @@ const AppearanceSettings = () => {
       {/* Message Status Style */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          📬 Message Status Styles
+          <CheckBadgeIcon className="w-5 h-5 text-primary-500" />
+          Message status styles
         </h3>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
           {messageStatusStyles.map((style) => (
@@ -455,7 +480,22 @@ const AppearanceSettings = () => {
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
               )}
             >
-              <p className="text-2xl mb-1">{style.icon}</p>
+              <div className="flex items-center justify-center gap-0.5 mb-1 h-7 text-primary-500">
+                {style.icon === 'double' && (
+                  <>
+                    <CheckIcon className="w-4 h-4" />
+                    <CheckIcon className="w-4 h-4 -ml-2" />
+                  </>
+                )}
+                {style.icon === 'single' && <CheckIcon className="w-4 h-4" />}
+                {style.icon === 'dot' && <span className="w-2 h-2 rounded-full bg-current" />}
+                {style.icon === 'bar' && (
+                  <span className="w-6 h-1.5 rounded-full bg-current" />
+                )}
+                {style.icon === 'circle' && (
+                  <span className="w-4 h-4 rounded-full border-2 border-current" />
+                )}
+              </div>
               <p className="text-xs font-medium text-gray-900 dark:text-white">{style.name}</p>
             </button>
           ))}
@@ -465,7 +505,8 @@ const AppearanceSettings = () => {
       {/* Auto Cache Cleaner */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          🗑️ Auto Cache Cleaner
+          <TrashIcon className="w-5 h-5 text-primary-500" />
+          Auto cache cleaner
         </h3>
         <div className="space-y-4">
           <label className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl cursor-pointer">
@@ -499,7 +540,8 @@ const AppearanceSettings = () => {
           {autoCacheClean && (
             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
               <p className="text-sm text-green-800 dark:text-green-300">
-                ✅ Auto cache cleaner is enabled. Cache will be cleared automatically to free up space.
+                <CheckCircleIcon className="w-4 h-4 inline mr-1 text-emerald-500" />
+            Auto cache cleaner is enabled. Cache will be cleared automatically to free up space.
               </p>
             </div>
           )}
@@ -509,7 +551,8 @@ const AppearanceSettings = () => {
       {/* Auto Update Settings */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          🔄 Auto Update Settings
+          <ArrowUpCircleIcon className="w-5 h-5 text-primary-500" />
+          Auto update settings
         </h3>
         <div className="space-y-4">
           <label className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl cursor-pointer">
@@ -555,7 +598,8 @@ const AppearanceSettings = () => {
                 />
               </label>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                🔔 You'll receive email notifications at {updateEmail || 'your email'} when new updates are available
+                <BellIcon className="w-4 h-4 inline mr-1 text-amber-500" />
+            You'll receive email notifications at {updateEmail || 'your email'} when new updates are available
               </p>
             </div>
           )}

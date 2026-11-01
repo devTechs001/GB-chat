@@ -13,6 +13,7 @@ import {
   DevicePhoneMobileIcon,
   FingerPrintIcon,
   ExclamationTriangleIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline'
 import useAuthStore from '../../store/useAuthStore'
 import Button from '../common/Button'
@@ -213,7 +214,8 @@ const PrivacySettings = () => {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
         <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            🛡️ GB Advanced Privacy
+            <ShieldCheckIcon className="w-5 h-5 text-primary-500" />
+            GB Advanced Privacy
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Premium privacy features exclusive to GBChat
@@ -224,7 +226,7 @@ const PrivacySettings = () => {
           {/* Freeze Last Seen */}
           <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
             <div className="flex items-center gap-3 flex-1">
-              <span className="text-xl flex-shrink-0">🧊</span>
+              <BoltIcon className="w-5 h-5 flex-shrink-0 text-cyan-500" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   Freeze Last Seen
@@ -245,7 +247,7 @@ const PrivacySettings = () => {
           {/* Anti-Delete Messages */}
           <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
             <div className="flex items-center gap-3 flex-1">
-              <span className="text-xl flex-shrink-0">🔄</span>
+              <ArrowPathIcon className="w-5 h-5 flex-shrink-0" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   Anti-Delete Messages
@@ -266,7 +268,7 @@ const PrivacySettings = () => {
           {/* Hide Second Tick */}
           <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
             <div className="flex items-center gap-3 flex-1">
-              <span className="text-xl flex-shrink-0">✓✓</span>
+              <CheckBadgeIcon className="w-5 h-5 flex-shrink-0 text-emerald-500" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   Hide Second Tick
@@ -287,7 +289,7 @@ const PrivacySettings = () => {
           {/* Hide Typing Indicator */}
           <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
             <div className="flex items-center gap-3 flex-1">
-              <span className="text-xl flex-shrink-0">⌨️</span>
+              <KeyboardIcon className="w-5 h-5 flex-shrink-0 text-indigo-500" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   Hide Typing
@@ -308,7 +310,7 @@ const PrivacySettings = () => {
           {/* Hide Recording Indicator */}
           <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
             <div className="flex items-center gap-3 flex-1">
-              <span className="text-xl flex-shrink-0">🎙️</span>
+              <MicrophoneIcon className="w-5 h-5 flex-shrink-0 text-rose-500" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   Hide Recording
@@ -329,7 +331,7 @@ const PrivacySettings = () => {
           {/* Anti View Once */}
           <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
             <div className="flex items-center gap-3 flex-1">
-              <span className="text-xl flex-shrink-0">👁️</span>
+              <EyeIcon className="w-5 h-5 flex-shrink-0 text-amber-500" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   Anti View Once
@@ -350,7 +352,7 @@ const PrivacySettings = () => {
           {/* DND Mode */}
           <label className="flex items-center justify-between gap-4 p-4 md:p-6 cursor-pointer">
             <div className="flex items-center gap-3 flex-1">
-              <span className="text-xl flex-shrink-0">🔕</span>
+              <BellSlashIcon className="w-5 h-5 flex-shrink-0 text-gray-500" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   DND Mode

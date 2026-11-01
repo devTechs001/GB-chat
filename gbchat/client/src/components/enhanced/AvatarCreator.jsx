@@ -735,7 +735,7 @@ const AvatarCreator = ({ onClose, onSave, initialAvatar = null }) => {
 
       // Call onSave with the file and configuration
       await onSave(file, selectedOptions)
-      toast.success('Custom avatar saved! 🎨')
+      toast.success('Custom avatar saved')
     } catch (error) {
       console.error('Failed to save avatar:', error)
       toast.error('Failed to save avatar')

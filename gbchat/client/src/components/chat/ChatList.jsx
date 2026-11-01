@@ -16,7 +16,7 @@ import EmptyState from '../layout/EmptyState'
 import clsx from 'clsx'
 
 const ChatList = ({ onChatSelect, className }) => {
-  const { chats, searchQuery, setSearchQuery, isLoading } = useChatStore()
+  const { chats, searchQuery, setSearchQuery, loading: isLoading, error, fetchChats } = useChatStore()
   const [filter, setFilter] = useState('all') // all, unread, groups, archived
   const [sortBy, setSortBy] = useState('date') // date, name, unread
   const [showNewChatModal, setShowNewChatModal] = useState(false)
@@ -179,6 +179,16 @@ const ChatList = ({ onChatSelect, className }) => {
                 </div>
               </div>
             ))}
+          </div>
+        ) : error && filteredChats.length === 0 ? (
+          <div className="p-6 text-center">
+            <p className="text-sm text-gray-500">{error}</p>
+            <button
+              onClick={() => fetchChats()}
+              className="mt-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              Try again
+            </button>
           </div>
         ) : filteredChats.length === 0 ? (
           <EmptyState

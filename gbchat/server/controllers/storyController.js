@@ -2,6 +2,7 @@
 import Story from "../models/Story.js";
 import User from "../models/User.js";
 import cloudinary from "../config/cloudinary.js";
+import Notification from "../models/Notification.js";
 
 export const createStory = async (req, res, next) => {
   try {
@@ -121,6 +122,15 @@ export const viewStory = async (req, res, next) => {
 
       // Notify story owner
       const io = req.app.get("io");
+      await Notification.createFor({
+        user: story.user,
+        type: "story_view",
+        title: "Someone viewed your story",
+        body: `${req.user.fullName || "A contact"} viewed your story`,
+        actor: req.user._id,
+        storyId: story._id,
+      });
+
       io.to(story.user.toString()).emit("storyViewed", {
         storyId: story._id,
         viewer: { _id: req.user._id, fullName: req.user.fullName, avatar: req.user.avatar },
@@ -149,6 +159,18 @@ export const reactToStory = async (req, res, next) => {
 
     await story.save();
 
+    if (story.user.toString() !== req.user._id.toString()) {
+      await Notification.createFor({
+        user: story.user,
+        type: "story_reaction",
+        title: "New story reaction",
+        body: `${req.user.fullName || "A contact"} reacted ${reaction || ""} to your story`.trim(),
+        actor: req.user._id,
+        storyId: story._id,
+        data: { reaction },
+      });
+    }
+
     const io = req.app.get("io");
     io.to(story.user.toString()).emit("storyReaction", {
       storyId: story._id,
@@ -169,6 +191,15 @@ export const replyToStory = async (req, res, next) => {
 
     story.replies.push({ user: req.user._id, text });
     await story.save();
+
+    await Notification.createFor({
+      user: story.user,
+      type: "story_reply",
+      title: "New reply to your story",
+      body: text?.slice(0, 140) || "",
+      actor: req.user._id,
+      storyId: story._id,
+    });
 
     const io = req.app.get("io");
     io.to(story.user.toString()).emit("storyReply", {

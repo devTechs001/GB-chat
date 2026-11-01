@@ -12,18 +12,33 @@ import Dropdown from '../common/Dropdown'
 import IconButton from '../common/IconButton'
 import clsx from 'clsx'
 
-const ContactCard = ({ contact, onClick, onMessage, onCall, onVideoCall }) => {
+const ContactCard = ({ contact, onClick, onMessage, onCall, onVideoCall, onDelete, onToggleFavorite }) => {
   const menuItems = [
-    { label: 'View Profile', action: 'view' },
-    { label: 'Add to Favorites', action: 'favorite' },
-    { label: 'Share Contact', action: 'share' },
+    { label: 'View profile', action: 'view' },
+    {
+      label: contact.isFavorite ? 'Remove from favorites' : 'Add to favorites',
+      action: 'favorite',
+    },
+    { label: 'Share contact', action: 'share' },
     { divider: true },
-    { label: 'Block Contact', action: 'block', danger: true },
-    { label: 'Delete Contact', action: 'delete', danger: true },
+    { label: 'Delete contact', action: 'delete', danger: true },
   ]
 
-  const handleMenuAction = (action) => {
-    console.log('Menu action:', action, contact)
+  const handleMenuAction = async (action) => {
+    if (action === 'view') onClick?.(contact)
+    if (action === 'favorite') onToggleFavorite?.(contact)
+    if (action === 'delete') onDelete?.(contact)
+    if (action === 'share') {
+      const shareText = [contact.name, contact.phoneNumber || contact.phone, contact.email]
+        .filter(Boolean)
+        .join(' · ')
+      try {
+        if (navigator.share) await navigator.share({ title: contact.name, text: shareText })
+        else await navigator.clipboard.writeText(shareText)
+      } catch {
+        /* cancelled */
+      }
+    }
   }
 
   return (

@@ -4,6 +4,7 @@ import {
   searchUsers,
   getUserProfile,
   uploadAvatar,
+  removeAvatar,
   blockUser,
   unblockUser,
   getBlockedUsers,
@@ -34,6 +35,7 @@ router.get("/online", getOnlineUsers);
 router.get("/blocked", getBlockedUsers);
 router.get("/:id", getUserProfile);
 router.post("/avatar", uploadAvatarDisk.single("avatar"), uploadAvatar);
+router.delete("/avatar", removeAvatar);
 router.patch("/profile", updateProfile);
 router.patch("/status", updateStatus);
 router.post("/:userId/block", blockUser);

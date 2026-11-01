@@ -30,6 +30,7 @@ import useChatStore from '../../store/useChatStore'
 import useGBFeaturesStore from '../../store/useGBFeaturesStore'
 import useAuthStore from '../../store/useAuthStore'
 import CallInterface from '../calls/CallInterface'
+import useCallStore from '../../store/useCallStore'
 import ChatDisplaySettings from '../settings/ChatDisplaySettings'
 import WallpaperSelector from './WallpaperSelector'
 import MediaGallery from './MediaGallery'
@@ -265,12 +266,35 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
     }
   }
 
-  const handleStartCall = (isVideo = false) => {
+  const handleStartCall = async (isVideo = false) => {
+    const participantId =
+      otherParticipant?.user?._id || otherParticipant?.user?.id || chat?.userId || chat?.otherUser?._id
+
+    if (!participantId) {
+      toast.error('This contact cannot be called yet')
+      return
+    }
+
     setCallType(isVideo ? 'video' : 'audio')
-    setShowCallInterface(true)
+    const result = await useCallStore
+      .getState()
+      .initiateCall({
+        participantId,
+        chatId: chat?._id,
+        type: isVideo ? 'video' : 'audio',
+        peer: {
+          _id: participantId,
+          name: displayName,
+          avatar: displayAvatar,
+        },
+      })
+
+    if (result.success) setShowCallInterface(true)
   }
 
   const handleEndCall = () => {
+    const active = useCallStore.getState().activeCall
+    useCallStore.getState().endCall(active?._id)
     setShowCallInterface(false)
   }
 

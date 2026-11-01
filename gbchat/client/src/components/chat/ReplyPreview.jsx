@@ -25,17 +25,17 @@ const ReplyPreview = ({ message, onCancel }) => {
 
     switch (message.type) {
       case 'image':
-        return '📷 Photo'
+        return 'Photo'
       case 'video':
-        return '🎬 Video'
+        return 'Video'
       case 'document':
-        return '📄 Document'
+        return 'Document'
       case 'voice':
-        return '🎤 Voice message'
+        return 'Voice message'
       case 'audio':
-        return '🎵 Audio'
+        return 'Audio'
       case 'location':
-        return '📍 Location'
+        return 'Location'
       default:
         return contentText || 'Media message'
     }

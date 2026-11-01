@@ -23,7 +23,14 @@ const StoryCard = ({
   isCloseFriend = false,
   isHighlight = false 
 }) => {
-  const hasUnviewed = !story.viewedBy?.includes(story.currentUserId)
+  const owner = story.user || story.userId || {}
+  const viewerIds = [
+    ...(story.viewedBy || []),
+    ...(story.viewers || []).map((v) => v?.user?._id || v?.user),
+  ].filter(Boolean)
+  const hasUnviewed = story.currentUserId
+    ? !viewerIds.some((id) => String(id) === String(story.currentUserId))
+    : true
   const mediaCount = story.media?.length || 0
   const isVideo = story.media?.[0]?.type === 'video'
 
@@ -68,7 +75,7 @@ const StoryCard = ({
           <div className="absolute inset-0.5 bg-white dark:bg-gray-900 rounded-xl overflow-hidden">
             <img
               src={story.media?.[0]?.thumbnail || story.media?.[0]?.url}
-              alt={story.user?.name}
+              alt={(story.user?.fullName || story.user?.name || owner.fullName || owner.name || 'User')}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             />
             
@@ -88,8 +95,8 @@ const StoryCard = ({
           {/* User Avatar */}
           <div className="absolute top-1.5 left-1.5">
             <Avatar
-              src={story.user?.avatar}
-              alt={story.user?.name}
+              src={owner.avatar}
+              alt={(story.user?.fullName || story.user?.name || owner.fullName || owner.name || 'User')}
               size="xs"
               className={clsx(
                 'ring-2 transition-all duration-300',
@@ -112,8 +119,8 @@ const StoryCard = ({
             </div>
           )}
 
-          {/* Like Indicator */}
-          {story.isLiked && (
+          {/* My reaction on this specific story */}
+          {(story.myReaction || story.isLiked) && (
             <div className="absolute bottom-1.5 left-1.5 text-red-500">
               <HeartSolidIcon className="w-4 h-4 drop-shadow-lg" />
             </div>
@@ -122,7 +129,7 @@ const StoryCard = ({
 
         {/* User Name */}
         <p className="mt-2 text-xs text-center font-medium text-gray-900 dark:text-white truncate max-w-[80px] md:max-w-[90px]">
-          {isOwn ? 'My Story' : story.user?.name}
+          {isOwn ? 'My story' : owner.fullName || owner.name || 'User'}
         </p>
 
         {/* Time and Status */}

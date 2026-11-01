@@ -136,3 +136,58 @@ The client is shipping calls to endpoints the server does not expose. Because al
 * **Group invite link / join**, `POST /stories/mute|unmute`, `GET /channels/:id/follow` – still absent.
 * **`npm run lint` is broken** – `gbchat/client/eslint.config.js` uses the ESLint 9 flat-config helpers (`eslint/config`, `@eslint/js`, `globals`) while `eslint ^8.56` is installed, and the two packages the config imports are not in `devDependencies`. Either bump ESLint to v9 (+ those two devDeps) or point the `lint` script at the existing `eslintrc.cjs` with `ESLINT_USE_FLAT_CONFIG=false`.
 * `components/layout/TopBar.jsx` and `pages/HomePage.jsx` are unused. They were left in place (no feature removal); they can be deleted in a follow-up.
+
+## 4. Round 2 — polish, realtime and theming
+
+### 4.1 Theme system
+* `store/useThemeStore.js` rewritten: 12 themes (`light`, `dark`, `gb-green`, `amoled`, `midnight`, `ocean`, `forest`, `sunset`, `rose`, `cyberpunk`, `forestlight`, `sakura`). Each theme declares a **mode**, a full primary scale and surface tokens (canvas / surface / surface-alt / border / text / muted).
+* `applyTheme()` writes those to CSS custom properties on `<html>` (`--app-*`, `--color-primary-*`), sets `data-theme` / `data-mode` and `color-scheme`, so a theme change repaints the whole app — not just one accent colour.
+* `index.css` gained a token layer (`--app-*`, radii, elevations, `--list-pane-width`, `--nav-rail-width`), desktop primitives (`.app-canvas`, `.panel`, `.panel-header`, `.nav-rail`, `.list-pane`, `.detail-pane`, `.elev-1..3`, `.hover-lift`) and a *theme surface bridge* that maps the existing Tailwind neutral greys onto the active theme tokens.
+* Appearance settings renders palette swatches (accent / surface / canvas) with light-dark iconography instead of emoji, and "reset" now restores every appearance field.
+
+### 4.2 Loading screen
+* `components/common/Splash.jsx` rebuilt: branded logo mark, determinate progress, status copy, structural skeletons. No random blurred orbs, no `Math.random()` in render.
+* `components/common/Skeleton.jsx` adds `Skeleton`, `ListSkeleton`, `CardGridSkeleton`, `SettingsSkeleton`; used by the chat list, contacts, notification feed, media gallery and call picker.
+
+### 4.3 Stories — the "liking one likes all" bug
+Root cause: `StoryViewer` kept a single local `isLiked` flag that was never scoped to a story, never persisted, and shared across every story in the viewer.
+* `useStoryStore` now has `reactToStory(storyId, reaction, userId)` with per-story optimistic state (`myReaction`) and rollback, `viewStory(storyId, userId)` (idempotent, optimistic), `fetchStoryViewers`.
+* `StoryViewer` derives `reaction` from the story being viewed (`myReaction` → `viewers[]` → legacy `reactions[]`), resets on story change, and calls `POST /stories/:id/react`. Replies post to `POST /stories/:id/reply` with the server's `{ text }` payload; the viewer list comes from `GET /stories/:id/viewers`.
+* `GET /stories` is grouped per author (`{ user, stories[] }`) — the store now flattens it, so cards, ownership and view counts are correct.
+* Cards show `myReaction` per story instead of a shared `isLiked`.
+* Server-side: story view/reaction/reply now create `Notification` records for the owner.
+
+### 4.4 Profile
+* "Clicking my profile shows user not found" fixed: `/profile/:userId` now treats `me`, the cached `auth-storage` user and the signed-in id as *self* (rendered from local state, no network round-trip), falls back to cached data for other ids, and shows an actionable empty state instead of a bare string.
+* Avatar upload works from the profile page (camera-badge button, 5 MB + MIME validation) and **removal** is now real: `DELETE /api/users/avatar` (new endpoint, clears local files too). The old "upload an empty file" hack is gone.
+
+### 4.5 Realtime
+* `hooks/useSocket.js` rewritten around **one shared socket** (previously every `useSocket()` call opened its own connection with `forceNew: true`, so the server's `onlineUsers` map pointed at a stale socket). Handlers are attached once.
+* Client event names aligned with the server contract: `newMessage`, `messagesRead`/`messagesDelivered`, `typing`/`stopTyping` → `userTyping`/`userStopTyping`, `onlineUsers`/`userOnline`/`userOffline`, `incomingCall`/`callAccepted`/`callDeclined`/`callEnded`/`callFailed`.
+* `useChatStore` gained the missing realtime actions (`receiveMessage`, `updateMessageStatus`, `setTyping`, `setOnlineUsers`, `updateContact`).
+
+### 4.6 Calls (audio + video)
+* `hooks/usePeerConnection.js` implements the full signaling handshake the server already exposes (`webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate`), queues ICE candidates until the remote description exists, supports screen share track replacement, TURN via `VITE_TURN_URL`/`VITE_TURN_USERNAME`/`VITE_TURN_CREDENTIAL`, and surfaces media-permission errors.
+* `useCallStore` normalises server `Call` documents into the UI shape (direction, peer, participants), uses the real `participantId` payload, and never falls back to fake history outside demo mode.
+* New `components/calls/IncomingCallOverlay.jsx` — global ringing card with accept/decline, mounted in `App`, plus the live `CallInterface` ("Ringing…" until answered).
+
+### 4.7 Previously sample-only surfaces now on real APIs
+| Surface | Endpoint |
+| --- | --- |
+| Chat list | `GET /api/chats` (normalised participants, unread, last message) |
+| Groups list | `GET /api/groups` (**new**), plus star/archive/mute/leave/delete actions |
+| Group create (multi-select) | `POST /api/groups` |
+| Contacts | `GET/POST/DELETE /api/contacts`, `PATCH /api/contacts/:id/favorite` |
+| Notifications feed | `GET /api/notifications`, `PATCH /:id/read`, `PATCH /read-all`, `DELETE /:id`, `DELETE /` (**new**), backed by a new `Notification` model |
+| Notification settings | `GET/PUT /api/notifications/settings` |
+| Media, links & docs | `GET /api/chats/:id/media` (normalised `content.media`, lightbox, error + retry) |
+| App permissions | `GET /api/permissions`, `POST /api/permissions/device/*`, real contacts import |
+| Contact list for new calls | `GET /api/contacts` |
+
+### 4.8 Emoji → icons
+All emoji used as UI chrome were replaced with Heroicons across auth/feature grids, settings headers and toasts, story highlights, privacy toggles, cache cleaner, device list, empty states, announcement targeting and group toasts. Emoji that are *content* (chat effects, avatar creator parts, language flags, story reactions) were intentionally kept.
+
+### 4.9 Known gaps (still open)
+* Group calls (server models 1:1 only) and channel scheduled posts.
+* ESLint config mismatch (see §3.3) — lint is not runnable in this repo yet.
+* WebRTC needs a TURN server for real NAT traversal in production (`VITE_TURN_*`).

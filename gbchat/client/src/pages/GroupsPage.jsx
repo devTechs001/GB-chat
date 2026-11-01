@@ -104,20 +104,49 @@ const GroupsPage = () => {
   const [showEventCreator, setShowEventCreator] = useState(false)
   const [showMoreOptions, setShowMoreOptions] = useState(false)
 
-  const { groups, fetchChats, chats, setActiveChat, currentChat } = useChatStore()
+  const { fetchChats, setActiveChat } = useChatStore()
   const { user } = useAuthStore()
   const gbFeaturesStore = useGBFeaturesStore()
   const navigate = useNavigate()
 
-  // Get groups from chats or use sample data
-  const groupsList = groups.length > 0 ? groups : chats.filter(chat => chat.isGroup)
+  // Groups come from GET /api/groups (real data, falls back to chat store)
+  const [groupList, setGroupList] = useState([])
+  const [groupsLoading, setGroupsLoading] = useState(true)
+  const [groupsError, setGroupsError] = useState(null)
+  const { chats } = useChatStore()
+
+  const groupsList = groupList.length
+    ? groupList
+    : chats.filter((chat) => chat.isGroup || chat.type === 'group')
+
+  const fetchGroups = async () => {
+    setGroupsLoading(true)
+    setGroupsError(null)
+    try {
+      const { data } = await api.get('/groups')
+      setGroupList(Array.isArray(data?.groups) ? data.groups : [])
+    } catch (error) {
+      setGroupsError(
+        error.response?.status === 401
+          ? 'Sign in to see your groups'
+          : error.response?.data?.message || 'Could not load groups'
+      )
+      setGroupList([])
+    } finally {
+      setGroupsLoading(false)
+    }
+  }
 
   useEffect(() => {
+    fetchGroups()
     fetchChats()
     gbFeaturesStore.fetchGBFeatures()
+  }, [])
+
+  useEffect(() => {
     loadAnnouncements()
     calculateGroupStats()
-  }, [])
+  }, [groupsList.length])
 
   useEffect(() => {
     calculateGroupStats()
@@ -195,7 +224,7 @@ const GroupsPage = () => {
       
       setSelectedGroups(new Set())
       setShowBulkActions(false)
-      await fetchChats()
+      await fetchGroups()
     } catch (error) {
       toast.error('Failed to perform bulk action')
     } finally {
@@ -240,24 +269,58 @@ const GroupsPage = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await fetchChats()
+    await fetchGroups()
     await gbFeaturesStore.fetchGBFeatures()
-    calculateGroupStats()
-    setTimeout(() => setRefreshing(false), 1000)
+    setTimeout(() => setRefreshing(false), 600)
   }
 
   const handleCreateGroupSuccess = async (newGroup) => {
-    console.log('Group created successfully:', newGroup)
-    await fetchChats()
     setIsCreateGroupOpen(false)
-    toast.success('Group created successfully! 🎉')
+    if (newGroup?._id) {
+      setGroupList((previous) => [newGroup, ...previous.filter((g) => g._id !== newGroup._id)])
+    }
+    await fetchGroups()
+    toast.success('Group created')
   }
 
   const handleGroupClick = (group) => {
-    // Set the group as active chat to open chat area
     setActiveChat(group)
-    // Navigate to chats page (path is /chats or / in App.jsx)
     navigate('/chats')
+  }
+
+  /** Per-group actions used by the card menu */
+  const handleGroupAction = async (group, action) => {
+    const id = group._id
+    try {
+      if (action === 'star') {
+        const { data } = await api.patch(`/groups/${id}/star`)
+        setGroupList((previous) =>
+          previous.map((g) => (g._id === id ? { ...g, isStarred: data?.isStarred ?? !g.isStarred } : g))
+        )
+      } else if (action === 'archive') {
+        const { data } = await api.patch(`/groups/${id}/archive`)
+        setGroupList((previous) =>
+          previous.map((g) => (g._id === id ? { ...g, isArchived: data?.isArchived ?? !g.isArchived } : g))
+        )
+      } else if (action === 'mute') {
+        await api.post(`/groups/${id}/mute`)
+        setGroupList((previous) =>
+          previous.map((g) => (g._id === id ? { ...g, isMuted: !g.isMuted } : g))
+        )
+      } else if (action === 'leave') {
+        if (!window.confirm(`Leave ${group.name}?`)) return
+        await api.post(`/groups/${id}/leave`)
+        setGroupList((previous) => previous.filter((g) => g._id !== id))
+        toast.success('You left the group')
+      } else if (action === 'delete') {
+        if (!window.confirm(`Delete ${group.name} for everyone?`)) return
+        await api.delete(`/groups/${id}`)
+        setGroupList((previous) => previous.filter((g) => g._id !== id))
+        toast.success('Group deleted')
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || `Could not ${action} this group`)
+    }
   }
 
   const handleAnnouncementClick = (announcement) => {
@@ -330,7 +393,7 @@ const GroupsPage = () => {
         durationHours: pollData.durationHours || 24
       })
 
-      toast.success('Poll created successfully! 📊')
+      toast.success('Poll created')
       setShowPollCreator(false)
       
       // Refresh groups data to show new poll
@@ -362,7 +425,7 @@ const GroupsPage = () => {
         targetAudience: announcementData.targetAudience || 'all'
       })
 
-      toast.success('Announcement created successfully! 📢')
+      toast.success('Announcement published')
       setShowAnnouncementCreator(false)
       
       // Refresh groups data to show new announcement
@@ -396,7 +459,7 @@ const GroupsPage = () => {
         sendReminder: eventData.sendReminder || true
       })
 
-      toast.success('Event created successfully! 📅')
+      toast.success('Event created')
       setShowEventCreator(false)
       
       // Refresh groups data to show new event
@@ -423,7 +486,7 @@ const GroupsPage = () => {
         optionId: optionId
       })
 
-      toast.success('Vote submitted! ✓')
+      toast.success('Vote submitted')
       
       // Refresh polls data
       fetchChats()
@@ -450,9 +513,9 @@ const GroupsPage = () => {
       })
 
       const statusMessages = {
-        going: 'See you there! 🎉',
-        maybe: 'Maybe response recorded 🤔',
-        'not-going': 'Sorry you can\'t make it 😢',
+        going: 'See you there!',
+        maybe: 'Maybe response recorded',
+        'not-going': "Sorry you can't make it",
       }
       toast.success(statusMessages[status] || 'RSVP submitted!')
       
@@ -468,7 +531,7 @@ const GroupsPage = () => {
 
   // More Options handlers
   const handleImportGroups = () => {
-    toast.info('Import groups feature coming soon! 📥')
+    toast('Import groups is not available yet')
     setShowMoreOptions(false)
   }
 
@@ -478,12 +541,12 @@ const GroupsPage = () => {
   }
 
   const handleGroupSettings = () => {
-    toast.info('Global group settings coming soon! ⚙️')
+    toast('Global group settings are not available yet')
     setShowMoreOptions(false)
   }
 
   const handleHelpSupport = () => {
-    toast.info('Opening help & support... 📚')
+    toast('Opening help & support')
     setShowMoreOptions(false)
     // In a real app, this would navigate to help page or open support chat
   }
@@ -548,7 +611,13 @@ const GroupsPage = () => {
     <div className="flex flex-col h-full min-h-0 bg-gray-50 dark:bg-gray-950">
       <PageHeader
         title="Groups"
-        subtitle={`${groupsList.length} group${groupsList.length === 1 ? '' : 's'}`}
+        subtitle={
+          groupsLoading
+            ? 'Loading groups…'
+            : groupsError
+            ? groupsError
+            : `${groupsList.length} group${groupsList.length === 1 ? '' : 's'}`
+        }
         icon={UserGroupIcon}
         actions={
           <>
@@ -1130,8 +1199,14 @@ const GroupsPage = () => {
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>{formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}</span>
                     <div className="flex items-center gap-3">
-                      <span>👍 {announcement.likes}</span>
-                      <span>💬 {announcement.comments}</span>
+                      <span className="flex items-center gap-1">
+                        <HandThumbUpIcon className="w-3.5 h-3.5" />
+                        {announcement.likes}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <ChatBubbleLeftIcon className="w-3.5 h-3.5" />
+                        {announcement.comments}
+                      </span>
                     </div>
                   </div>
                 </motion.div>

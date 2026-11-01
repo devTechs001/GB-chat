@@ -21,7 +21,7 @@ import EmptyState from '../components/layout/EmptyState'
 import clsx from 'clsx'
 
 const CallsPage = () => {
-  const { callHistory, activeCall, fetchCallHistory, initiateCall } = useCallStore()
+  const { callHistory, activeCall, fetchCallHistory, initiateCall, isLoading, historyError } = useCallStore()
   const [filter, setFilter] = useState('all') // all, missed, incoming, outgoing
   const [searchQuery, setSearchQuery] = useState('')
   const [showCallInterface, setShowCallInterface] = useState(false)
@@ -62,9 +62,15 @@ const CallsPage = () => {
     return 'Connecting...'
   }
 
-  const handleCall = (user, isVideo = false) => {
-    initiateCall({ userId: user._id, type: isVideo ? 'video' : 'audio' })
-    setShowCallInterface(true)
+  const handleCall = async (user, isVideo = false) => {
+    const participantId = user?._id || user?.id
+    if (!participantId) return
+    const result = await initiateCall({
+      participantId,
+      type: isVideo ? 'video' : 'audio',
+      peer: { _id: participantId, name: user.name, avatar: user.avatar },
+    })
+    if (result.success) setShowCallInterface(true)
   }
 
   const groupCallsByDate = (calls) => {
@@ -140,7 +146,7 @@ const CallsPage = () => {
               <div key={date}>
                 <div className="px-4 py-2">
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    {date === new Date().toDateString() ? '📅 Today' : date}
+                    {date === new Date().toDateString() ? 'Today' : date}
                   </h3>
                 </div>
                 <div className="space-y-1">
@@ -184,7 +190,13 @@ const CallsPage = () => {
       </div>
 
       {showCallInterface && activeCall && (
-        <CallInterface callData={activeCall} onEnd={() => setShowCallInterface(false)} />
+        <CallInterface
+          callData={activeCall}
+          onEnd={() => {
+            useCallStore.getState().endCall(activeCall._id)
+            setShowCallInterface(false)
+          }}
+        />
       )}
 
       <NewCallModal isOpen={showNewCallModal} onClose={() => setShowNewCallModal(false)} />

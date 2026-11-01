@@ -145,7 +145,7 @@ const StoriesPage = () => {
         <div className="mx-4 mt-4 md:mx-6 md:mt-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-800 p-4 md:p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              ✨ My Story
+              My story
             </h2>
             <Button
               variant="secondary"
@@ -161,7 +161,7 @@ const StoriesPage = () => {
           </div>
           <div className="flex items-center gap-4">
             <StoryCardEnhanced
-              story={{ ...myStory, user, currentUserId: user._id }}
+              story={{ ...myStory, user: user || myStory.user, currentUserId: user?._id }}
               onClick={() => handleStoryClick(myStory, -1)}
               isOwn
             />
@@ -216,9 +216,10 @@ const StoriesPage = () => {
                   transition={{ delay: index * 0.05 }}
                 >
                   <StoryCardEnhanced
-                    story={story}
+                    story={{ ...story, currentUserId: user?._id }}
                     onClick={() => handleStoryClick(story, index)}
-                    isCloseFriend={user.closeFriends?.includes(story.user._id)}
+                    isOwn={String(story.user?._id || story.userId?._id) === String(user?._id)}
+                    isCloseFriend={user?.closeFriends?.includes(story.user?._id)}
                   />
                 </motion.div>
               ))}

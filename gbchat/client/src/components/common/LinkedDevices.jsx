@@ -99,15 +99,18 @@ const LinkedDevices = ({ isOpen, onClose }) => {
   };
 
   const getPlatformIcon = (platform) => {
-    const icons = {
-      windows: '🪟',
-      macos: '🍎',
-      linux: '🐧',
-      android: '🤖',
-      ios: '📱',
-      web: '🌐',
-    };
-    return icons[platform] || '❓';
+    const kind = {
+      windows: 'desktop',
+      macos: 'desktop',
+      linux: 'desktop',
+      android: 'mobile',
+      ios: 'mobile',
+      web: 'globe',
+    }[String(platform || '').toLowerCase()] || 'desktop';
+
+    if (kind === 'mobile') return <DevicePhoneMobileIcon className="w-4 h-4" />;
+    if (kind === 'globe') return <GlobeAltIcon className="w-4 h-4" />;
+    return <ComputerDesktopIcon className="w-4 h-4" />;
   };
 
   const formatDate = (dateString) => {
@@ -237,8 +240,8 @@ const LinkedDevices = ({ isOpen, onClose }) => {
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-sm text-gray-600 dark:text-gray-400">
-                          <span>{getPlatformIcon(device.platform)}</span>
-                          <span>{device.platform}</span>
+                          <span className="inline-flex items-center">{getPlatformIcon(device.platform)}</span>
+                          <span className="capitalize">{device.platform || 'device'}</span>
                           {device.browser && device.browser !== 'unknown' && (
                             <>
                               <span>•</span>

@@ -216,7 +216,7 @@ const AboutSection = () => {
       {/* Copyright */}
       <div className="text-center text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-gray-700">
         <p>© {new Date().getFullYear()} GBChat. All rights reserved.</p>
-        <p className="mt-1">Made with ❤️ for users worldwide</p>
+        <p className="mt-1">Made for users worldwide</p>
       </div>
     </div>
   );

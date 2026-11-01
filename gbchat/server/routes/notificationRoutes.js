@@ -11,12 +11,28 @@ import {
   getNotificationSounds,
   sendTestNotification,
 } from '../controllers/notificationController.js';
+import {
+  getNotifications,
+  getUnreadCount,
+  markNotificationRead,
+  markAllRead,
+  deleteNotification,
+  clearNotifications,
+} from '../controllers/notificationFeedController.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(protect);
+
+// Feed ---------------------------------------------------------------
+router.get('/', getNotifications);
+router.delete('/', clearNotifications);
+router.get('/unread-count', getUnreadCount);
+router.patch('/read-all', markAllRead);
+router.patch('/:id/read', markNotificationRead);
+router.delete('/:id', deleteNotification);
 
 // Get/Set notification settings
 router.get('/settings', getNotificationSettings);
