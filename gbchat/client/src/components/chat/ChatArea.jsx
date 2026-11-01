@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
 import ChatHeader from './ChatHeader'
 import ChatBubble from './ChatBubble'
 import ChatInput from './ChatInput'
@@ -12,6 +12,7 @@ import useAuthStore from '../../store/useAuthStore'
 import useThemeStore from '../../store/useThemeStore'
 import api from '../../lib/api'
 import clsx from 'clsx'
+import { Star as StarIcon } from 'lucide-react'
 import { shallow } from 'zustand/shallow'
 
 const ChatArea = ({ onInfoClick, onBack }) => {
@@ -51,6 +52,10 @@ const ChatArea = ({ onInfoClick, onBack }) => {
   })()
 
   const { chatWallpaper, chatEffect } = useThemeStore()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // ?message=<id> — set by the starred / pinned lists and notification links
+  const focusMessageId = searchParams.get('message')
+  const [highlightedMessage, setHighlightedMessage] = useState(null)
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
   const [replyTo, setReplyTo] = useState(null)
@@ -149,6 +154,33 @@ const ChatArea = ({ onInfoClick, onBack }) => {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  /* Deep link to one message: scroll to it, flash a ring, then drop the param
+     so a refresh does not keep jumping back. */
+  useEffect(() => {
+    if (!focusMessageId || !messages?.length) return
+
+    const timer = setTimeout(() => {
+      const node = document.getElementById(`message-${focusMessageId}`)
+      if (node) {
+        node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setHighlightedMessage(focusMessageId)
+      }
+
+      const next = new URLSearchParams(searchParams)
+      next.delete('message')
+      setSearchParams(next, { replace: true })
+    }, 250)
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusMessageId, messages.length])
+
+  useEffect(() => {
+    if (!highlightedMessage) return
+    const timer = setTimeout(() => setHighlightedMessage(null), 2600)
+    return () => clearTimeout(timer)
+  }, [highlightedMessage])
 
   // Simulate message status updates for testing
   useEffect(() => {
@@ -323,7 +355,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
                     animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
                     transition={{ duration: 3 + Math.random() * 3, repeat: Infinity, delay: Math.random() * 4 }}
                   >
-                    ⭐
+                    <StarIcon className="h-3 w-3 text-amber-300 drop-shadow" />
                   </motion.div>
                 ))}
               </div>
@@ -366,28 +398,17 @@ const ChatArea = ({ onInfoClick, onBack }) => {
                   (message.sender?.name === 'You')
                 );
 
-                // Debug - log EVERY message to see positioning
-                console.log(`Message #${index}:`, {
-                  id: messageId,
-                  'sender._id': message.sender?._id,
-                  'sender.fullName': message.sender?.fullName,
-                  senderId,
-                  userId,
-                  isMine,
-                  position: isMine ? 'RIGHT (mine)' : 'LEFT (theirs)',
-                  content: message.content,
-                  status: message.status
-                })
-
                 return (
                 <motion.div
                   key={messageId}
+                  id={`message-${messageId}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: Math.min(index, 12) * 0.03 }}
                   className={clsx(
-                    'mb-1 md:mb-2',
-                    selectedMessages.includes(messageId) && 'bg-blue-50/50 dark:bg-blue-900/20 -mx-2 px-2 rounded-lg'
+                    'mb-1 rounded-lg md:mb-2',
+                    selectedMessages.includes(messageId) && '-mx-2 bg-blue-50/50 px-2 dark:bg-blue-900/20',
+                    highlightedMessage === messageId && 'ring-2 ring-primary-500/70 ring-offset-2 ring-offset-transparent'
                   )}
                 >
                   <ChatBubble

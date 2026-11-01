@@ -75,6 +75,24 @@ const userSchema = new mongoose.Schema(
       enum: ["aurora", "sunset", "ocean", "forest", "midnight", "rose", "graphite"],
       default: "aurora",
     },
+    /** Public extras shown on the profile "About" card. */
+    jobTitle: {
+      type: String,
+      default: "",
+      maxlength: 80,
+    },
+    /** IANA zone id, e.g. "Africa/Nairobi" — lets the profile show local time. */
+    timezone: {
+      type: String,
+      default: "",
+      maxlength: 64,
+    },
+    /** How many times another member opened this profile. */
+    profileViews: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     /** Free-form status line ("In a meeting") — `status` stays presence. */
     statusText: {
       type: String,
@@ -278,6 +296,8 @@ userSchema.methods.toPublicProfile = function () {
     pronouns: this.pronouns,
     coverGradient: this.coverGradient,
     statusText: this.statusText,
+    jobTitle: this.jobTitle,
+    timezone: this.timezone,
     isVerified: this.isVerified,
     email: this.email,
     phone: this.phone,

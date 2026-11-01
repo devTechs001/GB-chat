@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   UserCircleIcon,
@@ -43,16 +44,37 @@ const SECTIONS = [
  *  < lg : section list (master) ⇄ section content (detail)
  */
 const SettingsPage = () => {
-  const [activeSection, setActiveSection] = useState('account')
+  const navigate = useNavigate()
+  const { section: routeSection } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedSection = routeSection || searchParams.get('section') || 'account'
+  const isValidSection = SECTIONS.some((entry) => entry.id === requestedSection)
+
+  const [activeSection, setActiveSection] = useState(isValidSection ? requestedSection : 'account')
   const [showGBFeaturesDrawer, setShowGBFeaturesDrawer] = useState(false)
   const [mobileContentOpen, setMobileContentOpen] = useState(false)
 
   const currentSection = SECTIONS.find((section) => section.id === activeSection) || SECTIONS[0]
   const ActiveComponent = currentSection.component
 
+  // Deep links (/settings/privacy, /settings?section=help) win over local state,
+  // so notifications can link straight to the pane they are talking about.
+  useEffect(() => {
+    if (!routeSection && !searchParams.get('section')) return
+    if (!isValidSection) {
+      setSearchParams({}, { replace: true })
+      return
+    }
+    setActiveSection(requestedSection)
+    setMobileContentOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedSection, isValidSection])
+
   const openSection = (sectionId) => {
     setActiveSection(sectionId)
     setMobileContentOpen(true)
+    // Keep the URL shareable without remounting the page.
+    navigate(`/settings/${sectionId}`, { replace: true })
   }
 
   const SectionList = ({ onSelect }) => (
@@ -129,7 +151,7 @@ const SettingsPage = () => {
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-            <SectionList onSelect={setActiveSection} />
+            <SectionList onSelect={openSection} />
             <div className="px-3 pb-4">
               <button
                 onClick={() => setShowGBFeaturesDrawer(true)}

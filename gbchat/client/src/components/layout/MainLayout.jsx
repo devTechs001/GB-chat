@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import Sidebar from './Sidebar'
 import SidePanel from './SidePanel'
 import BottomNav from './BottomNav'
+import OfflineBanner from './OfflineBanner'
 import useMediaQuery from '../../hooks/useMediaQuery'
 
 /**
@@ -125,6 +126,7 @@ const MainLayout = () => {
 
       {/* ---------- Content ---------- */}
       <div className="flex-1 min-w-0 flex flex-col h-full">
+        <OfflineBanner />
         <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <Outlet context={outletContext} />
         </main>

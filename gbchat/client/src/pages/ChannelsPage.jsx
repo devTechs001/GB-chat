@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   PlusIcon,
@@ -11,6 +12,7 @@ import {
   CurrencyDollarIcon,
 } from '@heroicons/react/24/outline'
 import ChannelCard from '../components/channels/ChannelCard'
+import ChannelDetail from '../components/channels/ChannelDetail'
 import ChannelCreate from '../components/channels/ChannelCreate'
 import ChannelAnalytics from '../components/channels/ChannelAnalytics'
 import ChannelPostScheduler from '../components/channels/ChannelPostScheduler'
@@ -72,6 +74,8 @@ const SAMPLE_CHANNELS = [
 ]
 
 const ChannelsPage = () => {
+  const navigate = useNavigate()
+  const { channelId } = useParams()
   const [channels, setChannels] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, subscribed, trending
@@ -208,6 +212,18 @@ const ChannelsPage = () => {
     { id: 'scheduler', label: 'Scheduler', icon: CalendarIcon },
     { id: 'monetization', label: 'Monetize', icon: CurrencyDollarIcon },
   ]
+
+  /* /channels/:channelId renders the channel itself, not the browse grid. */
+  if (channelId) {
+    const initial = channels.find((channel) => String(channel._id) === String(channelId)) || null
+    return (
+      <ChannelDetail
+        channelId={channelId}
+        initialChannel={initial}
+        onBack={() => navigate('/channels')}
+      />
+    )
+  }
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-gray-50 dark:bg-gray-950">

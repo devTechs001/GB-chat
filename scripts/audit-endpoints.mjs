@@ -1,296 +1,317 @@
 #!/usr/bin/env node
 /**
- * audit-endpoints.mjs
+ * audit-endpoints.mjs — deeper companion to `check-endpoints.mjs`.
  *
- * A deeper companion to `check-endpoints.mjs`. Where that script only asks
- * "does every client call have a server route?", this one audits the API
- * itself and writes a Markdown report:
+ * `check-endpoints` answers "does every call the client makes exist?".
+ * This one answers the ops questions:
  *
- *   - every registered route, grouped by mounted router
- *   - whether the router requires auth (`router.use(protect)`)
- *   - whether the client actually calls it
- *   - client calls with no matching server route
- *   - duplicate / shadowed routes
- *   - routes that look public but mutate data
+ *   • what does each mounted router expose, and how many routes is that?
+ *   • which routes are reachable without `protect` (auth) on the router itself?
+ *   • which method+path pairs are declared twice (first one wins silently)?
+ *   • which endpoints has no client called (dead surface, or admin/ops only)?
  *
- *   node scripts/audit-endpoints.mjs            # print summary + write report
- *   node scripts/audit-endpoints.mjs --stdout   # print the whole report
+ * Output: gbchat/docs/ENDPOINT_AUDIT.md  (+ a short stdout summary)
  *
- * Report: gbchat/docs/ENDPOINT_AUDIT.md
+ *   node scripts/audit-endpoints.mjs [--json]
  */
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const serverDir = path.join(root, 'gbchat', 'server')
-const clientSrc = path.join(root, 'gbchat', 'client', 'src')
-const reportPath = path.join(root, 'gbchat', 'docs', 'ENDPOINT_AUDIT.md')
+const here = path.dirname(fileURLToPath(import.meta.url))
+const root = path.resolve(here, '..')
+const gb = path.join(root, 'gbchat')
+const serverRoutesDir = path.join(gb, 'server', 'routes')
+const clientSrc = path.join(gb, 'client', 'src')
+const indexFile = path.join(gb, 'server', 'index.js')
+const outFile = path.join(gb, 'docs', 'ENDPOINT_AUDIT.md')
 
-const read = (file) => fs.readFileSync(file, 'utf8')
-
-const walk = (dir, extensions) => {
+const walk = (dir, exts = ['.js']) => {
   const out = []
-  if (!fs.existsSync(dir)) return out
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) out.push(...walk(full, extensions))
-    else if (extensions.some((ext) => entry.name.endsWith(ext))) out.push(full)
+  const visit = (current) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        if (['node_modules', 'dist', 'build', '.git'].includes(entry.name)) continue
+        visit(full)
+      } else if (exts.includes(path.extname(entry.name))) {
+        out.push(full)
+      }
+    }
   }
+  visit(dir)
   return out
 }
 
-const normalize = (routePath) =>
-  routePath
+// ---------------------------------------------------------------- helpers
+const normalize = (route) => {
+  // Query strings never identify a route — drop them before comparing.
+  const cleaned = route
+    .split('?')[0]
     .replace(/\$\{[^}]+\}/g, ':id')
-    .replace(/\?.*$/, '')
-    .replace(/:[A-Za-z_]+/g, ':id')
-    .replace(/(.)\/$/, '$1')
+    .replace(/:[A-Za-z0-9_]+/g, ':id')
+    .replace(/\/+$/, '')
+    .replace(/\/{2,}/g, '/')
+  return cleaned !== '' ? cleaned : '/'
+}
 
 const METHODS = ['get', 'post', 'put', 'patch', 'delete']
 
 // ---------------------------------------------------------------- mounts
-const indexSource = read(path.join(serverDir, 'index.js'))
+const indexSource = fs.readFileSync(indexFile, 'utf8')
 const mounts = new Map()
+
 for (const match of indexSource.matchAll(/app\.use\(\s*["']([^"']+)["']\s*,([^)]*)\)/g)) {
-  for (const arg of match[2].split(',')) {
-    const name = arg.trim()
-    if (/^[A-Za-z_$][\w$]*$/.test(name)) mounts.set(name, match[1])
+  const mountPath = match[1]
+  const args = match[2]
+  const identifiers = args
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => /^[A-Za-z_$][\w$]*$/.test(part))
+  for (const identifier of identifiers) {
+    if (!mounts.has(identifier)) mounts.set(identifier, [])
+    if (!mounts.get(identifier).includes(mountPath)) mounts.get(identifier).push(mountPath)
   }
 }
 
-const inlineRoutes = [...indexSource.matchAll(/app\.(get|post|put|patch|delete)\(\s*["']([^"']+)["']/g)].map(
-  (m) => ({ file: 'index.js', method: m[1].toUpperCase(), full: m[2], mount: null, guarded: false })
-)
+// ---------------------------------------------------------------- routes
+const routers = []
+const allRoutes = []
+const seen = new Map()
 
-// ---------------------------------------------------------------- server routes
-const routes = [...inlineRoutes]
-
-for (const file of walk(path.join(serverDir, 'routes'), ['.js'])) {
+for (const file of walk(serverRoutesDir).sort()) {
   const routerName = path.basename(file, '.js')
-  const mount = mounts.get(routerName)
-  if (!mount) continue
+  const prefixes = mounts.get(routerName) || []
+  const source = fs.readFileSync(file, 'utf8')
 
-  const source = read(file)
-  // rough but useful: a router that applies protect() to everything
-  const guarded = /router\.use\(\s*protect\s*\)/.test(source)
-  const perRouteGuard = /protect/.test(source)
-  const seen = new Set()
+  const usesProtect = /router\.use\(\s*protect\s*\)/.test(source)
+  const perRouteAuth = /(get|post|put|patch|delete)\(\s*["'][^"']+["']\s*,\s*protect/.test(source)
 
-  const add = (method, routePath) => {
-    const method_ = method.toUpperCase()
-    const full = normalize(routePath === '/' ? mount : mount + routePath)
-    const key = `${method_} ${full}`
-    if (seen.has(key)) return
-    seen.add(key)
-    routes.push({
-      file: path.relative(path.join(root, 'gbchat'), file),
-      router: routerName,
-      mount,
-      method: method_,
-      full,
-      guarded: guarded || perRouteGuard,
-      routerGuarded: guarded,
-    })
-  }
+  const found = []
 
-  // chained: router.route('/x').get(h).post(h)
+  // chained: router.route('/x').get(a).post(b)
   for (const chain of source.matchAll(/router\.route\(\s*["']([^"']+)["']\s*\)([^;]*)/g)) {
-    for (const method of chain[2].matchAll(/\.(get|post|put|patch|delete)\(/g)) add(method[1], chain[1])
+    for (const method of chain[2].matchAll(/\.(get|post|put|patch|delete)\(/g)) {
+      found.push({
+        method: method[1].toUpperCase(),
+        route: chain[1],
+        pos: chain.index + (method.index || 0),
+      })
+    }
   }
 
-  for (const match of source.matchAll(/router\.(get|post|put|patch|delete)\(\s*["']([^"']+)/g)) {
-    add(match[1], match[2])
+  for (const match of source.matchAll(/router\.(get|post|put|patch|delete)\(\s*["']([^"']+)["']/g)) {
+    found.push({ method: match[1].toUpperCase(), route: match[2], pos: match.index })
   }
+
+  // Declaration order in the file is registration order — sort by offset, not
+  // by which regex happened to run first.
+  found.sort((a, b) => a.pos - b.pos)
+
+  // Order matters in Express: an earlier route can swallow a later literal one
+  // (`GET /:id` before `GET /mine`). Record the declaration order per router.
+  const ordered = []
+
+  for (const [index, item] of found.entries()) {
+    ordered.push({ ...item, index })
+  }
+
+  const entries = []
+  for (const { method, route } of found) {
+    const fullPaths = prefixes.length
+      ? prefixes.map((prefix) => normalize(prefix + (route === '/' ? '' : route)))
+      : [normalize(route)]
+
+    for (const fullPath of fullPaths) {
+      const key = `${method} ${fullPath}`
+      const auth = usesProtect || perRouteAuth
+      entries.push({ method, path: fullPath, auth, key })
+
+      if (seen.has(key)) {
+        seen.get(key).duplicates = (seen.get(key).duplicates || 0) + 1
+        seen.get(key).duplicateFiles.push(routerName)
+      } else {
+        const record = { ...entries[entries.length - 1], router: routerName, prefixes, duplicates: 0, duplicateFiles: [routerName] }
+        seen.set(key, record)
+        allRoutes.push(record)
+      }
+    }
+  }
+
+  // Does an earlier pattern match a later, more specific path?
+  const shadowed = []
+  for (const earlier of ordered) {
+    const pattern = new RegExp(
+      '^' + earlier.route.replace(/:[A-Za-z0-9_]+/g, '[^/]+').replace(/\*/g, '.*') + '$'
+    )
+    for (const later of ordered) {
+      if (later.index <= earlier.index) continue
+      if (later.method !== earlier.method) continue
+      if (later.route.includes(':') || later.route === earlier.route) continue
+      if (pattern.test(later.route)) {
+        shadowed.push({ method: later.method, literal: later.route, swallowedBy: earlier.route })
+      }
+    }
+  }
+
+  routers.push({
+    shadowed,
+    name: routerName,
+    file: path.relative(root, file),
+    prefixes,
+    mounted: prefixes.length > 0,
+    usesProtect,
+    perRouteAuth,
+    routes: entries,
+  })
 }
-
-routes.sort((a, b) => a.full.localeCompare(b.full) || a.method.localeCompare(b.method))
 
 // ---------------------------------------------------------------- client calls
 const clientCalls = new Map()
 for (const file of walk(clientSrc, ['.js', '.jsx'])) {
-  if (file.endsWith(path.join('lib', 'api.js'))) continue
-  const lines = read(file).split('\n')
-  lines.forEach((line, index) => {
+  if (file.endsWith(path.join('lib', 'api.js')) || file.endsWith(path.join('lib', 'token.js'))) continue
+  const lines = fs.readFileSync(file, 'utf8').split('\n')
+  lines.forEach((line, i) => {
     if (line.trim().startsWith('//')) return
-    for (const match of line.matchAll(/api\.(get|post|put|patch|delete)\(\s*[`'"]([^`'"]+)/g)) {
-      const key = `${match[1].toUpperCase()} ${normalize('/api' + match[2])}`
-      if (!clientCalls.has(key)) clientCalls.set(key, `${path.relative(clientSrc, file)}:${index + 1}`)
+    for (const m of line.matchAll(/api\.(get|post|put|patch|delete)\(\s*[`'"]([^`'"]+)/g)) {
+      const key = `${m[1].toUpperCase()} ${normalize('/api' + m[2])}`
+      if (!clientCalls.has(key)) clientCalls.set(key, `${path.relative(clientSrc, file)}:${i + 1}`)
     }
   })
 }
 
-const routeKeys = new Set(routes.map((r) => `${r.method} ${r.full}`))
-const unmatchedCalls = [...clientCalls.entries()]
-  .filter(([key]) => !routeKeys.has(key))
-  .sort((a, b) => a[0].localeCompare(b[0]))
+const clientSet = new Set(clientCalls.keys())
+const routeSet = new Set(allRoutes.map((r) => r.key))
 
-// duplicates: same "shape" (params collapsed already) registered twice
-const shape = new Map()
-for (const route of routes) {
-  const key = `${route.method} ${route.full}`
-  const list = shape.get(key) || []
-  list.push(route.file)
-  shape.set(key, list)
-}
-const duplicates = [...shape.entries()].filter(([, files]) => files.length > 1)
-
-// Shadowing: a literal path registered *after* a parameterised path of the same
-// shape can never be reached, because Express matches in definition order.
-const toRegex = (routePath) =>
-  new RegExp(
-    '^' + routePath.replace(/\/+$/, '').replace(/:[A-Za-z_]+/g, '[^/]+').replace(/\//g, '\\/') + '/?$'
-  )
-
-const shadowed = []
-for (const file of walk(path.join(serverDir, 'routes'), ['.js'])) {
-  const source = read(file)
-  const found = []
-  for (const match of source.matchAll(/router\.(get|post|put|patch|delete)\(\s*["']([^"']+)["']/g)) {
-    found.push({ method: match[1].toUpperCase(), path: match[2] })
-  }
-  for (const chain of source.matchAll(/router\.route\(\s*["']([^"']+)["']\s*\)([^;]*)/g)) {
-    for (const method of chain[2].matchAll(/\.(get|post|put|patch|delete)\(/g)) {
-      found.push({ method: method[1].toUpperCase(), path: chain[1] })
-    }
-  }
-
-  found.forEach((later, laterIndex) => {
-    if (later.path.includes(':')) return // only literal paths can be shadowed
-    found.forEach((earlier, earlierIndex) => {
-      if (earlierIndex >= laterIndex) return
-      if (earlier.method !== later.method) return
-      if (!earlier.path.includes(':')) return
-      // Only same-depth paths can shadow each other
-      const depth = (value) => value.split('/').filter(Boolean).length
-      if (depth(earlier.path) !== depth(later.path)) return
-      if (toRegex(earlier.path).test(later.path)) {
-        shadowed.push({
-          file: path.relative(path.join(root, 'gbchat'), file),
-          hidden: `${later.method} ${later.path}`,
-          shadowedBy: `${earlier.method} ${earlier.path}`,
-        })
-      }
-    })
-  })
-}
-
-const unprotected = routes.filter(
-  (route) => !route.guarded && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(route.method)
+const unmatchedClient = [...clientSet].filter((key) => !routeSet.has(key))
+const unusedRoutes = allRoutes.filter((route) => !clientSet.has(route.key))
+const duplicates = [...seen.values()].filter((route) => route.duplicates > 0)
+const unauthenticated = allRoutes.filter((route) => !route.auth)
+const unmounted = routers.filter((router) => !router.mounted)
+const shadowedRoutes = routers.flatMap((router) =>
+  (router.shadowed || []).map((entry) => ({ ...entry, router: router.name }))
 )
-const unusedServerRoutes = routes.filter((route) => !clientCalls.has(`${route.method} ${route.full}`))
 
 // ---------------------------------------------------------------- report
-const byRouter = routes.reduce((acc, route) => {
-  const key = route.router || '(inline in index.js)'
-  acc[key] = acc[key] || []
-  acc[key].push(route)
-  return acc
-}, {})
+const byRouter = [...routers].sort((a, b) => b.routes.length - a.routes.length)
+const stamp = new Date().toISOString().slice(0, 10)
 
 const lines = []
-lines.push('# GBChat — endpoint audit')
+lines.push('# Endpoint audit')
 lines.push('')
-lines.push(`Generated: ${new Date().toISOString().slice(0, 10)} · \`node scripts/audit-endpoints.mjs\``)
-lines.push('')
-lines.push('## Summary')
+lines.push(`Generated by \`node scripts/audit-endpoints.mjs\` on ${stamp}.`)
 lines.push('')
 lines.push('| Metric | Value |')
 lines.push('| --- | --- |')
-lines.push(`| Registered routes | **${routes.length}** |`)
-lines.push(`| Mounted routers | **${Object.keys(byRouter).length}** |`)
-lines.push(`| Distinct client calls | **${clientCalls.size}** |`)
-lines.push(`| Client calls without a route | **${unmatchedCalls.length}** |`)
-lines.push(`| Routes no client calls yet | ${unusedServerRoutes.length} |`)
-lines.push(`| Mutating routes without auth middleware | ${unprotected.length} |`)
-lines.push(`| Duplicate route definitions | ${duplicates.length} |`)
-lines.push(`| Shadowed routes | ${shadowed.length} |`)
+lines.push(`| Server routes | ${allRoutes.length} |`)
+lines.push(`| Routers mounted | ${routers.filter((r) => r.mounted).length} / ${routers.length} |`)
+lines.push(`| Client calls | ${clientCalls.size} |`)
+lines.push(`| Client calls without a server route | ${unmatchedClient.length} |`)
+lines.push(`| Server routes no client calls | ${unusedRoutes.length} |`)
+lines.push(`| Duplicate method + path | ${duplicates.length} |`)
+lines.push(`| Routes without an auth guard | ${unauthenticated.length} |`)
+lines.push(`| Shadowed routes (declared too late) | ${shadowedRoutes.length} |`)
 lines.push('')
-
-if (shadowed.length) {
-  lines.push('## Shadowed routes (declared after a parameterised sibling)')
-  lines.push('')
-  lines.push('| Unreachable route | Shadowed by | File |')
-  lines.push('| --- | --- | --- |')
-  for (const entry of shadowed) {
-    lines.push(`| \`${entry.hidden}\` | \`${entry.shadowedBy}\` | ${entry.file} |`)
-  }
-  lines.push('')
-}
 
 lines.push('## Routes per router')
 lines.push('')
-lines.push('| Router | Mount | Auth | Routes |')
-lines.push('| --- | --- | --- | --- |')
-for (const [router, list] of Object.entries(byRouter).sort((a, b) => a[0].localeCompare(b[0]))) {
-  const authed = list.some((route) => route.guarded)
+lines.push('| Router | Mount | Routes | Router-level `protect` |')
+lines.push('| --- | --- | ---: | --- |')
+for (const router of byRouter) {
   lines.push(
-    `| \`${router}\` | \`${list[0].mount || '—'}\` | ${authed ? 'yes' : 'no'} | ${list.length} |`
+    `| \`${router.name}\` | ${router.prefixes.map((p) => `\`${p}\``).join(', ') || '— (not mounted)'} | ${router.routes.length} | ${router.usesProtect ? 'yes' : router.perRouteAuth ? 'per route' : '**no**'} |`
   )
 }
 lines.push('')
 
-if (shadowed.length) {
-  lines.push('## Shadowed routes (declared after a parameterised sibling)')
+if (unmounted.length) {
+  lines.push('## Routers that are never mounted')
   lines.push('')
-  lines.push('| Unreachable route | Shadowed by | File |')
-  lines.push('| --- | --- | --- |')
-  for (const entry of shadowed) {
-    lines.push(`| \`${entry.hidden}\` | \`${entry.shadowedBy}\` | ${entry.file} |`)
+  for (const router of unmounted) lines.push(`- \`${router.file}\` — ${router.routes.length} routes unreachable`)
+  lines.push('')
+}
+
+if (shadowedRoutes.length) {
+  lines.push('## Shadowed routes')
+  lines.push('')
+  lines.push('A more specific path is declared **after** a parameterised one, so Express matches the parameterised route first and the literal is unreachable.')
+  lines.push('')
+  lines.push('| Method | Literal (unreachable) | Swallowed by | Router |')
+  lines.push('| --- | --- | --- | --- |')
+  for (const route of shadowedRoutes) {
+    lines.push(`| ${route.method} | \`${route.literal}\` | \`${route.swallowedBy}\` | \`${route.router}\` |`)
   }
-  lines.push('')
-}
-
-if (unmatchedCalls.length) {
-  lines.push('## Client calls with no server route')
-  lines.push('')
-  lines.push('| Call | Where |')
-  lines.push('| --- | --- |')
-  for (const [key, where] of unmatchedCalls) lines.push(`| \`${key}\` | ${where} |`)
-  lines.push('')
-}
-
-if (unprotected.length) {
-  lines.push('## Mutating routes without auth middleware')
-  lines.push('')
-  lines.push('| Route | File |')
-  lines.push('| --- | --- |')
-  for (const route of unprotected) lines.push(`| \`${route.method} ${route.full}\` | ${route.file} |`)
   lines.push('')
 }
 
 if (duplicates.length) {
-  lines.push('## Duplicate route definitions')
+  lines.push('## Duplicate declarations (the first registration wins)')
   lines.push('')
-  for (const [key, files] of duplicates) lines.push(`- \`${key}\` — ${files.join(', ')}`)
+  for (const route of duplicates) {
+    lines.push(`- \`${route.key}\` — declared ${route.duplicates + 1}× (${[...new Set(route.duplicateFiles)].join(', ')})`)
+  }
   lines.push('')
 }
 
-lines.push('## All routes')
+if (unauthenticated.length) {
+  lines.push('## Routes with no auth guard')
+  lines.push('')
+  lines.push('These are public by design or a security bug — each one needs a decision.')
+  lines.push('')
+  lines.push('| Method | Path | Router |')
+  lines.push('| --- | --- | --- |')
+  for (const route of unauthenticated.sort((a, b) => a.path.localeCompare(b.path))) {
+    lines.push(`| ${route.method} | \`${route.path}\` | \`${route.router}\` |`)
+  }
+  lines.push('')
+}
+
+if (unmatchedClient.length) {
+  lines.push('## Client calls with no server route (broken)')
+  lines.push('')
+  for (const key of unmatchedClient) lines.push(`- \`${key}\` — ${clientCalls.get(key)}`)
+  lines.push('')
+}
+
+lines.push('## Server routes the client never calls')
 lines.push('')
-lines.push('| Method | Path | Auth | Called by client | File |')
-lines.push('| --- | --- | --- | --- | --- |')
-for (const route of routes) {
-  const called = clientCalls.has(`${route.method} ${route.full}`)
-  lines.push(
-    `| ${route.method} | \`${route.full}\` | ${route.guarded ? 'yes' : '—'} | ${called ? 'yes' : '—'} | ${route.file} |`
-  )
+lines.push('Not automatically a bug: some are for admin tooling, mobile clients or the gRPC bridge.')
+lines.push('')
+lines.push('| Method | Path | Router |')
+lines.push('| --- | --- | --- |')
+for (const route of unusedRoutes.sort((a, b) => a.path.localeCompare(b.path))) {
+  lines.push(`| ${route.method} | \`${route.path}\` | \`${route.router}\` |`)
 }
 lines.push('')
 
-const report = lines.join('\n')
-fs.mkdirSync(path.dirname(reportPath), { recursive: true })
-fs.writeFileSync(reportPath, report)
+fs.mkdirSync(path.dirname(outFile), { recursive: true })
+fs.writeFileSync(outFile, lines.join('\n'))
 
-console.log(`routes             : ${routes.length}`)
-console.log(`routers            : ${Object.keys(byRouter).length}`)
-console.log(`client calls       : ${clientCalls.size}`)
-console.log(`unmatched calls    : ${unmatchedCalls.length}`)
-console.log(`unused by client   : ${unusedServerRoutes.length}`)
-console.log(`unprotected writes : ${unprotected.length}`)
-console.log(`duplicates         : ${duplicates.length}`)
-console.log(`shadowed           : ${shadowed.length}`)
-console.log(`report             : ${path.relative(root, reportPath)}`)
+const summary = {
+  serverRoutes: allRoutes.length,
+  routers: routers.length,
+  mounted: routers.filter((r) => r.mounted).length,
+  clientCalls: clientCalls.size,
+  unmatchedClient: unmatchedClient.length,
+  unusedRoutes: unusedRoutes.length,
+  duplicates: duplicates.length,
+  shadowed: shadowedRoutes.length,
+  unauthenticated: unauthenticated.length,
+  report: path.relative(root, outFile),
+}
 
-if (process.argv.includes('--stdout')) console.log(`\n${report}`)
-if (unmatchedCalls.length && process.argv.includes('--strict')) process.exit(1)
+if (process.argv.includes('--json')) {
+  console.log(JSON.stringify({ summary, unmatchedClient, duplicates: duplicates.map((d) => d.key), unauthenticated: unauthenticated.map((r) => r.key) }, null, 2))
+} else {
+  console.log('server routes      :', summary.serverRoutes)
+  console.log('routers mounted    :', `${summary.mounted}/${summary.routers}`)
+  console.log('client calls       :', summary.clientCalls)
+  console.log('unmatched calls    :', summary.unmatchedClient)
+  console.log('unused by client   :', summary.unusedRoutes)
+  console.log('duplicate routes   :', summary.duplicates)
+  console.log('shadowed routes    :', summary.shadowed)
+  console.log('no auth guard      :', summary.unauthenticated)
+  console.log('report             :', summary.report)
+}
+
+process.exitCode = unmatchedClient.length ? 1 : 0

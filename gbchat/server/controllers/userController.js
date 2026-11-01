@@ -30,7 +30,7 @@ export const searchUsers = async (req, res, next) => {
 export const getUserProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select(
-      "fullName username email phone avatar about status statusText lastSeen privacy isVerified createdAt website location coverPhoto pronouns coverGradient"
+      "fullName username email phone avatar about status statusText lastSeen privacy isVerified role createdAt website location coverPhoto pronouns coverGradient jobTitle timezone profileViews"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -51,6 +51,12 @@ export const getUserProfile = async (req, res, next) => {
       (user.privacy.about === "contacts" && !isContact)
     ) {
       delete profile.about;
+    }
+
+    // A visit is a view — but never inflate your own counter.
+    if (String(user._id) !== String(req.user._id)) {
+      User.updateOne({ _id: user._id }, { $inc: { profileViews: 1 } }).catch(() => {});
+      profile.profileViews = (profile.profileViews || 0) + 1;
     }
 
     // Additive extras used by the redesigned profile page. They never reveal
@@ -89,6 +95,26 @@ export const getUserProfile = async (req, res, next) => {
         createdAt: message.createdAt,
       }));
 
+      // Groups both people are in — the strongest "how do we know each other" hint.
+      const viewerGroups = await Chat.find({
+        participants: req.user._id,
+        isGroup: true,
+      })
+        .select("_id name avatar participants")
+        .lean();
+
+      profile.mutualGroups = viewerGroups
+        .filter((group) =>
+          (group.participants || []).some((p) => String(p.user || p) === String(user._id))
+        )
+        .slice(0, 10)
+        .map((group) => ({
+          _id: group._id,
+          name: group.name || "Group",
+          avatar: group.avatar || "",
+          memberCount: group.participants?.length || 0,
+        }));
+
       profile.contact = req.user.contacts?.some(
         (id) => String(id) === String(user._id)
       ) || false;
@@ -110,7 +136,9 @@ export const getUserProfile = async (req, res, next) => {
 export const getProfileStats = async (req, res, next) => {
   try {
     const userId = req.params.id;
-    const user = await User.findById(userId).select("contacts createdAt isVerified");
+    const user = await User.findById(userId).select(
+    "contacts createdAt isVerified profileViews"
+  );
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const chats = await Chat.find({ participants: { $in: [userId] } })
@@ -129,15 +157,29 @@ export const getProfileStats = async (req, res, next) => {
       Story.countDocuments({ user: userId }),
     ]);
 
+    const mutualGroups = await Chat.countDocuments({
+      isGroup: true,
+      participants: {
+        $all: [
+          { $elemMatch: { user: userId } },
+          { $elemMatch: { user: req.user._id } },
+        ],
+      },
+    });
+
     res.json({
       success: true,
       stats: {
         contacts: user.contacts?.length || 0,
         chats: directIds.length,
         groups: groupIds.length,
+        mutualGroups,
         messagesSent,
         media: mediaCount,
         stories: storiesCount,
+        profileViews: user.profileViews || 0,
+        joinedAt: user.createdAt,
+        isVerified: Boolean(user.isVerified),
         memberSince: user.createdAt,
         isVerified: user.isVerified,
       },

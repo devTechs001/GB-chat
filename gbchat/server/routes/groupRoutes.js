@@ -58,7 +58,6 @@ router.patch("/:id/star", setGroupFlag);
 router.patch("/:id/mute", setGroupFlag);
 router.post("/:id/mute", setGroupMute);
 router.post("/:id/unmute", setGroupMute);
-router.put("/:id", updateGroup);
 router.post("/:id/members", addMembers);
 router.delete("/:id/members/:memberId", removeMember);
 router.post("/:id/leave", leaveGroup);

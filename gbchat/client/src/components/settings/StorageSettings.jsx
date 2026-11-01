@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ChartBarIcon,
@@ -8,6 +9,8 @@ import {
   MicrophoneIcon,
   TrashIcon,
   SparklesIcon,
+  CircleStackIcon,
+  ArrowRightIcon,
 } from '@heroicons/react/24/outline'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
@@ -18,6 +21,7 @@ import clsx from 'clsx'
 import CacheCleaner from './CacheCleaner'
 
 const StorageSettings = () => {
+  const navigate = useNavigate()
   const [storageData, setStorageData] = useState({
     total: 0,
     used: 0,
@@ -153,6 +157,25 @@ const StorageSettings = () => {
           <span className="hidden sm:inline">Cache Cleaner</span>
         </button>
       </div>
+
+      {/* Backup & offline — the SQLite mirror and the on-device cache live here */}
+      <button
+        onClick={() => navigate('/backup')}
+        className="flex w-full items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-left transition hover:border-primary-300 hover:shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:hover:border-primary-700"
+      >
+        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-300">
+          <CircleStackIcon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+            Backup &amp; offline storage
+          </span>
+          <span className="block text-xs text-gray-500 dark:text-gray-400">
+            SQLite snapshot, download, restore and the on-device cache
+          </span>
+        </span>
+        <ArrowRightIcon className="h-5 w-5 flex-none text-gray-400" />
+      </button>
 
       {/* Cache Cleaner Section */}
       {showCacheCleaner && (

@@ -195,6 +195,8 @@ export const updateProfile = async (req, res, next) => {
       pronouns,
       coverGradient,
       statusText,
+      jobTitle,
+      timezone,
     } = req.body;
 
     const updateData = {};
@@ -208,6 +210,22 @@ export const updateProfile = async (req, res, next) => {
     if (coverPhoto !== undefined) updateData.coverPhoto = coverPhoto;
     if (pronouns !== undefined) updateData.pronouns = String(pronouns).slice(0, 30);
     if (statusText !== undefined) updateData.statusText = String(statusText).slice(0, 80);
+    if (jobTitle !== undefined) updateData.jobTitle = String(jobTitle).slice(0, 80);
+    if (timezone !== undefined) {
+      // Accept only real IANA zones so the profile can render local time safely.
+      const zone = String(timezone).slice(0, 64);
+      let valid = zone === "";
+      if (!valid) {
+        try {
+          new Intl.DateTimeFormat("en", { timeZone: zone });
+          valid = true;
+        } catch {
+          valid = false;
+        }
+      }
+      if (!valid) return res.status(400).json({ message: "Unknown timezone" });
+      updateData.timezone = zone;
+    }
     if (coverGradient !== undefined) {
       const allowed = ["aurora", "sunset", "ocean", "forest", "midnight", "rose", "graphite"];
       if (!allowed.includes(coverGradient)) {
@@ -254,6 +272,8 @@ export const updateProfile = async (req, res, next) => {
         coverPhoto: user.coverPhoto,
         coverGradient: user.coverGradient,
         statusText: user.statusText,
+        jobTitle: user.jobTitle,
+        timezone: user.timezone,
         website: user.website,
         location: user.location,
         status: user.status,

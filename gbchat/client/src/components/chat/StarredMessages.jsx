@@ -66,7 +66,7 @@ const StarredMessages = ({ onClose }) => {
   };
 
   const handleNavigateToChat = (chatId, messageId) => {
-    navigate(`/chat?chatId=${chatId}&messageId=${messageId}`);
+    navigate(`/chats?chat=${chatId}&message=${messageId}`);
     onClose?.();
   };
 

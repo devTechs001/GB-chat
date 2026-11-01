@@ -144,3 +144,9 @@ rollup.config.js.timestamp-*
 # yarn.lock - keep if using yarn
 # package-lock.json - keep if using npm
 # pnpm-lock.yaml - keep if using pnpm
+
+# Local SQLite backups (one .db per user) and their WAL sidecars
+/data/
+*.db
+*.db-wal
+*.db-shm

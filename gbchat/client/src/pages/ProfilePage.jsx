@@ -43,6 +43,12 @@ import {
   BuildingOffice2Icon,
   EnvelopeIcon,
   IdentificationIcon,
+  BriefcaseIcon,
+  EyeIcon,
+  UserPlusIcon,
+  StarIcon,
+  LanguageIcon,
+  SunIcon,
 } from '@heroicons/react/24/outline'
 import Avatar from '../components/common/Avatar'
 import Button from '../components/common/Button'
@@ -73,6 +79,24 @@ const PRESENCE = {
   busy: { label: 'Busy', dot: 'bg-red-500', chip: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', icon: SignalIcon },
   away: { label: 'Away', dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', icon: SignalIcon },
   offline: { label: 'Offline', dot: 'bg-gray-400', chip: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300', icon: SignalIcon },
+}
+
+/** Human label for an IANA zone: "Africa/Nairobi" → "Nairobi". */
+const zoneLabel = (zone) => (zone ? zone.split('/').pop().replace(/_/g, ' ') : '')
+
+/** Current wall-clock time in the profile owner's zone ('' when unknown). */
+const localTimeIn = (zone) => {
+  if (!zone) return ''
+  try {
+    return new Intl.DateTimeFormat('en', {
+      timeZone: zone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date())
+  } catch {
+    return ''
+  }
 }
 
 const coverClass = (profile) =>
@@ -215,6 +239,11 @@ const ProfilePage = () => {
     pronouns: '',
     statusText: '',
     coverGradient: 'aurora',
+    jobTitle: '',
+    timezone:
+      typeof Intl !== 'undefined'
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+        : '',
   })
 
   const targetId = userId && userId !== 'me' ? userId : currentUser?._id || currentUser?.id
@@ -301,7 +330,10 @@ const ProfilePage = () => {
       pronouns: profile.pronouns || '',
       statusText: profile.statusText || '',
       coverGradient: profile.coverGradient || 'aurora',
+      jobTitle: profile.jobTitle || '',
+      timezone: profile.timezone || form.timezone || '',
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   /* ---------------- actions ---------------- */
@@ -562,6 +594,37 @@ const ProfilePage = () => {
     }
   }, [isMe, profile])
 
+  const badges = useMemo(() => {
+    const list = []
+    if (profile?.isVerified || profile?.verified) {
+      list.push({ id: 'verified', label: 'Verified', icon: CheckBadgeIcon, tone: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' })
+    }
+    if (profile?.role === 'admin') {
+      list.push({ id: 'admin', label: 'Admin', icon: ShieldCheckIcon, tone: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' })
+    }
+    if (profile?.contact) {
+      list.push({ id: 'contact', label: 'In your contacts', icon: UserPlusIcon, tone: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' })
+    }
+    if (stats?.mutualGroups > 0) {
+      list.push({
+        id: 'mutual',
+        label: `${stats.mutualGroups} shared group${stats.mutualGroups === 1 ? '' : 's'}`,
+        icon: UserGroupIcon,
+        tone: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+      })
+    }
+    if (stats?.profileViews > 0) {
+      list.push({
+        id: 'views',
+        label: `${stats.profileViews} profile view${stats.profileViews === 1 ? '' : 's'}`,
+        icon: EyeIcon,
+        tone: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+      })
+    }
+    return list
+  }, [profile, stats])
+
+  const localTime = localTimeIn(profile?.timezone)
   const activeLightboxItem = lightbox !== null ? mediaItems[lightbox] : null
 
   if (loading) return <Skeleton />
@@ -922,13 +985,36 @@ const ProfilePage = () => {
         </div>
       )}
 
+      {/* ---------------- Badges ---------------- */}
+      {badges.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5 px-4">
+          {badges.map((badge) => {
+            const Icon = badge.icon
+            return (
+              <span
+                key={badge.id}
+                className={clsx(
+                  'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium',
+                  badge.tone
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {badge.label}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
       {/* ---------------- Stats ---------------- */}
       <div className="mt-3 px-4">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
           <StatTile icon={ChatBubbleLeftEllipsisIcon} label="Chats" value={stats?.chats} tone="text-green-500" />
           <StatTile icon={UserGroupIcon} label="Groups" value={stats?.groups} tone="text-blue-500" />
+          <StatTile icon={UserPlusIcon} label="Shared" value={stats?.mutualGroups} tone="text-cyan-500" />
           <StatTile icon={PhotoIcon} label="Media" value={stats?.media} tone="text-purple-500" />
           <StatTile icon={SparklesIcon} label="Stories" value={stats?.stories} tone="text-amber-500" />
+          <StatTile icon={EyeIcon} label="Views" value={stats?.profileViews} tone="text-rose-500" />
         </div>
       </div>
 
@@ -1207,6 +1293,9 @@ const ProfilePage = () => {
                         </span>
                       </InfoRow>
                     )}
+                    {profile.jobTitle && (
+                      <InfoRow icon={BriefcaseIcon} label="Work">{profile.jobTitle}</InfoRow>
+                    )}
                     {profile.pronouns && (
                       <InfoRow icon={BuildingOffice2Icon} label="Pronouns">{profile.pronouns}</InfoRow>
                     )}
@@ -1223,6 +1312,32 @@ const ProfilePage = () => {
                       </InfoRow>
                     )}
                     {profile.location && <InfoRow icon={MapPinIcon} label="Location">{profile.location}</InfoRow>}
+                    {profile.timezone && (
+                      <InfoRow icon={ClockIcon} label="Local time">
+                        <span className="flex flex-wrap items-center gap-x-1.5">
+                          <SunIcon className="h-4 w-4 text-amber-500" />
+                          <span className="tabular-nums">{localTime || '—'}</span>
+                          <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                            ({zoneLabel(profile.timezone)})
+                          </span>
+                        </span>
+                      </InfoRow>
+                    )}
+                    {profile.username && (
+                      <InfoRow icon={AtSymbolIcon} label="Username">
+                        <span className="flex items-center justify-between gap-2">
+                          <span>@{profile.username}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyValue(`@${profile.username}`, 'Username copied')}
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                            aria-label="Copy username"
+                          >
+                            <ClipboardDocumentIcon className="h-4 w-4" />
+                          </button>
+                        </span>
+                      </InfoRow>
+                    )}
                     {profile.createdAt && (
                       <InfoRow icon={CalendarIcon} label="Member since">
                         {format(new Date(profile.createdAt), 'd MMMM yyyy')}
@@ -1231,6 +1346,16 @@ const ProfilePage = () => {
                     {stats && (
                       <InfoRow icon={ChatBubbleLeftEllipsisIcon} label="Messages sent">
                         {stats.messagesSent}
+                      </InfoRow>
+                    )}
+                    {stats?.mutualGroups > 0 && (
+                      <InfoRow icon={UserGroupIcon} label="Groups in common">
+                        {stats.mutualGroups}
+                      </InfoRow>
+                    )}
+                    {stats?.profileViews > 0 && (
+                      <InfoRow icon={EyeIcon} label="Profile views">
+                        {stats.profileViews}
                       </InfoRow>
                     )}
                     <InfoRow icon={ArrowDownTrayIcon} label="Contact card">
@@ -1311,6 +1436,22 @@ const ProfilePage = () => {
               value={form.website}
               onChange={(e) => setForm({ ...form, website: e.target.value })}
               placeholder="https://…"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Work"
+              value={form.jobTitle}
+              onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
+              placeholder="Product designer"
+            />
+            <Field
+              label="Timezone"
+              value={form.timezone}
+              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+              placeholder="Africa/Nairobi"
+              hint="IANA zone — shows your local time"
             />
           </div>
 

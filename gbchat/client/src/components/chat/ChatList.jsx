@@ -98,7 +98,7 @@ const ChatList = ({ onChatSelect, className }) => {
     { id: 'calls', label: 'Calls', icon: PhoneIcon, tone: 'text-green-500', onClick: () => navigate('/calls') },
     { id: 'groups', label: 'Groups', icon: UsersIcon, tone: 'text-blue-500', onClick: () => navigate('/groups') },
     { id: 'contacts', label: 'Contacts', icon: BookOpenIcon, tone: 'text-purple-500', onClick: () => navigate('/contacts') },
-    { id: 'media', label: 'Starred', icon: StarIcon, tone: 'text-rose-500', onClick: () => navigate('/profile') },
+    { id: 'media', label: 'Starred', icon: StarIcon, tone: 'text-rose-500', onClick: () => navigate('/profile/me') },
   ]
 
   const totalUnread = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0)

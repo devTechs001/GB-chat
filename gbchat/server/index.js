@@ -57,6 +57,8 @@ import gbSettingsRoutes from "./routes/gbSettingsRoutes.js";
 // New routes: Permissions, Backup, and Recovery
 import permissionRoutes from "./routes/permissionRoutes.js";
 import backupRoutes from "./routes/backupRoutes.js";
+import localBackupRoutes from "./routes/localBackupRoutes.js";
+import offlineRoutes from "./routes/offlineRoutes.js";
 import recoveryRoutes from "./routes/recoveryRoutes.js";
 
 dotenv.config();
@@ -154,6 +156,10 @@ app.use("/api/gb-settings", gbSettingsRoutes);
 
 // Permissions, Backup, and Recovery routes
 app.use("/api/permissions", permissionRoutes);
+// Local (SQLite) + offline mirror endpoints must be mounted before the
+// Mongo-backed /api/backup router so its "/:backupId" route cannot swallow them.
+app.use("/api/backup/local", localBackupRoutes);
+app.use("/api/backup/offline", offlineRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/recovery", recoveryRoutes);
 
