@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import api from '../lib/api'
+import api, { isDemoMode } from '../lib/api'
 import toast from 'react-hot-toast'
 
 const useNotificationStore = create(
@@ -36,6 +36,10 @@ const useNotificationStore = create(
       feedError: null,
 
       fetchNotifications: async ({ silent = false } = {}) => {
+        if (isDemoMode()) {
+          set({ isLoading: false, feedError: null })
+          return { success: true, demo: true }
+        }
         if (!silent) set({ isLoading: true, feedError: null })
         try {
           const { data } = await api.get('/notifications', { params: { limit: 40 } })
@@ -59,6 +63,7 @@ const useNotificationStore = create(
       },
 
       fetchUnreadCount: async () => {
+        if (isDemoMode()) return
         try {
           const { data } = await api.get('/notifications/unread-count')
           set({ unreadCount: data?.unreadCount ?? 0 })
@@ -229,6 +234,7 @@ const useNotificationStore = create(
         set((state) => ({
           settings: { ...state.settings, ...settings },
         }))
+        if (isDemoMode()) return { success: true, demo: true }
         try {
           const { data } = await api.put('/notifications/settings', {
             ...get().settings,

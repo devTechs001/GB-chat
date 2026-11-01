@@ -191,3 +191,10 @@ All emoji used as UI chrome were replaced with Heroicons across auth/feature gri
 * Group calls (server models 1:1 only) and channel scheduled posts.
 * ESLint config mismatch (see §3.3) — lint is not runnable in this repo yet.
 * WebRTC needs a TURN server for real NAT traversal in production (`VITE_TURN_*`).
+
+### 4.10 Verification (round 2)
+* `npm run check:endpoints` → **390 server routes / 104 client calls / 0 unmatched**.
+* `npx vite build` → success.
+* Headless SSR render (happy-dom + Vite SSR) of every page and the new panels — ChatPage, StoriesPage, CallsPage, GroupsPage, ContactsPage, ProfilePage, SettingsPage, AuthPage, Splash, NotificationCenter, IncomingCallOverlay, StoryViewer, CallInterface, MediaGallery, AppPermissions, ContactList, NewCallModal, NewChatModal — **all render**.
+* Store-level assertions: theme switch writes `data-mode`/`--app-surface`; reacting to story *A* leaves story *B* untouched (`myReaction` isolated); viewing story *B* only marks *B* as viewed.
+* Demo mode (`Explore demo` on the auth screen) exercises the whole UI without a backend; it never writes sample data into a real session.
