@@ -1,3 +1,4 @@
+import { getToken } from '../../lib/token'
 import React, { useState, useEffect } from 'react';
 import { Clock, Calendar, Send, X, Check, Trash2 } from 'lucide-react';
 import axios from 'axios';
@@ -17,7 +18,7 @@ const ScheduledMessages = ({ chatId, onClose }) => {
 
   const fetchScheduledMessages = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await axios.get('/api/gb-features/scheduled', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -37,7 +38,7 @@ const ScheduledMessages = ({ chatId, onClose }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
 
       await axios.post(
@@ -65,7 +66,7 @@ const ScheduledMessages = ({ chatId, onClose }) => {
 
   const handleCancelSchedule = async (messageId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       await axios.post(
         '/api/gb-features/cancel-schedule',
         { messageId },

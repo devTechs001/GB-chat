@@ -30,7 +30,7 @@ export const searchUsers = async (req, res, next) => {
 export const getUserProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select(
-      "fullName username email phone avatar about status lastSeen privacy isVerified createdAt website location coverPhoto pronouns"
+      "fullName username email phone avatar about status statusText lastSeen privacy isVerified createdAt website location coverPhoto pronouns coverGradient"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -168,25 +168,37 @@ export const getUserMedia = async (req, res, next) => {
       chat: { $in: chatIds },
       deletedFor: { $ne: req.user._id },
       $or: [
-        { type: { $in: ["image", "video"] } },
+        { type: { $in: ["image", "video", "document", "audio", "voice"] } },
         { "content.text": { $regex: "https?://", $options: "i" } },
       ],
     })
       .sort({ createdAt: -1 })
       .limit(limit)
-      .select("type content.media.url content.media.thumbnail content.text createdAt")
+      .select("type content.media.url content.media.thumbnail content.media.filename content.media.mimeType content.text createdAt")
       .lean();
 
     res.json({
       success: true,
-      media: messages.map((message) => ({
-        _id: message._id,
-        type: message.type,
-        url: message.content?.media?.url || null,
-        thumbnail: message.content?.media?.thumbnail || message.content?.media?.url || null,
-        text: message.content?.text || "",
-        createdAt: message.createdAt,
-      })),
+      media: messages.map((message) => {
+        const media = message.content?.media || {};
+        const kind =
+          message.type === "image" || message.type === "video"
+            ? message.type
+            : media.url
+              ? "document"
+              : "link";
+        return {
+          _id: message._id,
+          kind,
+          type: message.type,
+          url: media.url || null,
+          thumbnail: media.thumbnail || media.url || null,
+          filename: media.filename || "",
+          mimeType: media.mimeType || "",
+          text: message.content?.text || "",
+          createdAt: message.createdAt,
+        };
+      }),
     });
   } catch (error) {
     next(error);
@@ -367,14 +379,22 @@ export const getBlockedUsers = async (req, res, next) => {
 /** PATCH /api/users/status — update the presence line */
 export const updateStatus = async (req, res, next) => {
   try {
-    const { status } = req.body;
-    if (!status) return res.status(400).json({ message: "Status is required" });
+    const { status, statusText } = req.body;
+    const allowed = ["online", "offline", "busy", "away"];
+    if (status !== undefined && !allowed.includes(status)) {
+      return res.status(400).json({ message: `status must be one of: ${allowed.join(", ")}` });
+    }
+    if (status === undefined && statusText === undefined) {
+      return res.status(400).json({ message: "status or statusText is required" });
+    }
 
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { status },
-      { new: true }
-    ).select("-password");
+    const patch = {};
+    if (status !== undefined) patch.status = status;
+    if (statusText !== undefined) patch.statusText = String(statusText).slice(0, 80);
+
+    const user = await User.findByIdAndUpdate(req.user._id, patch, { new: true }).select(
+      "-password"
+    );
 
     res.json(user);
   } catch (error) {

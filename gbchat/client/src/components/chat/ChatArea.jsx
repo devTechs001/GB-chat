@@ -308,7 +308,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
                     animate={{ y: '-10%', opacity: [0, 0.8, 0] }}
                     transition={{ duration: 6 + Math.random() * 4, repeat: Infinity, delay: Math.random() * 6 }}
                   >
-                    💕
+                    <HeartIcon className="w-5 h-5 text-pink-400/80" />
                   </motion.div>
                 ))}
               </div>

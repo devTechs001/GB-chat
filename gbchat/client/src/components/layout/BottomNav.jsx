@@ -3,20 +3,20 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   ChatBubbleLeftRightIcon,
   PhotoIcon,
-  SpeakerWaveIcon,
-  UserGroupIcon,
   PhoneIcon,
   Cog6ToothIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline'
 import useChatStore from '../../store/useChatStore'
 import clsx from 'clsx'
 
 const NAV_ITEMS = [
+  // Five is the most a phone tab bar can show legibly; groups, channels and
+  // the profile stay one tap away via the home shortcut strip / sidebar.
   { name: 'Chats', href: '/chats', icon: ChatBubbleLeftRightIcon },
   { name: 'Stories', href: '/stories', icon: PhotoIcon },
-  { name: 'Channels', href: '/channels', icon: SpeakerWaveIcon },
-  { name: 'Groups', href: '/groups', icon: UserGroupIcon },
   { name: 'Calls', href: '/calls', icon: PhoneIcon },
+  { name: 'Contacts', href: '/contacts', icon: UsersIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
 

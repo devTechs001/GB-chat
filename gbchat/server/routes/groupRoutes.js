@@ -31,6 +31,9 @@ import {
   getAnnouncements,
   pinAnnouncement,
   deleteAnnouncement,
+  importGroups,
+  getGroupPreferences,
+  updateGroupPreferences,
 } from "../controllers/groupController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -42,6 +45,9 @@ router.use(protect);
 router.get("/", getGroups);
 router.post("/", createGroup);
 router.post("/export", exportGroups);
+router.post("/import", importGroups);
+router.get("/preferences", getGroupPreferences);
+router.put("/preferences", updateGroupPreferences);
 router.post("/bulk-invite", bulkInvite);
 router.get("/:id", getGroup);
 router.put("/:id", updateGroup);

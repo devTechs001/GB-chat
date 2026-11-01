@@ -14,6 +14,12 @@ import PageHeader from '../components/layout/PageHeader'
 import EmptyState from '../components/layout/EmptyState'
 import { PhotoIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
+import api from '../lib/api'
+import toast from 'react-hot-toast'
+
+// Highlights live on the server; the local cache keeps the page usable offline
+// and in demo mode.
+const HIGHLIGHT_CACHE_KEY = 'storyHighlights'
 
 const StoriesPage = () => {
   const { user } = useAuthStore()
@@ -27,14 +33,39 @@ const StoriesPage = () => {
   const [highlights, setHighlights] = useState([])
   const [showHighlights, setShowHighlights] = useState(true)
 
+  const readHighlightCache = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(HIGHLIGHT_CACHE_KEY) || '[]')
+      return Array.isArray(cached) ? cached : []
+    } catch {
+      return []
+    }
+  }
+
+  const cacheHighlights = (list) => {
+    try {
+      localStorage.setItem(HIGHLIGHT_CACHE_KEY, JSON.stringify(list))
+    } catch {
+      /* storage full or unavailable — the server copy is the source of truth */
+    }
+  }
+
+  const fetchHighlights = async () => {
+    try {
+      const { data } = await api.get('/stories/highlights')
+      const list = Array.isArray(data?.highlights) ? data.highlights : []
+      setHighlights(list)
+      cacheHighlights(list)
+    } catch {
+      // offline / demo: fall back to whatever we cached locally
+      setHighlights(readHighlightCache())
+    }
+  }
+
   useEffect(() => {
     fetchStories()
     fetchMyStory()
-    // Load highlights from localStorage or API
-    const savedHighlights = localStorage.getItem('storyHighlights')
-    if (savedHighlights) {
-      setHighlights(JSON.parse(savedHighlights))
-    }
+    fetchHighlights()
   }, [])
 
   const filteredStories = (stories || []).filter((story) => {
@@ -71,30 +102,78 @@ const StoriesPage = () => {
     }
   }
 
-  const handleAddHighlight = (highlightData) => {
-    const newHighlight = {
-      _id: Date.now().toString(),
+  const handleAddHighlight = async (highlightData) => {
+    const optimistic = {
+      _id: `local-${Date.now()}`,
       ...highlightData,
       storyCount: 0,
       stories: [],
     }
-    const updatedHighlights = [...highlights, newHighlight]
-    setHighlights(updatedHighlights)
-    localStorage.setItem('storyHighlights', JSON.stringify(updatedHighlights))
+    setHighlights((prev) => [...prev, optimistic])
+
+    try {
+      const { data } = await api.post('/stories/highlights', {
+        title: highlightData.title,
+        icon: highlightData.icon,
+        color: highlightData.color,
+        categoryId: highlightData.categoryId,
+        coverImage: highlightData.coverImage,
+        storyIds: highlightData.storyIds,
+      })
+      if (data?.highlight) {
+        setHighlights((prev) => {
+          const next = prev.map((item) => (item._id === optimistic._id ? data.highlight : item))
+          cacheHighlights(next)
+          return next
+        })
+      }
+      toast.success('Highlight created')
+    } catch (error) {
+      // Keep it locally so the UI is not lost when the API is unreachable.
+      setHighlights((prev) => {
+        cacheHighlights(prev)
+        return prev
+      })
+      if (error?.response) toast.error(error.response.data?.message || 'Could not save highlight')
+    }
   }
 
-  const handleEditHighlight = (highlightData) => {
-    const updatedHighlights = highlights.map(h =>
-      h._id === highlightData._id ? { ...h, ...highlightData } : h
-    )
-    setHighlights(updatedHighlights)
-    localStorage.setItem('storyHighlights', JSON.stringify(updatedHighlights))
+  const handleEditHighlight = async (highlightData) => {
+    setHighlights((prev) => {
+      const next = prev.map((h) => (h._id === highlightData._id ? { ...h, ...highlightData } : h))
+      cacheHighlights(next)
+      return next
+    })
+
+    if (String(highlightData._id).startsWith('local-')) return
+    try {
+      await api.patch(`/stories/highlights/${highlightData._id}`, {
+        title: highlightData.title,
+        icon: highlightData.icon,
+        color: highlightData.color,
+        categoryId: highlightData.categoryId,
+        coverImage: highlightData.coverImage,
+      })
+    } catch (error) {
+      if (error?.response) toast.error(error.response.data?.message || 'Could not update highlight')
+    }
   }
 
-  const handleDeleteHighlight = (highlightData) => {
-    const updatedHighlights = highlights.filter(h => h._id !== highlightData._id)
-    setHighlights(updatedHighlights)
-    localStorage.setItem('storyHighlights', JSON.stringify(updatedHighlights))
+  const handleDeleteHighlight = async (highlightData) => {
+    const previous = highlights
+    const next = highlights.filter((h) => h._id !== highlightData._id)
+    setHighlights(next)
+    cacheHighlights(next)
+
+    if (String(highlightData._id).startsWith('local-')) return
+    try {
+      await api.delete(`/stories/highlights/${highlightData._id}`)
+      toast.success('Highlight deleted')
+    } catch (error) {
+      setHighlights(previous)
+      cacheHighlights(previous)
+      toast.error(error?.response?.data?.message || 'Could not delete highlight')
+    }
   }
 
   return (

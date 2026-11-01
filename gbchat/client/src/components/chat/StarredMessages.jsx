@@ -1,3 +1,4 @@
+import { getToken } from '../../lib/token'
 import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, Calendar, Trash2, ExternalLink, X } from 'lucide-react';
 import axios from 'axios';
@@ -16,7 +17,7 @@ const StarredMessages = ({ onClose }) => {
 
   const fetchStarredMessages = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await axios.get('/api/gb-features/starred', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -48,7 +49,7 @@ const StarredMessages = ({ onClose }) => {
 
   const handleUnstarMessage = async (messageId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       await axios.post(
         '/api/gb-features/unstar',
         { messageId },

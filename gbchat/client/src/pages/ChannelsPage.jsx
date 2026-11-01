@@ -21,6 +21,7 @@ import api from '../lib/api'
 import PageHeader from '../components/layout/PageHeader'
 import EmptyState from '../components/layout/EmptyState'
 import clsx from 'clsx'
+import toast from 'react-hot-toast'
 
 // Demo/offline fallback so the page is never blank when the API is unreachable
 const SAMPLE_CHANNELS = [
@@ -80,10 +81,20 @@ const ChannelsPage = () => {
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [activeTab, setActiveTab] = useState('browse') // browse, analytics, scheduler, monetization
   const [scheduledPosts, setScheduledPosts] = useState([])
+  const [ownedChannels, setOwnedChannels] = useState([])
+  const [schedulerChannelId, setSchedulerChannelId] = useState('')
+  const [schedulerLoading, setSchedulerLoading] = useState(false)
 
   useEffect(() => {
     fetchChannels()
+    fetchOwnedChannels()
   }, [])
+
+  // The scheduler only makes sense for channels you own/admin.
+  useEffect(() => {
+    if (activeTab === 'scheduler' && schedulerChannelId) fetchScheduledPosts(schedulerChannelId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, schedulerChannelId])
 
   const fetchChannels = async () => {
     try {
@@ -108,20 +119,87 @@ const ChannelsPage = () => {
     return true
   })
 
-  const handleSchedulePost = (postData) => {
-    console.log('Scheduling post:', postData)
-    setScheduledPosts([...scheduledPosts, { ...postData, _id: Date.now().toString(), status: 'pending' }])
+  /* ---------------- channel ownership + real scheduler ---------------- */
+
+  const fetchOwnedChannels = async () => {
+    try {
+      const { data } = await api.get('/channels/mine')
+      const list = Array.isArray(data) ? data : data.channels || []
+      setOwnedChannels(list)
+      if (list.length && !schedulerChannelId) setSchedulerChannelId(list[0]._id)
+    } catch {
+      // offline / demo mode: the scheduler shows its empty state
+      setOwnedChannels([])
+    }
   }
 
-  const handlePublishNow = (postId) => {
-    console.log('Publishing post:', postId)
-    setScheduledPosts(scheduledPosts.map(p =>
-      p._id === postId ? { ...p, status: 'published' } : p
-    ))
+  const normalizeScheduled = (post) => ({
+    ...post,
+    content: post.text,
+    media: post.mediaUrl ? { url: post.mediaUrl, thumbnail: post.mediaUrl } : null,
+    status: post.status === 'published' ? 'published' : post.status || 'pending',
+  })
+
+  const fetchScheduledPosts = async (channelId) => {
+    setSchedulerLoading(true)
+    try {
+      const { data } = await api.get(`/channels/${channelId}/posts/scheduled`)
+      const list = data?.scheduled || []
+      setScheduledPosts(list.map(normalizeScheduled))
+    } catch (error) {
+      setScheduledPosts([])
+      const status = error?.response?.status
+      if (status === 403) toast.error('Only channel admins can manage the schedule')
+    } finally {
+      setSchedulerLoading(false)
+    }
   }
 
-  const handleDeleteScheduledPost = (postId) => {
-    setScheduledPosts(scheduledPosts.filter(p => p._id !== postId))
+  const handleSchedulePost = async (postData) => {
+    const channelId = postData.channelId || schedulerChannelId
+    if (!channelId) {
+      toast.error('Create a channel first')
+      return
+    }
+    try {
+      const { data } = await api.post(`/channels/${channelId}/posts/schedule`, {
+        text: postData.content,
+        type: postData.media ? 'image' : 'text',
+        mediaUrl: typeof postData.media === 'string' ? postData.media : postData.media?.url || '',
+        scheduledFor: postData.scheduledFor,
+      })
+      const created = data?.scheduledPost
+      if (created) {
+        setScheduledPosts((prev) => [...prev, normalizeScheduled(created)])
+        toast.success('Post scheduled')
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not schedule this post')
+    }
+  }
+
+  const handlePublishNow = async (postId) => {
+    if (!schedulerChannelId) return
+    try {
+      await api.post(`/channels/${schedulerChannelId}/posts/scheduled/${postId}/publish`)
+      setScheduledPosts((prev) =>
+        prev.map((post) => (post._id === postId ? { ...post, status: 'published' } : post))
+      )
+      toast.success('Post published')
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not publish this post')
+    }
+  }
+
+  const handleDeleteScheduledPost = async (postId) => {
+    if (!schedulerChannelId) return
+    try {
+      await api.delete(`/channels/${schedulerChannelId}/posts/scheduled/${postId}`)
+      setScheduledPosts((prev) => prev.filter((post) => post._id !== postId))
+      toast.success('Scheduled post removed')
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not remove this post')
+    }
   }
 
   const TABS = [
@@ -276,14 +354,52 @@ const ChannelsPage = () => {
           />
         )}
 
-        {activeTab === 'scheduler' && (
-          <ChannelPostScheduler
-            channelId="current-channel"
-            scheduledPosts={scheduledPosts}
-            onSchedule={handleSchedulePost}
-            onPublish={handlePublishNow}
-            onDelete={handleDeleteScheduledPost}
+        {activeTab === 'scheduler' && ownedChannels.length === 0 && (
+          <EmptyState
+            icon={CalendarIcon}
+            title="No channels to schedule for"
+            description="Create a channel first — scheduled posts are published to that channel's subscribers."
+            action={
+              <Button variant="primary" onClick={() => setShowCreate(true)}>
+                Create channel
+              </Button>
+            }
           />
+        )}
+
+        {activeTab === 'scheduler' && ownedChannels.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Channel</span>
+              <div className="flex flex-wrap gap-2">
+                {ownedChannels.map((channel) => (
+                  <button
+                    key={channel._id}
+                    onClick={() => setSchedulerChannelId(channel._id)}
+                    className={clsx(
+                      'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
+                      schedulerChannelId === channel._id
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    )}
+                  >
+                    {channel.name}
+                  </button>
+                ))}
+              </div>
+              {schedulerLoading && (
+                <span className="w-4 h-4 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+              )}
+            </div>
+
+            <ChannelPostScheduler
+              channelId={schedulerChannelId}
+              scheduledPosts={scheduledPosts}
+              onSchedule={handleSchedulePost}
+              onPublish={handlePublishNow}
+              onDelete={handleDeleteScheduledPost}
+            />
+          </div>
         )}
 
         {activeTab === 'monetization' && selectedChannel && (

@@ -76,6 +76,30 @@ export const getQueueSubscriber = async () => {
   return redisQueueSub;
 };
 
+/**
+ * Best-effort distributed lock.
+ *
+ * Returns `true` when the caller owns the lock for `ttlMs`. Without Redis the
+ * call always succeeds (single-process deployments need no coordination).
+ * The lock is released by expiry, so a crashed node can never deadlock the
+ * others — keep the TTL slightly longer than the interval between runs.
+ */
+export const acquireLock = async (key, ttlMs = 60_000) => {
+  const client = getRedis();
+  if (!client) return true;
+
+  try {
+    const result = await client.set(`gbchat:lock:${key}`, process.env.NODE_ID || process.pid, {
+      NX: true,
+      PX: ttlMs,
+    });
+    return result === 'OK';
+  } catch (error) {
+    console.warn('[redis] lock failed, running unlocked:', error.message);
+    return true;
+  }
+};
+
 export const redisStatus = () => ({
   configured: isRedisConfigured,
   connected,

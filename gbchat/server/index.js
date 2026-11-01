@@ -24,6 +24,7 @@ import {
   registerLimiter,
 } from "./middleware/rateLimiter.js";
 import { startGrpcServer } from "./grpc/server.js";
+import { startScheduler } from "./services/schedulerService.js";
 import { closeRedis } from "./config/redis.js";
 import systemRoutes from "./routes/systemRoutes.js";
 import { initializeAdmin } from "./utils/initAdmin.js";
@@ -166,6 +167,16 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Unknown API route → JSON 404 (never the SPA fallback HTML, which made client
+// errors look like a 200 with an HTML body).
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    success: false,
+    code: "NOT_FOUND",
+    message: `No API route matches ${req.method} ${req.originalUrl}`,
+  });
+});
+
 // Serve SPA for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'client/dist/index.html'));
@@ -176,19 +187,57 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(async () => {
-  // Initialize admin user
-  await initializeAdmin();
-
-  // Internal gRPC API (presence + notification fan-out across nodes)
-  await startGrpcServer({ io }).catch((error) =>
-    console.warn("[grpc] failed to start:", error.message)
-  );
-
+const startHttp = () => {
   server.listen(PORT, () => {
     console.log(`🚀 GBChat server running on port ${PORT}`);
     console.log(`   pid ${process.pid} · node ${process.env.NODE_ID || "local"}`);
   });
+};
+
+/**
+ * Boot sequence.
+ *
+ * The HTTP listener (and the internal gRPC API) start even when MongoDB is
+ * unreachable: probes and `/api/system/*` must keep answering so a load
+ * balancer / orchestrator can see "degraded" instead of "connection refused",
+ * and the process keeps retrying Mongo in the background instead of dying.
+ */
+const start = async () => {
+  let dbReady = false;
+
+  try {
+    dbReady = await connectDB();
+  } catch (error) {
+    console.error("[boot] Mongo connection failed:", error.message);
+  }
+
+  if (dbReady) {
+    try {
+      await initializeAdmin();
+    } catch (error) {
+      console.warn("[boot] admin seed skipped:", error.message);
+    }
+  } else {
+    console.warn("[boot] starting WITHOUT MongoDB — /api/system/ready will report degraded");
+  }
+
+  await startGrpcServer({ io }).catch((error) =>
+    console.warn("[grpc] failed to start:", error.message)
+  );
+
+  // Background jobs. A Redis leader lock makes this safe with N replicas — only
+  // one node executes each tick. Set SCHEDULER_ENABLED=false and run the
+  // dedicated worker (npm run worker) instead if you prefer to split concerns.
+  if (process.env.SCHEDULER_ENABLED !== "false" && dbReady) {
+    startScheduler(io);
+  }
+
+  startHttp();
+};
+
+start().catch((error) => {
+  console.error("[boot] fatal:", error);
+  process.exit(1);
 });
 
 // ---------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+import { getToken } from '../lib/token'
 import { create } from 'zustand'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -75,7 +76,7 @@ const useGBFeaturesStore = create((set, get) => ({
   // Fetch GB features from API
   fetchGBFeatures: async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const { data } = await axios.get('/api/gb-settings', {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -88,7 +89,7 @@ const useGBFeaturesStore = create((set, get) => ({
   // Toggle a feature
   toggleFeature: async (section, feature) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const { data } = await axios.post(
         '/api/gb-features/toggle',
         { section, feature },
@@ -105,7 +106,7 @@ const useGBFeaturesStore = create((set, get) => ({
   // Update GB features
   updateGBFeatures: async (section, data) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const { data: responseData } = await axios.put(
         `/api/gb-settings/${section}`,
         { [section]: data },
@@ -123,7 +124,7 @@ const useGBFeaturesStore = create((set, get) => ({
     const { gbFeatures } = get()
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
 
       if (settingId === 'dndMode') {
         const newData = {

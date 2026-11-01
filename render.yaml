@@ -34,6 +34,12 @@ services:
         value: https://devtechs001.github.io,https://gbchat.netlify.app
       - key: REDIS_URL
         sync: false
+      - key: TRUST_PROXY
+        value: "1"
+      - key: RATE_LIMIT_MAX
+        value: "600"
+      - key: RATE_LIMIT_AUTH_MAX
+        value: "20"
     disk:
       name: uploads
       mountPath: /opt/render/project/src/uploads

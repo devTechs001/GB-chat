@@ -25,10 +25,14 @@ const router = express.Router();
 
 router.use(protect);
 
-// Get messages
+// Literal paths MUST stay above "/:chatId" & friends, otherwise Express
+// matches "/schedule" as a chat id.
 router.get("/starred", getStarredMessages);
 router.get("/scheduled", getScheduledMessages);
+router.get("/schedule", getScheduledMessages);
 router.get("/search", searchMessages);
+router.post("/schedule", scheduleMessage);
+router.post("/cancel-schedule", cancelScheduledMessage);
 router.get("/:chatId", getMessages);
 
 // Send messages (including voice)
@@ -45,11 +49,7 @@ router.post("/:messageId/unstar", unstarMessage);
 router.post("/:messageId/forward", forwardMessage);
 router.get("/:messageId/reactions", getMessageReactions);
 
-// Scheduled messages
-// NOTE: POST /schedule now creates a scheduled message (it used to be bound to
-// the list handler, which made scheduling impossible). GET /scheduled lists them.
-router.post("/schedule", scheduleMessage);
-router.get("/schedule", getScheduledMessages);
-router.post("/cancel-schedule", cancelScheduledMessage);
+// Scheduled messages are declared above (before "/:chatId") so they are
+// reachable — see the note at the top of the file.
 
 export default router;

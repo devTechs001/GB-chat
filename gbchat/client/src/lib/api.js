@@ -1,3 +1,4 @@
+import { getToken, setToken, getRefreshToken, setRefreshToken, clearTokens } from './token'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
@@ -29,7 +30,7 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -62,20 +63,20 @@ api.interceptors.response.use(
       originalRequest._retry = true
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken')
+        const refreshToken = getRefreshToken()
         if (refreshToken) {
           const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken })
 
-          localStorage.setItem('token', data.token)
-          if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken)
+          setToken(data.token)
+          if (data.refreshToken) setRefreshToken(data.refreshToken)
 
           originalRequest.headers = originalRequest.headers || {}
           originalRequest.headers.Authorization = `Bearer ${data.token}`
           return api(originalRequest)
         }
       } catch (refreshError) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
+        clearTokens()
+        
         window.location.href = '/auth'
         return Promise.reject(refreshError)
       }

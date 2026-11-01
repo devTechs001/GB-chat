@@ -3,6 +3,7 @@ import Story from "../models/Story.js";
 import User from "../models/User.js";
 import cloudinary from "../config/cloudinary.js";
 import Notification from "../models/Notification.js";
+import StoryHighlight from "../models/StoryHighlight.js";
 
 export const createStory = async (req, res, next) => {
   try {
@@ -274,6 +275,153 @@ export const getStoryViewers = async (req, res, next) => {
     }
 
     res.json(story.viewers || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/* Highlights (permanent collections of stories)                       */
+/* ------------------------------------------------------------------ */
+
+// @desc    List highlights — the caller's own, plus anyone else's
+// @route   GET /api/stories/highlights?userId=<id>
+// @access  Private
+export const getHighlights = async (req, res, next) => {
+  try {
+    const targetId = req.query.userId || req.user._id;
+    const highlights = await StoryHighlight.find({ user: targetId })
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
+
+    res.json({
+      success: true,
+      highlights: highlights.map((highlight) => ({
+        _id: highlight._id,
+        title: highlight.title,
+        icon: highlight.icon,
+        color: highlight.color,
+        categoryId: highlight.categoryId,
+        coverImage: highlight.coverImage,
+        storyCount: highlight.stories?.length || 0,
+        stories: highlight.stories || [],
+        createdAt: highlight.createdAt,
+        isMine: String(highlight.user) === String(req.user._id),
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create a highlight
+// @route   POST /api/stories/highlights
+// @access  Private
+export const createHighlight = async (req, res, next) => {
+  try {
+    const { title, icon, color, categoryId, coverImage, storyIds } = req.body;
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ message: "Highlight name is required" });
+    }
+
+    const count = await StoryHighlight.countDocuments({ user: req.user._id });
+
+    let stories = [];
+    if (Array.isArray(storyIds) && storyIds.length) {
+      const owned = await Story.find({
+        _id: { $in: storyIds },
+        user: req.user._id,
+      })
+        .select("type content createdAt")
+        .lean();
+
+      stories = owned.map((story) => ({
+        story: story._id,
+        url: story.content?.media?.url || "",
+        thumbnail: story.content?.media?.thumbnail || story.content?.media?.url || "",
+        type: story.type,
+        caption: story.content?.text || "",
+      }));
+    }
+
+    const highlight = await StoryHighlight.create({
+      user: req.user._id,
+      title: String(title).trim().slice(0, 40),
+      icon: icon || "memories",
+      color: color || "from-purple-500 to-pink-500",
+      categoryId: categoryId || "memories",
+      coverImage: coverImage || stories[0]?.url || "",
+      stories,
+      order: count,
+    });
+
+    res.status(201).json({ success: true, highlight });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Rename / restyle a highlight, or add stories to it
+// @route   PATCH /api/stories/highlights/:id
+// @access  Private (owner)
+export const updateHighlight = async (req, res, next) => {
+  try {
+    const highlight = await StoryHighlight.findById(req.params.id);
+    if (!highlight) return res.status(404).json({ message: "Highlight not found" });
+    if (String(highlight.user) !== String(req.user._id)) {
+      return res.status(403).json({ message: "You can only edit your own highlights" });
+    }
+
+    const { title, icon, color, categoryId, coverImage, addStoryIds } = req.body;
+    if (title !== undefined) highlight.title = String(title).trim().slice(0, 40) || highlight.title;
+    if (icon !== undefined) highlight.icon = icon;
+    if (color !== undefined) highlight.color = color;
+    if (categoryId !== undefined) highlight.categoryId = categoryId;
+    if (coverImage !== undefined) highlight.coverImage = coverImage;
+
+    if (Array.isArray(addStoryIds) && addStoryIds.length) {
+      const owned = await Story.find({
+        _id: { $in: addStoryIds },
+        user: req.user._id,
+      })
+        .select("type content")
+        .lean();
+
+      owned.forEach((story) => {
+        highlight.stories.push({
+          story: story._id,
+          url: story.content?.media?.url || "",
+          thumbnail: story.content?.media?.thumbnail || story.content?.media?.url || "",
+          type: story.type,
+          caption: story.content?.text || "",
+        });
+      });
+
+      if (!highlight.coverImage && owned[0]?.content?.media?.url) {
+        highlight.coverImage = owned[0].content.media.url;
+      }
+    }
+
+    await highlight.save();
+    res.json({ success: true, highlight });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete a highlight (stories themselves are untouched)
+// @route   DELETE /api/stories/highlights/:id
+// @access  Private (owner)
+export const deleteHighlight = async (req, res, next) => {
+  try {
+    const highlight = await StoryHighlight.findById(req.params.id);
+    if (!highlight) return res.status(404).json({ message: "Highlight not found" });
+    if (String(highlight.user) !== String(req.user._id)) {
+      return res.status(403).json({ message: "You can only delete your own highlights" });
+    }
+
+    await highlight.deleteOne();
+    res.json({ success: true });
   } catch (error) {
     next(error);
   }

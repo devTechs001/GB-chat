@@ -2,10 +2,13 @@
 import cron from "node-cron";
 import Message from "../models/Message.js";
 import Chat from "../models/Chat.js";
+import { acquireLock } from "../config/redis.js";
 
 export const startScheduler = (io) => {
   // Check for scheduled messages every minute
   cron.schedule("* * * * *", async () => {
+    // Only one replica runs the job per tick (no-op without Redis).
+    if (!(await acquireLock("scheduler", 55_000))) return;
     try {
       const now = new Date();
       const scheduledMessages = await Message.find({
@@ -59,4 +62,6 @@ export const startScheduler = (io) => {
       console.error("Scheduler error:", error);
     }
   });
+
+  console.log("[scheduler] started (scheduled messages + self-destructing messages)");
 };

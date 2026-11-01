@@ -193,6 +193,8 @@ export const updateProfile = async (req, res, next) => {
       location,
       coverPhoto,
       pronouns,
+      coverGradient,
+      statusText,
     } = req.body;
 
     const updateData = {};
@@ -205,6 +207,14 @@ export const updateProfile = async (req, res, next) => {
     if (location !== undefined) updateData.location = String(location).slice(0, 100);
     if (coverPhoto !== undefined) updateData.coverPhoto = coverPhoto;
     if (pronouns !== undefined) updateData.pronouns = String(pronouns).slice(0, 30);
+    if (statusText !== undefined) updateData.statusText = String(statusText).slice(0, 80);
+    if (coverGradient !== undefined) {
+      const allowed = ["aurora", "sunset", "ocean", "forest", "midnight", "rose", "graphite"];
+      if (!allowed.includes(coverGradient)) {
+        return res.status(400).json({ message: "Unknown cover gradient" });
+      }
+      updateData.coverGradient = coverGradient;
+    }
     if (username !== undefined) {
       const handle = String(username).trim().toLowerCase().replace(/^@/, "");
       if (handle && !/^[a-z0-9._]{3,30}$/.test(handle)) {
@@ -242,6 +252,8 @@ export const updateProfile = async (req, res, next) => {
         phone: user.phone,
         avatar: user.avatar,
         coverPhoto: user.coverPhoto,
+        coverGradient: user.coverGradient,
+        statusText: user.statusText,
         website: user.website,
         location: user.location,
         status: user.status,

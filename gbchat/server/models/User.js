@@ -69,6 +69,18 @@ const userSchema = new mongoose.Schema(
       default: "",
       maxlength: 30,
     },
+    /** Named gradient used behind the avatar when no cover photo is set. */
+    coverGradient: {
+      type: String,
+      enum: ["aurora", "sunset", "ocean", "forest", "midnight", "rose", "graphite"],
+      default: "aurora",
+    },
+    /** Free-form status line ("In a meeting") — `status` stays presence. */
+    statusText: {
+      type: String,
+      default: "",
+      maxlength: 80,
+    },
     status: {
       type: String,
       enum: ["online", "offline", "busy", "away"],
@@ -140,6 +152,15 @@ const userSchema = new mongoose.Schema(
       },
       readReceipts: { type: Boolean, default: true },
       onlineStatus: { type: Boolean, default: true },
+    },
+    /** Per-user defaults applied when joining or creating groups */
+    groupPreferences: {
+      whoCanAddMe: { type: String, enum: ["everyone", "contacts", "nobody"], default: "everyone" },
+      muteNewGroups: { type: Boolean, default: false },
+      autoArchiveLargeGroups: { type: Boolean, default: true },
+      largeGroupThreshold: { type: Number, default: 100, min: 3, max: 1024 },
+      showGroupNotifications: { type: Boolean, default: true },
+      defaultAnnouncementReplies: { type: Boolean, default: false },
     },
     contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -255,6 +276,8 @@ userSchema.methods.toPublicProfile = function () {
     location: this.location,
     coverPhoto: this.coverPhoto,
     pronouns: this.pronouns,
+    coverGradient: this.coverGradient,
+    statusText: this.statusText,
     isVerified: this.isVerified,
     email: this.email,
     phone: this.phone,

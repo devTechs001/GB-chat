@@ -13,6 +13,10 @@ import {
   likeChannelPost,
   postToChannel,
   getChannelPosts,
+  scheduleChannelPost,
+  getScheduledChannelPosts,
+  publishScheduledChannelPost,
+  deleteScheduledChannelPost,
 } from "../controllers/channelController.js";
 import { protect } from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
@@ -33,5 +37,11 @@ router.delete("/:id", deleteChannel);
 router.post("/:id/posts", upload.single("media"), postToChannel);
 router.get("/:id/posts", getChannelPosts);
 router.post("/posts/:postId/like", likeChannelPost);
+
+// Scheduled posts (queue a post for later, publish now, or cancel it)
+router.get("/:id/posts/scheduled", getScheduledChannelPosts);
+router.post("/:id/posts/schedule", scheduleChannelPost);
+router.post("/:id/posts/scheduled/:postId/publish", publishScheduledChannelPost);
+router.delete("/:id/posts/scheduled/:postId", deleteScheduledChannelPost);
 
 export default router;

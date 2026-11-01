@@ -25,6 +25,7 @@ const ContactsPage = React.lazy(() => import('./pages/ContactsPage'))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'))
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'))
+const HomePage = React.lazy(() => import('./pages/HomePage'))
 const TermsAndConditions = React.lazy(() => import('./pages/legal/TermsAndConditions'))
 const PrivacyPolicy = React.lazy(() => import('./pages/legal/PrivacyPolicy'))
 
@@ -204,6 +205,9 @@ function App() {
               <Route path="settings" element={<SettingsPage />} />
               <Route path="profile/:userId" element={<ProfilePage />} />
             </Route>
+
+            {/* Public marketing / welcome page */}
+            <Route path="/welcome" element={<HomePage />} />
 
             {/* Public legal pages */}
             <Route path="/terms" element={<TermsAndConditions />} />
