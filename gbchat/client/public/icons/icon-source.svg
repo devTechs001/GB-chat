@@ -1,0 +1,36 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GBChat">
+  <defs>
+    <linearGradient id="gbBg" x1="56" y1="16" x2="456" y2="496" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0EA5E9"/>
+      <stop offset="0.52" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="gbGlow" x1="88" y1="32" x2="352" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.38"/>
+      <stop offset="0.72" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gbBubble" x1="140" y1="168" x2="352" y2="352" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E6F1FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- tile -->
+  <rect width="512" height="512" rx="116" fill="url(#gbBg)"/>
+  <rect width="512" height="512" rx="116" fill="url(#gbGlow)"/>
+
+  <!-- secondary bubble: a thread, not a single message -->
+  <g fill="#FFFFFF" fill-opacity="0.3">
+    <rect x="322" y="118" width="112" height="82" rx="30"/>
+    <path d="M406 190l30 32-42-12 12-20Z"/>
+  </g>
+
+  <!-- primary bubble -->
+  <rect x="118" y="166" width="244" height="180" rx="58" fill="url(#gbBubble)"/>
+  <path d="M166 330l-30 62 74-40-44-22Z" fill="url(#gbBubble)"/>
+
+  <!-- typing dots -->
+  <circle cx="192" cy="256" r="19" fill="#0EA5E9"/>
+  <circle cx="240" cy="256" r="19" fill="#4F46E5"/>
+  <circle cx="288" cy="256" r="19" fill="#7C3AED"/>
+</svg>

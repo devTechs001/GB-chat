@@ -160,7 +160,9 @@ const InfoRow = ({ icon: Icon, label, children }) => (
     </span>
     <div className="min-w-0 flex-1">
       <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
-      <div className="text-sm font-medium text-gray-900 dark:text-white break-words">{children}</div>
+      <div data-selectable className="text-sm font-medium text-gray-900 dark:text-white break-words">
+        {children}
+      </div>
     </div>
   </div>
 )
@@ -879,7 +881,9 @@ const ProfilePage = () => {
             )}
 
             <p className="mt-2 max-w-prose text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-              {profile.about || profile.bio || (isMe ? 'Add a short bio to introduce yourself.' : '')}
+              <span data-selectable>
+                {profile.about || profile.bio || (isMe ? 'Add a short bio to introduce yourself.' : '')}
+              </span>
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1251,7 +1255,9 @@ const ProfilePage = () => {
                     {profile.about && (
                       <div className="pb-3">
                         <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">About</p>
-                        <p className="mt-1 text-sm text-gray-800 dark:text-gray-200">{profile.about}</p>
+                        <p data-selectable className="mt-1 text-sm text-gray-800 dark:text-gray-200">
+                          {profile.about}
+                        </p>
                       </div>
                     )}
                     {profile.phone && (

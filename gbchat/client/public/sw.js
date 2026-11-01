@@ -1,13 +1,20 @@
 // Service Worker for GBChat PWA
-const CACHE_NAME = 'gbchat-cache-v1';
-const STATIC_CACHE_NAME = 'gbchat-static-v1';
-const API_CACHE_NAME = 'gbchat-api-v1';
+// Bump CACHE_VERSION whenever the shell or the icon set changes: `activate`
+// drops every cache that does not match, so a new icon is never masked by a
+// stale cached copy.
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `gbchat-cache-${CACHE_VERSION}`;
+const STATIC_CACHE_NAME = `gbchat-static-${CACHE_VERSION}`;
+const API_CACHE_NAME = `gbchat-api-${CACHE_VERSION}`;
 
 const CACHE_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.svg',
+  '/icons/icon.svg',
+  '/icons/icon-192x192.png',
+  '/icons/icon-maskable-192x192.png',
+  '/apple-touch-icon.png',
   '/notification.mp3'
 ];
 
@@ -161,8 +168,10 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'GBChat';
   const options = {
     body: data.body || 'New message',
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
+    // 192px art renders correctly as the notification icon; the small badge
+    // needs a flat, square image on Android.
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/favicon-32x32.png',
     vibrate: [200, 100, 200],
     data: {
       url: data.url || '/chats',

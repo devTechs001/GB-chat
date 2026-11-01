@@ -34,13 +34,65 @@
     overflow: hidden;
   }
 
-  /* Text is selectable everywhere by default; opt out where it hurts (buttons, nav) */
+  /* The app shell behaves like a native app: dragging on the interface should
+     scroll or swipe, never paint a blue text selection. Real content opts back
+     in with `data-selectable` (messages, bios, notes, any readonly text a user
+     may legitimately want to copy). Inputs are always selectable. */
+  body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   button,
   [role="button"],
   nav a,
+  label,
   .no-select {
     -webkit-user-select: none;
     user-select: none;
+  }
+
+  /* Content that must stay copyable */
+  input,
+  textarea,
+  select,
+  [contenteditable="true"],
+  [data-selectable],
+  [data-selectable] *,
+  .selectable,
+  .select-text {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
+  }
+
+  /* iOS: no callout bubble when long-pressing chrome… */
+  body {
+    -webkit-touch-callout: none;
+  }
+
+  /* …but keep it for content, where "Copy" is genuinely useful. */
+  input,
+  textarea,
+  [contenteditable="true"],
+  [data-selectable],
+  [data-selectable] * {
+    -webkit-touch-callout: default;
+  }
+
+  /* Images never drag out of the layout */
+  img,
+  video,
+  svg {
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  ::selection {
+    background-color: rgb(14 165 233 / 0.28);
+    color: inherit;
   }
 
   /* Desktop: slim, visible scrollbars that appear on hover */

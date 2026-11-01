@@ -9,6 +9,18 @@ Snapshot (round 5): **417 routes / 28 routers / 127 client calls / 0 unmatched /
 
 ---
 
+## 0.a Round 6 — app-feel polish (selection + PWA identity)
+
+| Change | Detail |
+| --- | --- |
+| **Text selection off by default** | `body { user-select: none }` + `-webkit-tap-highlight-color: transparent` + no iOS callout, so dragging on the shell scrolls and swipes instead of painting a selection. Content opts back in with `data-selectable` / `.selectable` — applied to chat bubbles, profile bio and About rows, and both legal pages. Inputs, textareas and `contenteditable` are always selectable. Images and SVGs no longer drag out of the layout (`-webkit-user-drag: none`). `::selection` is themed instead of the browser default blue. |
+| **New PWA icon** | Replaced the flat single-colour speech mark with a gradient tile (sky → indigo → violet), a primary bubble plus a secondary "thread" bubble and three typing dots. Two artworks: `icon.svg` (rounded tile → `purpose: any`) and `icon-maskable.svg` (full bleed + safe zone → `purpose: maskable`), rendered from one source into 72/96/128/144/152/180/192/384/512, `favicon-32x32` and `apple-touch-icon.png` via `@resvg/resvg-js`. |
+| **Manifest** | Added `id`, `scope`, `display_override`, `lang`/`dir`, `portrait-primary`, dark `background_color`, per-purpose icon entries, and four shortcuts (New chat · Stories · Channels · Backup). |
+| **Head tags** | SVG favicon now points at the new art, light/dark `theme-color`, correct `apple-touch-icon` sizes (iOS masks with its own radius, so the full-bleed square is used). |
+| **Service worker** | `CACHE_VERSION` bump + icon URLs in the precache list so a stale icon can never survive an update; notification `icon`/`badge` now point at real PNGs (`/icons/icon-192x192.png`, `/icons/favicon-32x32.png`). |
+
+---
+
 ## 0. Round 5 — routing, profile, stories, offline & local backup
 
 ### 0.1 Fixed in this round
@@ -52,7 +64,8 @@ Everything from §1.2 stands. Round 5 adds:
 | 14 | **Local backup scheduling** | The mirror is built on demand; a daily `worker` job per active user would keep it warm. | Making the offline cache useful for anyone who has not pressed the button. |
 | 15 | **Conflict resolution** | The outbox replays blindly; if the same message also reached the server another way, it duplicates. | Add `clientMessageId` idempotency (ties into recommendation #6). |
 | 16 | **Cache eviction** | IndexedDB keeps everything it caches. | Age/size-based prune (e.g. keep 30 days or 50 MB) in `offlineDb`. |
-| 17 | **Backup encryption** | The `.db` sits unencrypted on the API host. | Encrypt at rest with a key derived from the user's password, or document the disk as trusted. |
+| 17 | **Selection exceptions** | Only chat text, bios and legal copy opt back into selection. PDFs/previews or any future read-only document view needs `data-selectable`. |
+| 18 | **Backup encryption** | The `.db` sits unencrypted on the API host. | Encrypt at rest with a key derived from the user's password, or document the disk as trusted. |
 
 ---
 

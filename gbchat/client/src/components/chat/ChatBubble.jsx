@@ -265,7 +265,10 @@ const ChatBubble = ({
                 </p>
               </div>
             )}
-            <p className="whitespace-pre-wrap break-words text-sm md:text-base">
+            <p
+              data-selectable
+              className="whitespace-pre-wrap break-words text-sm md:text-base"
+            >
               {contentText}
             </p>
           </div>

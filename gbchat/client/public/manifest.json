@@ -1,12 +1,12 @@
 {
-  "name": "GBChat - Ultimate Messaging Platform",
+  "name": "GBChat \u2014 messaging",
   "short_name": "GBChat",
-  "description": "Feature-rich real-time messaging with E2E encryption",
+  "description": "Real-time messaging with stories, channels, groups and calls.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#0f172a",
   "theme_color": "#0ea5e9",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -42,7 +42,7 @@
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-384x384.png",
@@ -54,24 +54,83 @@
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["social", "messaging"],
+  "categories": [
+    "social",
+    "messaging"
+  ],
   "shortcuts": [
     {
-      "name": "New Chat",
-      "short_name": "Chat",
-      "description": "Start a new conversation",
-      "url": "/?action=new-chat",
-      "icons": [{"src": "/icons/icon-192x192.png", "sizes": "192x192"}]
+      "name": "New chat",
+      "short_name": "New chat",
+      "description": "Start a conversation",
+      "url": "/chats",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Stories",
       "short_name": "Stories",
-      "description": "View stories",
+      "description": "See what your contacts posted",
       "url": "/stories",
-      "icons": [{"src": "/icons/icon-192x192.png", "sizes": "192x192"}]
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Channels",
+      "short_name": "Channels",
+      "description": "Broadcast to your audience",
+      "url": "/channels",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Backup & offline",
+      "short_name": "Backup",
+      "description": "Local backups and the offline cache",
+      "url": "/backup",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "share_target": {
@@ -85,7 +144,10 @@
       "files": [
         {
           "name": "media",
-          "accept": ["image/*", "video/*"]
+          "accept": [
+            "image/*",
+            "video/*"
+          ]
         }
       ]
     }
@@ -97,5 +159,15 @@
       "type": "image/png",
       "form_factor": "narrow"
     }
-  ]
+  ],
+  "id": "/",
+  "scope": "/",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false
 }
