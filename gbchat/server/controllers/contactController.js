@@ -1,5 +1,6 @@
 // controllers/contactController.js
 import Contact from '../models/Contact.model.js';
+import Notification from '../models/Notification.js';
 import asyncHandler from 'express-async-handler';
 
 // @desc    Get all contacts

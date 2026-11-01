@@ -6,6 +6,10 @@ import {
   CheckCircleIcon,
   ClockIcon,
   BoltIcon,
+  PhotoIcon,
+  VideoCameraIcon,
+  DocumentTextIcon,
+  MusicalNoteIcon,
 } from '@heroicons/react/24/outline'
 import { CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid'
 import Button from '../common/Button'
@@ -38,7 +42,7 @@ const CacheCleaner = () => {
 
   const fetchCacheData = async () => {
     try {
-      const { data } = await api.get('/storage/cache')
+      const { data } = await api.get('/storage/usage')
       setCacheData(data)
       // Load auto-clean settings from localStorage
       const savedAutoClean = localStorage.getItem('auto-clean-enabled')
@@ -86,7 +90,7 @@ const CacheCleaner = () => {
   const handleCleanCache = async (type) => {
     setCleaning(true)
     try {
-      await api.delete(`/storage/cache/${type}`)
+      await api.delete(`/storage/clear/${type}`)
       toast.success('Cache cleared successfully!')
       localStorage.setItem('last-cache-clear', new Date().toISOString())
       fetchCacheData()
@@ -126,42 +130,42 @@ const CacheCleaner = () => {
       key: 'imageCache',
       label: 'Image Cache',
       description: 'Cached images from chats',
-      icon: '🖼️',
+      icon: 'image',
       color: 'bg-blue-500',
     },
     {
       key: 'videoCache',
       label: 'Video Cache',
       description: 'Cached video thumbnails',
-      icon: '🎬',
+      icon: 'video',
       color: 'bg-purple-500',
     },
     {
       key: 'documentCache',
       label: 'Document Cache',
       description: 'Cached documents and files',
-      icon: '📄',
+      icon: 'document',
       color: 'bg-green-500',
     },
     {
       key: 'audioCache',
       label: 'Audio Cache',
       description: 'Cached voice messages',
-      icon: '🎵',
+      icon: 'audio',
       color: 'bg-orange-500',
     },
     {
       key: 'thumbnailCache',
       label: 'Thumbnail Cache',
       description: 'Media thumbnails',
-      icon: '🖼️',
+      icon: 'image',
       color: 'bg-pink-500',
     },
     {
       key: 'tempFiles',
       label: 'Temporary Files',
       description: 'App temp files',
-      icon: '🗑️',
+      icon: 'trash',
       color: 'bg-gray-500',
     },
   ]
@@ -280,7 +284,17 @@ const CacheCleaner = () => {
                 key={item.key}
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                <span className="text-2xl">{item.icon}</span>
+                {(() => {
+                  const ICONS = {
+                    image: PhotoIcon,
+                    video: VideoCameraIcon,
+                    document: DocumentTextIcon,
+                    audio: MusicalNoteIcon,
+                    trash: TrashIcon,
+                  }
+                  const Icon = ICONS[item.icon] || DocumentTextIcon
+                  return <Icon className="w-6 h-6 text-primary-500" />
+                })()}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-gray-900 dark:text-white">

@@ -10,6 +10,8 @@ const useAuthStore = create(
       token: null,
       isLoading: false,
       isAuthenticated: false,
+      // Offline demo session: lets the UI be explored without a backend
+      isDemo: false,
       privacySettings: {
         ghostMode: false,
         readReceipts: true,
@@ -59,7 +61,13 @@ const useAuthStore = create(
             token,
             isAuthenticated: !!token,
             isLoading: false,
+            isDemo: false,
           })
+          try {
+            localStorage.removeItem('demo-mode')
+          } catch {
+            /* ignore */
+          }
 
           // Set token in axios defaults
           if (token) api.defaults.headers.common['Authorization'] = `Bearer ${token}`
@@ -177,17 +185,67 @@ const useAuthStore = create(
         }
       },
 
+      /**
+       * Demo session — no backend required.
+       * Used by the "Explore demo" entry point on the auth screen.
+       */
+      enterDemo: () => {
+        const demoUser = {
+          _id: 'user1',
+          id: 'user1',
+          fullName: 'Alex Demo',
+          name: 'Alex Demo',
+          email: 'demo@gbchat.app',
+          phone: '+1 555 0100',
+          about: 'Exploring GBChat',
+          status: 'Available',
+          avatar: null,
+          contacts: ['user2', 'user3', 'user4'],
+        }
+
+        try {
+          localStorage.setItem('demo-mode', 'true')
+          localStorage.setItem('hasCompletedOnboarding', 'true')
+          localStorage.setItem('token', 'demo-token')
+        } catch {
+          /* ignore */
+        }
+
+        set({
+          user: demoUser,
+          token: 'demo-token',
+          isAuthenticated: true,
+          isLoading: false,
+          isDemo: true,
+        })
+
+        toast.success('Demo mode — data is not saved')
+        return { success: true }
+      },
+
       logout: () => {
         set({
           user: null,
           token: null,
           isAuthenticated: false,
+          isDemo: false,
         })
+        try {
+          localStorage.removeItem('demo-mode')
+        } catch {
+          /* ignore */
+        }
         delete api.defaults.headers.common['Authorization']
         toast.success('Logged out successfully')
       },
 
       checkAuth: async () => {
+        // Demo sessions never hit the API
+        if (get().isDemo) {
+          set({ isAuthenticated: true, isLoading: false })
+          return
+        }
+
         const token = get().token
         if (!token) {
           set({ isLoading: false })
@@ -250,9 +308,11 @@ const useAuthStore = create(
           const { data } = await api.post('/users/avatar', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           })
-          const avatarUrl = data.avatar
+          const serverUser = data.user || data
+          const avatarUrl = serverUser.avatar
           const updatedUser = {
-            ...data,
+            ...useAuthStore.getState().user,
+            ...serverUser,
             avatar: avatarUrl
               ? avatarUrl + (avatarUrl.includes('?') ? '&' : '?') + 't=' + Date.now()
               : null
@@ -264,6 +324,23 @@ const useAuthStore = create(
           console.error('Avatar upload error:', error)
           toast.error(error.response?.data?.message || 'Upload failed')
           return { success: false, error: error.response?.data?.message }
+        }
+      },
+
+      removeAvatar: async () => {
+        try {
+          const { data } = await api.delete('/users/avatar')
+          set((state) => ({
+            user: {
+              ...(data?.user || state.user),
+              avatar: null,
+            },
+          }))
+          toast.success('Profile photo removed')
+          return { success: true }
+        } catch (error) {
+          toast.error(error.response?.data?.message || 'Could not remove the photo')
+          return { success: false, error }
         }
       },
 
@@ -312,6 +389,7 @@ const useAuthStore = create(
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
+        isDemo: state.isDemo,
         privacySettings: state.privacySettings,
       }),
     }

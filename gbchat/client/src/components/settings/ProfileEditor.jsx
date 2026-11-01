@@ -35,7 +35,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const MIN_FILE_SIZE = 10 * 1024 // 10KB
 
 const ProfileEditor = () => {
-  const { user, updateAvatar, updateProfile } = useAuthStore()
+  const { user, updateAvatar, removeAvatar, updateProfile } = useAuthStore()
   const fileInputRef = useRef(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [selectedFile, setSelectedFile] = useState(null)
@@ -163,19 +163,14 @@ const ProfileEditor = () => {
     }
   }
 
-  // Remove current avatar
+  // Remove current avatar (real DELETE /api/users/avatar)
   const handleRemoveAvatar = async () => {
-    if (!confirm('Are you sure you want to remove your profile photo?')) return
-
-    // Create empty file to clear avatar
-    const emptyFile = new File([''], 'empty.png', { type: 'image/png' })
+    if (!window.confirm('Remove your profile photo?')) return
+    setIsUploading(true)
     try {
-      const result = await updateAvatar(emptyFile)
-      if (result.success) {
-        toast.success('Profile photo removed')
-      }
-    } catch (error) {
-      toast.error('Failed to remove profile photo')
+      await removeAvatar()
+    } finally {
+      setIsUploading(false)
     }
   }
 

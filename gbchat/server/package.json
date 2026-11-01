@@ -11,10 +11,16 @@
     "seed:demo": "node scripts/seed-demo-data.js",
     "seed:admin": "node scripts/seed-admin.js",
     "seed:all": "node scripts/seed.js && node scripts/seed-demo-data.js",
-    "worker": "node services/worker.js"
+    "worker": "node services/worker.js",
+    "start:cluster": "node cluster.js",
+    "dev:cluster": "NODE_ENV=development CLUSTER=true node cluster.js",
+    "grpc:check": "node scripts/grpc-check.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@grpc/grpc-js": "^1.14.7",
+    "@grpc/proto-loader": "^0.7.15",
+    "@socket.io/redis-adapter": "^8.3.0",
     "axios": "^1.13.5",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.0",
@@ -33,6 +39,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^8.0.1",
     "qrcode": "^1.5.4",
+    "rate-limit-redis": "^4.3.1",
     "razorpay": "^2.9.2",
     "redis": "^4.6.13",
     "sharp": "^0.33.2",

@@ -14,40 +14,14 @@ const useTheme = () => {
     getAvailableThemes,
   } = useThemeStore()
 
+  // The store applies palette, mode, surfaces and font size to <html>
   useEffect(() => {
-    // Apply theme class to document
-    document.documentElement.className = theme
-    
-    // Apply dark mode preference
-    if (theme === 'dark' || theme === 'midnight' || theme === 'cyberpunk') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [theme])
-
-  useEffect(() => {
-    // Apply custom theme colors
-    if (customTheme) {
-      Object.entries(customTheme).forEach(([key, value]) => {
-        document.documentElement.style.setProperty(`--color-${key}`, value)
-      })
-    }
-  }, [customTheme])
-
-  useEffect(() => {
-    // Apply font size
-    const fontSizes = {
-      small: '14px',
-      medium: '16px',
-      large: '18px',
-      xlarge: '20px',
-    }
-    document.documentElement.style.fontSize = fontSizes[fontSize] || '16px'
-  }, [fontSize])
+    useThemeStore.getState().initTheme()
+  }, [theme, customTheme, fontSize])
 
   const isDarkMode = useCallback(() => {
-    return ['dark', 'midnight', 'cyberpunk', 'ocean', 'forest', 'sunset'].includes(theme)
+    const themes = useThemeStore.getState().getAvailableThemes()
+    return (themes[theme]?.mode || 'light') === 'dark'
   }, [theme])
 
   const toggleDarkMode = useCallback(() => {

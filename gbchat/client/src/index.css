@@ -5,19 +5,6 @@
 @layer base {
   * {
     @apply box-border;
-    /* Prevent text selection globally */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-
-  /* Allow text selection in input fields and editable elements */
-  input, textarea, [contenteditable="true"], .selectable {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
   }
 
   html {
@@ -33,7 +20,10 @@
     padding: 0;
     overflow: hidden;
     @apply antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   #root {
@@ -44,79 +34,95 @@
     overflow: hidden;
   }
 
-  /* Safe area for notched devices */
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+  /* Text is selectable everywhere by default; opt out where it hurts (buttons, nav) */
+  button,
+  [role="button"],
+  nav a,
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
   }
 
-  /* Hide scrollbars globally while maintaining functionality */
+  /* Desktop: slim, visible scrollbars that appear on hover */
   * {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225 / 0.8) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: rgb(71 85 105 / 0.8) transparent;
   }
 
   *::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, and Opera */
-    width: 0px;
-    background: transparent;
+    width: 8px;
+    height: 8px;
   }
 
   *::-webkit-scrollbar-track {
-    display: none;
     background: transparent;
   }
 
   *::-webkit-scrollbar-thumb {
-    display: none;
-    background: transparent;
+    background-color: rgb(203 213 225 / 0.85);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
 
-  *::-webkit-scrollbar-corner {
-    display: none;
-    background: transparent;
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(148 163 184);
+    background-clip: content-box;
   }
 
-  /* Hide scrollbars for specific elements */
-  .scrollbar-hide {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+  .dark *::-webkit-scrollbar-thumb {
+    background-color: rgb(71 85 105 / 0.9);
+    background-clip: content-box;
   }
 
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(100 116 139);
+    background-clip: content-box;
   }
 
-  /* Alternative scrollbar hiding for webkit browsers */
-  .scrollbar-hide::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+  /* Focus visibility (keyboard users) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-500, #0ea5e9);
+    outline-offset: 2px;
   }
 
-  /* Hide scrollbars but keep scrolling functionality */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  /* Safe areas for notched devices */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
   }
 
-  /* For mobile browsers */
   @supports (-webkit-touch-callout: none) {
-    * {
+    .app-scroll {
       -webkit-overflow-scrolling: touch;
     }
   }
 
-  /* Prevent pull-to-refresh on mobile */
+  /* Prevent pull-to-refresh on the app shell only */
   body {
     overscroll-behavior: none;
   }
 
-  /* Prevent touch actions that cause refresh/zoom */
   html, body, #root {
     touch-action: manipulation;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -187,6 +193,41 @@
     @apply chat-bubble bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white;
   }
   
+  /* ---- App shell primitives ------------------------------------------- */
+  /* Use on the outer wrapper of a routed page: it owns the height + scroll */
+  .page-shell {
+    @apply flex flex-col h-full min-h-0 w-full;
+  }
+
+  /* Use on the scrollable body of a page */
+  .page-scroll {
+    @apply flex-1 min-h-0 overflow-y-auto overscroll-contain;
+  }
+
+  /* Consistent surface card used across settings / lists */
+  .surface-card {
+    @apply bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-800
+           rounded-2xl shadow-sm;
+  }
+
+  .surface-muted {
+    @apply bg-gray-50 dark:bg-gray-900/60 border border-gray-200/60 dark:border-gray-800;
+  }
+
+  /* Sticky page header (shared across pages) */
+  .page-header {
+    @apply flex-shrink-0 bg-white/85 dark:bg-gray-900/85 backdrop-blur-xl
+           border-b border-gray-200/70 dark:border-gray-800;
+  }
+
+  /* Min 44px tap targets on touch devices */
+  @media (pointer: coarse) {
+    .tap-target {
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
   .sidebar-item {
     @apply flex items-center gap-3 px-4 py-3 rounded-lg
            hover:bg-gray-100 dark:hover:bg-gray-800
@@ -272,6 +313,20 @@
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
+  }
+
+  /* Opt-in slim scrollbar (kept for components that asked for it) */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   /* Smooth page transition */
@@ -508,4 +563,196 @@
   --color-primary-900: #312e81;
   --color-dark-bg: #f0f4ff;
   --color-dark-surface: #ffffff;
+}
+
+/* =====================================================================
+   THEME TOKENS
+   Written by `useThemeStore.applyTheme()` as inline custom properties on
+   <html>, with sane fallbacks so first paint is never unstyled.
+   ===================================================================== */
+:root {
+  --app-bg: #f6f7f9;
+  --app-surface: #ffffff;
+  --app-surface-alt: #f3f4f6;
+  --app-border: #e5e7eb;
+  --app-text: #0f172a;
+  --app-text-muted: #64748b;
+  --app-radius: 16px;
+  --app-radius-lg: 22px;
+  --app-shadow-1: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.04);
+  --app-shadow-2: 0 10px 30px -12px rgb(15 23 42 / 0.25);
+  --app-shadow-3: 0 24px 60px -20px rgb(15 23 42 / 0.35);
+  --nav-rail-width: 76px;
+  --nav-rail-width-expanded: 248px;
+  --list-pane-width: 360px;
+  --app-header-height: 64px;
+  color-scheme: light;
+}
+
+html[data-mode='dark'] {
+  --app-shadow-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
+  --app-shadow-2: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+  --app-shadow-3: 0 24px 60px -20px rgb(0 0 0 / 0.75);
+  color-scheme: dark;
+}
+
+/* ---- Canvas & panels ------------------------------------------------ */
+body {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.app-canvas {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+}
+
+.panel {
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-1);
+}
+
+.panel-flat {
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+}
+
+.panel-inset {
+  background-color: var(--app-surface-alt);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+/* Semantic surfaces used by the shell */
+.theme-surface { background-color: var(--app-surface); }
+.theme-surface-alt { background-color: var(--app-surface-alt); }
+.theme-canvas { background-color: var(--app-bg); }
+.theme-border { border-color: var(--app-border); }
+
+/* ---- Elevation helpers --------------------------------------------- */
+.elev-1 { box-shadow: var(--app-shadow-1); }
+.elev-2 { box-shadow: var(--app-shadow-2); }
+.elev-3 { box-shadow: var(--app-shadow-3); }
+
+/* ---- Desktop two/three-pane shell ---------------------------------- */
+.app-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--app-bg);
+}
+
+.nav-rail {
+  width: var(--nav-rail-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
+  background-color: var(--app-surface);
+  border-right: 1px solid var(--app-border);
+}
+
+.list-pane {
+  width: var(--list-pane-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background-color: var(--app-surface);
+  border-right: 1px solid var(--app-border);
+}
+
+.detail-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--app-bg);
+}
+
+.divider-x {
+  width: 1px;
+  background-color: var(--app-border);
+}
+
+/* ---- Focus + interaction affordances ------------------------------- */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-primary-500, #0ea5e9);
+  outline-offset: 2px;
+}
+
+.hover-lift {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--app-shadow-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-reduced-motion='true'] *,
+  .hover-lift:hover {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    transform: none !important;
+  }
+}
+
+/* =====================================================================
+   THEME SURFACE BRIDGE
+   Components were written with Tailwind neutral greys. Rather than
+   rewriting every class, dark/light surfaces are remapped onto the active
+   theme tokens here. Unlayered, so it wins over Tailwind utilities.
+   ===================================================================== */
+html[data-mode='dark'] .dark\:bg-gray-900,
+html[data-mode='dark'] .dark\:bg-gray-950,
+html[data-mode='dark'] .dark\:bg-dark-bg {
+  background-color: var(--app-surface);
+}
+
+html[data-mode='dark'] .dark\:bg-gray-800,
+html[data-mode='dark'] .dark\:bg-gray-700,
+html[data-mode='dark'] .dark\:bg-dark-surface {
+  background-color: var(--app-surface-alt);
+}
+
+html[data-mode='dark'] .dark\:border-gray-800,
+html[data-mode='dark'] .dark\:border-gray-700,
+html[data-mode='dark'] .dark\:border-dark-border {
+  border-color: var(--app-border);
+}
+
+html[data-mode='dark'] .dark\:divide-gray-800 > :not([hidden]) ~ :not([hidden]),
+html[data-mode='dark'] .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--app-border);
+}
+
+html[data-mode='dark'] body,
+html[data-mode='dark'] .bg-gray-50 {
+  background-color: var(--app-bg);
+}
+
+html[data-mode='light'] .bg-white {
+  background-color: var(--app-surface);
+}
+html[data-mode='light'] .bg-gray-50 {
+  background-color: var(--app-bg);
 }

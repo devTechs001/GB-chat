@@ -18,7 +18,57 @@ import ChannelMonetization from '../components/channels/ChannelMonetization'
 import SearchBar from '../components/common/SearchBar'
 import Button from '../components/common/Button'
 import api from '../lib/api'
+import PageHeader from '../components/layout/PageHeader'
+import EmptyState from '../components/layout/EmptyState'
 import clsx from 'clsx'
+
+// Demo/offline fallback so the page is never blank when the API is unreachable
+const SAMPLE_CHANNELS = [
+  {
+    _id: 'ch1',
+    name: 'GBChat Announcements',
+    username: 'gbchat',
+    description: 'Product news, release notes and tips.',
+    avatar: 'https://picsum.photos/seed/gbchat-channel/200/200.jpg',
+    subscriberCount: 24800,
+    isSubscribed: true,
+    isTrending: true,
+    verified: true,
+  },
+  {
+    _id: 'ch2',
+    name: 'Design Weekly',
+    username: 'designweekly',
+    description: 'UI inspiration and layout teardowns every Friday.',
+    avatar: 'https://picsum.photos/seed/design-weekly/200/200.jpg',
+    subscriberCount: 9120,
+    isSubscribed: true,
+    isTrending: false,
+    verified: false,
+  },
+  {
+    _id: 'ch3',
+    name: 'Tech Pulse',
+    username: 'techpulse',
+    description: 'Daily technology headlines in 60 seconds.',
+    avatar: 'https://picsum.photos/seed/tech-pulse/200/200.jpg',
+    subscriberCount: 45210,
+    isSubscribed: false,
+    isTrending: true,
+    verified: true,
+  },
+  {
+    _id: 'ch4',
+    name: 'Nairobi Devs',
+    username: 'nairobidevs',
+    description: 'Community events, jobs and meetups.',
+    avatar: 'https://picsum.photos/seed/nairobi-devs/200/200.jpg',
+    subscriberCount: 3210,
+    isSubscribed: false,
+    isTrending: false,
+    verified: false,
+  },
+]
 
 const ChannelsPage = () => {
   const [channels, setChannels] = useState([])
@@ -43,7 +93,7 @@ const ChannelsPage = () => {
       setChannels(channelsArray)
     } catch (error) {
       console.error('Failed to fetch channels:', error)
-      setChannels([])
+      setChannels(SAMPLE_CHANNELS)
     } finally {
       setLoading(false)
     }
@@ -52,7 +102,7 @@ const ChannelsPage = () => {
   const filteredChannels = channels.filter((channel) => {
     if (filter === 'subscribed' && !channel.isSubscribed) return false
     if (filter === 'trending' && !channel.isTrending) return false
-    if (searchQuery && !channel.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && !(channel.name || '').toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
     return true
@@ -74,52 +124,44 @@ const ChannelsPage = () => {
     setScheduledPosts(scheduledPosts.filter(p => p._id !== postId))
   }
 
-  return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950 pb-16 overflow-hidden">
-      {/* Mobile Header */}
-      <div className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 flex items-center justify-between sticky top-0 z-10 flex-shrink-0">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">📢 Channels</h1>
-        <Button
-          variant="primary"
-          size="sm"
-          icon={<PlusIcon className="w-5 h-5" />}
-          onClick={() => setShowCreate(true)}
-        />
-      </div>
+  const TABS = [
+    { id: 'browse', label: 'Browse', icon: HashtagIcon },
+    { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
+    { id: 'scheduler', label: 'Scheduler', icon: CalendarIcon },
+    { id: 'monetization', label: 'Monetize', icon: CurrencyDollarIcon },
+  ]
 
-      {/* Desktop Header */}
-      <div className="hidden md:block bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 p-6 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-            📢 Channels
-          </h1>
+  return (
+    <div className="flex flex-col h-full min-h-0 bg-gray-50 dark:bg-gray-950">
+      <PageHeader
+        title="Channels"
+        subtitle="Broadcast to your audience"
+        icon={HashtagIcon}
+        badge={channels.length}
+        actions={
           <Button
             variant="primary"
+            size="sm"
             icon={<PlusIcon className="w-5 h-5" />}
             onClick={() => setShowCreate(true)}
           >
-            Create Channel
+            <span className="hidden sm:inline">Create channel</span>
           </Button>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-4">
-          {[
-            { id: 'browse', label: 'Browse', icon: HashtagIcon },
-            { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
-            { id: 'scheduler', label: 'Scheduler', icon: CalendarIcon },
-            { id: 'monetization', label: 'Monetization', icon: CurrencyDollarIcon },
-          ].map((tab) => {
+        }
+      >
+        {/* Tabs */}
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+          {TABS.map((tab) => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={clsx(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
                   activeTab === tab.id
-                    ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/30'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -129,40 +171,39 @@ const ChannelsPage = () => {
           })}
         </div>
 
-        {/* Search */}
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={activeTab === 'browse' ? 'Search channels...' : 'Search...'}
-        />
-
-        {/* Filters */}
         {activeTab === 'browse' && (
-          <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-hide">
-            {[
-              { id: 'all', label: 'All Channels' },
-              { id: 'subscribed', label: 'Subscribed' },
-              { id: 'trending', label: 'Trending' },
-            ].map((filterOption) => (
-              <button
-                key={filterOption.id}
-                onClick={() => setFilter(filterOption.id)}
-                className={clsx(
-                  'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-300',
-                  filter === filterOption.id
-                    ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30'
-                    : 'bg-white/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200/50 dark:border-gray-700/50'
-                )}
-              >
-                {filterOption.label}
-              </button>
-            ))}
-          </div>
+          <>
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search channels..."
+            />
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'subscribed', label: 'Subscribed' },
+                { id: 'trending', label: 'Trending' },
+              ].map((filterOption) => (
+                <button
+                  key={filterOption.id}
+                  onClick={() => setFilter(filterOption.id)}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
+                    filter === filterOption.id
+                      ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  )}
+                >
+                  {filterOption.label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
-      </div>
+      </PageHeader>
 
       {/* Channels Grid */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-6">
         {activeTab === 'browse' && (
           <>
             {loading ? (
@@ -179,22 +220,22 @@ const ChannelsPage = () => {
                 ))}
               </div>
             ) : filteredChannels.length === 0 ? (
-              <div className="text-center py-12">
-                <HashtagIcon className="w-16 h-16 mx-auto text-primary-400/50 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  No channels found
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  {searchQuery
-                    ? 'Try different search terms'
-                    : 'Create your first channel to get started'}
-                </p>
-                {!searchQuery && (
-                  <Button variant="primary" onClick={() => setShowCreate(true)}>
-                    Create Channel
-                  </Button>
-                )}
-              </div>
+              <EmptyState
+                icon={HashtagIcon}
+                title="No channels found"
+                description={
+                  searchQuery
+                    ? 'Try different search terms.'
+                    : 'Create your first channel to start broadcasting.'
+                }
+                action={
+                  !searchQuery && (
+                    <Button variant="primary" onClick={() => setShowCreate(true)}>
+                      Create channel
+                    </Button>
+                  )
+                }
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <AnimatePresence>
@@ -223,15 +264,16 @@ const ChannelsPage = () => {
         )}
 
         {activeTab === 'analytics' && !selectedChannel && (
-          <div className="text-center py-12">
-            <ChartBarIcon className="w-16 h-16 mx-auto text-primary-400/50 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              Select a Channel
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400">
-              Choose a channel from the Browse tab to view analytics
-            </p>
-          </div>
+          <EmptyState
+            icon={ChartBarIcon}
+            title="Select a channel"
+            description="Open a channel from the Browse tab to see its analytics."
+            action={
+              <Button variant="secondary" onClick={() => setActiveTab('browse')}>
+                Browse channels
+              </Button>
+            }
+          />
         )}
 
         {activeTab === 'scheduler' && (
@@ -253,15 +295,16 @@ const ChannelsPage = () => {
         )}
 
         {activeTab === 'monetization' && !selectedChannel && (
-          <div className="text-center py-12">
-            <CurrencyDollarIcon className="w-16 h-16 mx-auto text-primary-400/50 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              Select a Channel
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400">
-              Choose a channel from the Browse tab to manage monetization
-            </p>
-          </div>
+          <EmptyState
+            icon={CurrencyDollarIcon}
+            title="Select a channel"
+            description="Open a channel from the Browse tab to manage monetization."
+            action={
+              <Button variant="secondary" onClick={() => setActiveTab('browse')}>
+                Browse channels
+              </Button>
+            }
+          />
         )}
       </div>
 

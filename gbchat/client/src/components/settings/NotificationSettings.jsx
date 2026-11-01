@@ -7,10 +7,15 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 const NotificationSettings = () => {
-  const { settings, updateSettings, requestPermission, permission } =
+  const { settings, updateSettings, loadSettings, requestPermission, permission } =
     useNotificationStore()
 
   const [formData, setFormData] = useState(settings)
+
+  useEffect(() => {
+    loadSettings()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     setFormData(settings)

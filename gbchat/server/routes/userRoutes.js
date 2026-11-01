@@ -4,8 +4,14 @@ import {
   searchUsers,
   getUserProfile,
   uploadAvatar,
+  removeAvatar,
   blockUser,
+  unblockUser,
+  getBlockedUsers,
+  updateStatus,
   getOnlineUsers,
+  getProfileStats,
+  getUserMedia,
 } from "../controllers/userController.js";
 import {
   updateProfile,
@@ -28,9 +34,15 @@ router.put("/privacy-settings", updatePrivacySettings);
 
 router.get("/search", searchUsers);
 router.get("/online", getOnlineUsers);
+router.get("/blocked", getBlockedUsers);
+router.get("/:id/stats", getProfileStats);
+router.get("/:id/media", getUserMedia);
 router.get("/:id", getUserProfile);
 router.post("/avatar", uploadAvatarDisk.single("avatar"), uploadAvatar);
+router.delete("/avatar", removeAvatar);
 router.patch("/profile", updateProfile);
+router.patch("/status", updateStatus);
 router.post("/:userId/block", blockUser);
+router.post("/:userId/unblock", unblockUser);
 
 export default router;

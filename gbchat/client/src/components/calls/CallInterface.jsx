@@ -18,6 +18,7 @@ import {
 import { MicrophoneIcon as MicrophoneSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
 import useCallStore from '../../store/useCallStore'
+import useAuthStore from '../../store/useAuthStore'
 import usePeerConnection from '../../hooks/usePeerConnection'
 import clsx from 'clsx'
 import { formatDuration } from '../../lib/formatters'
@@ -36,6 +37,40 @@ const CallInterface = ({ callData, onEnd }) => {
     connectionQuality,
   } = usePeerConnection(callData)
 
+  const authUser = useAuthStore((state) => state.user)
+
+  // The API stores participants as [{ user, status }]; the UI wants flat people
+  const participants = (callData?.participants || []).map((participant) => {
+    const person = participant?.user && typeof participant.user === 'object' ? participant.user : null
+    return {
+      id: person?._id || participant?.user || participant?.id || participant?._id,
+      name:
+        person?.fullName ||
+        person?.name ||
+        participant?.fullName ||
+        participant?.name ||
+        callData?.user?.name ||
+        'Contact',
+      avatar: person?.avatar || participant?.avatar || callData?.user?.avatar || null,
+      status: participant?.status,
+    }
+  })
+
+  // Fall back to the peer we normalized in the call store
+  const call = {
+    ...callData,
+    type: callData?.type || 'audio',
+    isGroup: Boolean(callData?.isGroup),
+    currentUser: authUser,
+    participants: participants.length
+      ? participants
+      : callData?.user
+      ? [callData.user]
+      : [],
+    status: callData?.status || 'ongoing',
+  }
+
+  const isRinging = ['initiated', 'ringing'].includes(call.status) && call.isCaller
   const [callDuration, setCallDuration] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [selectedVideoId, setSelectedVideoId] = useState(null)
@@ -55,9 +90,9 @@ const CallInterface = ({ callData, onEnd }) => {
       localVideoRef.current.srcObject = localStream
     }
 
-    // Start call duration timer
+    // Start call duration timer (only once the call is connected)
     const interval = setInterval(() => {
-      setCallDuration(prev => prev + 1)
+      if (!isRinging) setCallDuration((previous) => previous + 1)
     }, 1000)
 
     return () => clearInterval(interval)
@@ -84,14 +119,14 @@ const CallInterface = ({ callData, onEnd }) => {
       }, 3000)
     }
 
-    if (callData.type === 'video') {
+    if (call.type === 'video') {
       containerRef.current?.addEventListener('mousemove', handleMouseMove)
       return () => {
         containerRef.current?.removeEventListener('mousemove', handleMouseMove)
         clearTimeout(controlsTimeoutRef.current)
       }
     }
-  }, [callData.type, showChat])
+  }, [call.type, showChat])
 
   const handleFullscreen = () => {
     if (!isFullscreen) {
@@ -121,11 +156,11 @@ const CallInterface = ({ callData, onEnd }) => {
 
   const VideoGrid = () => {
     const videos = [
-      { id: 'local', stream: localStream, user: callData.currentUser },
+      { id: 'local', stream: localStream, user: call.currentUser },
       ...Object.entries(remoteStreams).map(([id, stream]) => ({
         id,
         stream,
-        user: callData.participants.find(p => p.id === id),
+        user: call.participants.find((p) => String(p.id) === String(id)) || {},
       })),
     ]
 
@@ -197,16 +232,16 @@ const CallInterface = ({ callData, onEnd }) => {
     <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-gray-900 to-gray-800">
       <div className="text-center">
         <Avatar
-          src={callData.participants[0]?.avatar}
-          alt={callData.participants[0]?.name}
+          src={call.participants[0]?.avatar}
+          alt={call.participants[0]?.name}
           size="xl"
           className="mx-auto mb-6 ring-4 ring-white/20"
         />
         <h2 className="text-2xl font-semibold text-white mb-2">
-          {callData.participants[0]?.name}
+          {call.participants[0]?.name}
         </h2>
         <p className="text-gray-300">
-          {formatDuration(callDuration)}
+          {isRinging ? 'Ringing…' : formatDuration(callDuration)}
         </p>
         
         {/* Audio visualizer */}
@@ -248,10 +283,10 @@ const CallInterface = ({ callData, onEnd }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <h3 className="text-white font-medium">
-                  {callData.isGroup ? callData.groupName : callData.participants[0]?.name}
+                  {call.isGroup ? call.groupName : call.participants[0]?.name}
                 </h3>
                 <span className="text-white/70 text-sm">
-                  {formatDuration(callDuration)}
+                  {isRinging ? 'Ringing…' : formatDuration(callDuration)}
                 </span>
                 {getConnectionIcon()}
               </div>
@@ -281,7 +316,7 @@ const CallInterface = ({ callData, onEnd }) => {
 
       {/* Main content */}
       <div className="flex-1 relative">
-        {callData.type === 'video' ? <VideoGrid /> : <AudioCallView />}
+        {call.type === 'video' ? <VideoGrid /> : <AudioCallView />}
       </div>
 
       {/* Controls */}
@@ -312,7 +347,7 @@ const CallInterface = ({ callData, onEnd }) => {
               </button>
 
               {/* Video */}
-              {callData.type === 'video' && (
+              {call.type === 'video' && (
                 <button
                   onClick={toggleVideo}
                   className={clsx(
@@ -357,7 +392,7 @@ const CallInterface = ({ callData, onEnd }) => {
               </button>
 
               {/* Add participant */}
-              {callData.isGroup && (
+              {call.isGroup && (
                 <button
                   onClick={() => {/* Handle add participant */}}
                   className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white"

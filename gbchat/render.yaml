@@ -9,7 +9,7 @@ services:
     rootDir: server
     buildCommand: npm ci --production=false
     startCommand: node index.js
-    healthCheckPath: /api/health
+    healthCheckPath: /api/system/live
     envVars:
       - key: NODE_ENV
         value: production
@@ -43,8 +43,22 @@ services:
         sync: false
       - key: RATE_LIMIT_WINDOW_MS
         value: 900000
-      - key: RATE_LIMIT_MAX_REQUESTS
-        value: 100
+      - key: RATE_LIMIT_MAX
+        value: 600
+      - key: RATE_LIMIT_AUTH_MAX
+        value: 20
+      - key: RATE_LIMIT_WRITE_MAX
+        value: 120
+      - key: TRUST_PROXY
+        value: 1
+      - key: NODE_ID
+        value: gbchat-server-1
+      - key: REDIS_URL
+        sync: false
+      - key: GRPC_ENABLED
+        value: "true"
+      - key: GRPC_PORT
+        value: "50051"
     disk:
       name: uploads
       mountPath: /opt/render/project/src/uploads

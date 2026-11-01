@@ -8,7 +8,7 @@ import useStoryStore from '../../store/useStoryStore'
 import useAuthStore from '../../store/useAuthStore'
 import clsx from 'clsx'
 
-const StoryBar = () => {
+const StoryBar = ({ compact = false }) => {
   const { user } = useAuthStore()
   const { stories, myStory, fetchStories } = useStoryStore()
   const [showCreator, setShowCreator] = useState(false)
@@ -32,11 +32,13 @@ const StoryBar = () => {
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <div className="px-3 py-3 md:px-4 md:py-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Stories
-          </h3>
+      <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200/80 dark:border-gray-800">
+        <div className={compact ? 'px-3 py-2' : 'px-3 py-3 md:px-4 md:py-4'}>
+          {!compact && (
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Stories
+            </h3>
+          )}
           
           {/* Stories horizontal scroll */}
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
@@ -51,7 +53,7 @@ const StoryBar = () => {
                 className="relative"
               >
                 <div className={clsx(
-                  'w-16 h-20 md:w-20 md:h-24',
+                  compact ? 'w-14 h-16' : 'w-16 h-20 md:w-20 md:h-24',
                   'rounded-lg overflow-hidden',
                   'bg-gradient-to-b from-gray-100 to-gray-200',
                   'dark:from-gray-700 dark:to-gray-800',
@@ -99,6 +101,7 @@ const StoryBar = () => {
                 className="flex-shrink-0"
               >
                 <StoryCard
+                  key={story._id}
                   story={story}
                   onClick={() => {
                     setViewingStory(story)

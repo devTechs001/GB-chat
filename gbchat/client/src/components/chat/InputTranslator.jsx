@@ -64,7 +64,7 @@ const InputTranslator = ({ onTranslate, inputValue, disabled = false }) => {
 
     setIsTranslating(true)
     try {
-      const { data } = await api.post('/messages/translate-text', {
+      const { data } = await api.post('/translations/translate-text', {
         text: text,
         targetLang,
         sourceLang: sourceLang === 'auto' ? undefined : sourceLang,

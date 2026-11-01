@@ -1,12 +1,20 @@
 // server/routes/groupRoutes.js
 import express from "express";
 import {
+  getGroups,
   createGroup,
+  getGroup,
+  deleteGroup,
   updateGroup,
   addMembers,
   removeMember,
   leaveGroup,
   makeAdmin,
+  removeAdmin,
+  setGroupMute,
+  setGroupFlag,
+  bulkInvite,
+  exportGroups,
   updateGroupSettings,
   // Polls
   createPoll,
@@ -31,12 +39,25 @@ const router = express.Router();
 router.use(protect);
 
 // Group CRUD
+router.get("/", getGroups);
 router.post("/", createGroup);
+router.post("/export", exportGroups);
+router.post("/bulk-invite", bulkInvite);
+router.get("/:id", getGroup);
+router.put("/:id", updateGroup);
+router.patch("/:id", updateGroup);
+router.delete("/:id", deleteGroup);
+router.patch("/:id/archive", setGroupFlag);
+router.patch("/:id/star", setGroupFlag);
+router.patch("/:id/mute", setGroupFlag);
+router.post("/:id/mute", setGroupMute);
+router.post("/:id/unmute", setGroupMute);
 router.put("/:id", updateGroup);
 router.post("/:id/members", addMembers);
 router.delete("/:id/members/:memberId", removeMember);
 router.post("/:id/leave", leaveGroup);
 router.put("/:id/members/:memberId/admin", makeAdmin);
+router.delete("/:id/members/:memberId/admin", removeAdmin);
 router.put("/:id/settings", updateGroupSettings);
 
 // Polls

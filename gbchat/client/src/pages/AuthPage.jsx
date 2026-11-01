@@ -1,20 +1,41 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import {
+  LockClosedIcon,
+  PaintBrushIcon,
+  ClockIcon,
+  DevicePhoneMobileIcon,
+  MoonIcon,
+  SparklesIcon,
+  RocketLaunchIcon,
+} from '@heroicons/react/24/outline'
 import LoginForm from '../components/auth/LoginForm'
 import RegisterForm from '../components/auth/RegisterForm'
 import ForgotPassword from '../components/auth/ForgotPassword'
+import useAuthStore from '../store/useAuthStore'
 import clsx from 'clsx'
 
 const AuthPage = () => {
   const [activeTab, setActiveTab] = useState('login')
+  const enterDemo = useAuthStore((state) => state.enterDemo)
+  const [demoLoading, setDemoLoading] = useState(false)
+
+  const handleExploreDemo = () => {
+    setDemoLoading(true)
+    // Give the user a beat of feedback, then drop into the app shell
+    setTimeout(() => {
+      enterDemo()
+      setDemoLoading(false)
+    }, 250)
+  }
 
   const features = [
-    { icon: '🔒', title: 'End-to-End Encryption', desc: 'Your messages are secure' },
-    { icon: '🎨', title: 'Custom Avatars', desc: 'Create unique profile pictures' },
-    { icon: '⏰', title: 'Schedule Messages', desc: 'Send messages at the perfect time' },
-    { icon: '📱', title: 'Cross-Platform', desc: 'Access from any device' },
-    { icon: '🌙', title: 'Dark Mode', desc: 'Easy on the eyes' },
-    { icon: '✨', title: 'Photo Editor', desc: 'Edit your profile pictures' },
+    { icon: LockClosedIcon, title: 'End-to-end encryption', desc: 'Only you and the recipient can read messages' },
+    { icon: PaintBrushIcon, title: 'Custom avatars', desc: 'Create a profile picture that is yours' },
+    { icon: ClockIcon, title: 'Scheduled messages', desc: 'Send at the moment that matters' },
+    { icon: DevicePhoneMobileIcon, title: 'Cross platform', desc: 'Link up to four devices' },
+    { icon: MoonIcon, title: 'Dark mode & themes', desc: 'Easy on the eyes, day or night' },
+    { icon: SparklesIcon, title: 'Chat effects', desc: 'Wallpapers, bubbles and animations' },
   ]
 
   return (
@@ -134,14 +155,14 @@ const AuthPage = () => {
                 className="flex items-start gap-4 group"
               >
                 <motion.span
-                  className="text-3xl group-hover:scale-110 transition-transform"
-                  whileHover={{ rotate: [0, -10, 10, 0] }}
+                  className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/10 text-primary-300 ring-1 ring-white/10"
+                  whileHover={{ scale: 1.05 }}
                 >
-                  {feature.icon}
+                  <feature.icon className="h-5 w-5" />
                 </motion.span>
                 <div>
-                  <h3 className="font-semibold text-lg text-white">{feature.title}</h3>
-                  <p className="text-sm opacity-70 text-gray-300">{feature.desc}</p>
+                  <h3 className="font-semibold text-white">{feature.title}</h3>
+                  <p className="text-sm text-gray-400">{feature.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -280,6 +301,33 @@ const AuthPage = () => {
             )}
           </AnimatePresence>
 
+          {/* Demo entry point — lets the UI be explored without a backend */}
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+              <span className="text-xs uppercase tracking-wide text-gray-400">or</span>
+              <span className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+            </div>
+            <button
+              type="button"
+              onClick={handleExploreDemo}
+              disabled={demoLoading}
+              className={clsx(
+                'w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl',
+                'border border-gray-300 dark:border-gray-700 bg-white/70 dark:bg-gray-900/60',
+                'text-sm font-semibold text-gray-700 dark:text-gray-200',
+                'hover:bg-white dark:hover:bg-gray-900 hover:border-primary-400 dark:hover:border-primary-600',
+                'transition disabled:opacity-60'
+              )}
+            >
+              <RocketLaunchIcon className="w-4 h-4" aria-hidden="true" />
+              {demoLoading ? 'Opening demo…' : 'Explore demo without an account'}
+            </button>
+            <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">
+              Demo runs on sample data and never leaves your browser.
+            </p>
+          </div>
+
           {/* Mobile Features - Enhanced */}
           <div className="lg:hidden mt-12 grid grid-cols-3 gap-4">
             {features.slice(0, 3).map((feature, index) => (
@@ -290,7 +338,7 @@ const AuthPage = () => {
                 transition={{ delay: index * 0.1 }}
                 className="text-center p-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl"
               >
-                <span className="text-2xl block mb-1">{feature.icon}</span>
+                <feature.icon className="mx-auto mb-1.5 h-5 w-5 text-primary-500" />
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   {feature.title}
                 </p>

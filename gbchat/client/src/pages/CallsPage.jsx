@@ -16,10 +16,12 @@ import SearchBar from '../components/common/SearchBar'
 import CallInterface from '../components/calls/CallInterface'
 import NewCallModal from '../components/calls/NewCallModal'
 import useCallStore from '../store/useCallStore'
+import PageHeader from '../components/layout/PageHeader'
+import EmptyState from '../components/layout/EmptyState'
 import clsx from 'clsx'
 
 const CallsPage = () => {
-  const { callHistory, activeCall, fetchCallHistory, initiateCall } = useCallStore()
+  const { callHistory, activeCall, fetchCallHistory, initiateCall, isLoading, historyError } = useCallStore()
   const [filter, setFilter] = useState('all') // all, missed, incoming, outgoing
   const [searchQuery, setSearchQuery] = useState('')
   const [showCallInterface, setShowCallInterface] = useState(false)
@@ -30,7 +32,9 @@ const CallsPage = () => {
   }, [])
 
   const filteredCalls = (callHistory || []).filter((call) => {
-    if (filter !== 'all' && call.type !== filter) return false
+    if (filter === 'missed' && call.status !== 'missed') return false
+    if (filter === 'incoming' && call.direction !== 'incoming') return false
+    if (filter === 'outgoing' && call.direction !== 'outgoing') return false
     if (searchQuery && !call.user?.name?.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
@@ -58,9 +62,15 @@ const CallsPage = () => {
     return 'Connecting...'
   }
 
-  const handleCall = (user, isVideo = false) => {
-    initiateCall({ userId: user._id, type: isVideo ? 'video' : 'audio' })
-    setShowCallInterface(true)
+  const handleCall = async (user, isVideo = false) => {
+    const participantId = user?._id || user?.id
+    if (!participantId) return
+    const result = await initiateCall({
+      participantId,
+      type: isVideo ? 'video' : 'audio',
+      peer: { _id: participantId, name: user.name, avatar: user.avatar },
+    })
+    if (result.success) setShowCallInterface(true)
   }
 
   const groupCallsByDate = (calls) => {
@@ -76,67 +86,67 @@ const CallsPage = () => {
   const groupedCalls = groupCallsByDate(filteredCalls)
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950 pb-16 overflow-hidden">
-      {/* Mobile Header */}
-      <div className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 sticky top-0 z-10 flex-shrink-0">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">📞 Calls</h1>
-      </div>
-
-      {/* Desktop Header */}
-      <div className="hidden md:block bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 p-6 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-            📞 Calls
-          </h1>
+    <div className="flex flex-col h-full min-h-0 bg-gray-50 dark:bg-gray-950">
+      <PageHeader
+        title="Calls"
+        subtitle="Voice and video call history"
+        icon={PhoneIcon}
+        actions={
           <Button
-            variant="ghost"
-            icon={<PhoneIcon className="w-5 h-5" />}
+            variant="primary"
+            size="sm"
+            icon={<PhoneIcon className="w-4 h-4" />}
             onClick={() => setShowNewCallModal(true)}
-            className="hidden md:flex bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-400 rounded-xl"
           >
-            New Call
+            <span className="hidden sm:inline">New call</span>
           </Button>
-        </div>
-
+        }
+      >
         <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search calls..." />
 
-        <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {[
-            { id: 'all', label: '🔄 All' },
-            { id: 'missed', label: '❌ Missed' },
-            { id: 'incoming', label: '📥 Incoming' },
-            { id: 'outgoing', label: '📤 Outgoing' },
+            { id: 'all', label: 'All' },
+            { id: 'missed', label: 'Missed' },
+            { id: 'incoming', label: 'Incoming' },
+            { id: 'outgoing', label: 'Outgoing' },
           ].map((filterOption) => (
-            <button key={filterOption.id} onClick={() => setFilter(filterOption.id)}
+            <button
+              key={filterOption.id}
+              onClick={() => setFilter(filterOption.id)}
               className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-300',
+                'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
                 filter === filterOption.id
-                  ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30'
-                  : 'bg-white/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200/50 dark:border-gray-700/50'
-              )}>
+                  ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/30'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              )}
+            >
               {filterOption.label}
             </button>
           ))}
         </div>
-      </div>
+      </PageHeader>
 
       {/* Call History */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         {Object.keys(groupedCalls).length === 0 ? (
-          <div className="text-center py-16 px-4">
-            <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-primary-500/20 to-primary-600/10 rounded-full flex items-center justify-center">
-              <PhoneIcon className="w-12 h-12 text-primary-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No call history</h3>
-            <p className="text-gray-500 dark:text-gray-400">Your recent calls will appear here</p>
-          </div>
+          <EmptyState
+            icon={PhoneIcon}
+            title="No calls yet"
+            description="Your recent voice and video calls will appear here."
+            action={
+              <Button variant="primary" onClick={() => setShowNewCallModal(true)}>
+                Start a call
+              </Button>
+            }
+          />
         ) : (
           <div className="space-y-1 p-2">
             {Object.entries(groupedCalls).map(([date, calls]) => (
               <div key={date}>
                 <div className="px-4 py-2">
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    {date === new Date().toDateString() ? '📅 Today' : date}
+                    {date === new Date().toDateString() ? 'Today' : date}
                   </h3>
                 </div>
                 <div className="space-y-1">
@@ -180,7 +190,13 @@ const CallsPage = () => {
       </div>
 
       {showCallInterface && activeCall && (
-        <CallInterface callData={activeCall} onEnd={() => setShowCallInterface(false)} />
+        <CallInterface
+          callData={activeCall}
+          onEnd={() => {
+            useCallStore.getState().endCall(activeCall._id)
+            setShowCallInterface(false)
+          }}
+        />
       )}
 
       <NewCallModal isOpen={showNewCallModal} onClose={() => setShowNewCallModal(false)} />

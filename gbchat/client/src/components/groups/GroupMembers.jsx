@@ -18,7 +18,7 @@ const GroupMembers = ({ group, onUpdate }) => {
 
   const handleMakeAdmin = async (memberId) => {
     try {
-      await api.post(`/groups/${group._id}/admins/${memberId}`)
+      await api.put(`/groups/${group._id}/members/${memberId}/admin`)
       setMembers((prev) =>
         prev.map((m) =>
           m._id === memberId ? { ...m, isAdmin: true } : m
@@ -33,7 +33,7 @@ const GroupMembers = ({ group, onUpdate }) => {
 
   const handleRemoveAdmin = async (memberId) => {
     try {
-      await api.delete(`/groups/${group._id}/admins/${memberId}`)
+      await api.delete(`/groups/${group._id}/members/${memberId}/admin`)
       setMembers((prev) =>
         prev.map((m) =>
           m._id === memberId ? { ...m, isAdmin: false } : m

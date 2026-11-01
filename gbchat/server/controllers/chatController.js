@@ -248,3 +248,109 @@ export const getArchivedChats = async (req, res, next) => {
     next(error);
   }
 };
+/** PUT/POST /api/chats/:id/unarchive — force-remove from the archive list */
+export const unarchiveChat = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    user.archivedChats = user.archivedChats.filter(
+      (id) => id.toString() !== req.params.id
+    );
+    await user.save();
+    res.json({ archived: false });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** PUT/POST /api/chats/:id/unpin — force-unpin */
+export const unpinChat = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    user.pinnedChats = user.pinnedChats.filter(
+      (id) => id.toString() !== req.params.id
+    );
+    await user.save();
+    res.json({ pinned: false });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** PUT/POST /api/chats/:id/unmute — force-unmute */
+export const unmuteChat = async (req, res, next) => {
+  try {
+    const chat = await Chat.findById(req.params.id);
+    if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+    const participant = chat.participants.find(
+      (p) => p.user.toString() === req.user._id.toString()
+    );
+
+    if (participant) {
+      participant.isMuted = false;
+      participant.muteUntil = null;
+      await chat.save();
+    }
+
+    res.json({ muted: false });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** GET /api/chats/:id/media — shared media for the media gallery */
+export const getChatMedia = async (req, res, next) => {
+  try {
+    const media = await Message.find({
+      chat: req.params.id,
+      type: { $in: ["image", "video", "audio", "voice", "document"] },
+    })
+      .select("type content createdAt sender")
+      .populate("sender", "fullName avatar")
+      .sort({ createdAt: -1 })
+      .limit(200);
+
+    res.json(media);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** GET /api/chats/:id/search?q=term — search inside a conversation */
+export const searchChatMessages = async (req, res, next) => {
+  try {
+    const query = (req.query.q || "").trim();
+    if (!query) return res.json([]);
+
+    const results = await Message.find({
+      chat: req.params.id,
+      "content.text": { $regex: query, $options: "i" },
+    })
+      .select("content type createdAt sender")
+      .populate("sender", "fullName avatar")
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.json(results);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** POST /api/chats/:id/report — report a conversation */
+export const reportChat = async (req, res, next) => {
+  try {
+    const io = req.app.get("io");
+    if (io) {
+      io.to(req.params.id).emit("chatReported", {
+        chatId: req.params.id,
+        reportedBy: req.user._id,
+        reason: req.body?.reason || "unspecified",
+      });
+    }
+
+    res.json({ message: "Report submitted" });
+  } catch (error) {
+    next(error);
+  }
+};

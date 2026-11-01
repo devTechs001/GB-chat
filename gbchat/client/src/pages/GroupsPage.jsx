@@ -68,6 +68,7 @@ import clsx from 'clsx'
 import { formatDistanceToNow } from 'date-fns'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
+import PageHeader from '../components/layout/PageHeader'
 
 const GroupsPage = () => {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
@@ -103,20 +104,49 @@ const GroupsPage = () => {
   const [showEventCreator, setShowEventCreator] = useState(false)
   const [showMoreOptions, setShowMoreOptions] = useState(false)
 
-  const { groups, fetchChats, chats, setActiveChat, currentChat } = useChatStore()
+  const { fetchChats, setActiveChat } = useChatStore()
   const { user } = useAuthStore()
   const gbFeaturesStore = useGBFeaturesStore()
   const navigate = useNavigate()
 
-  // Get groups from chats or use sample data
-  const groupsList = groups.length > 0 ? groups : chats.filter(chat => chat.isGroup)
+  // Groups come from GET /api/groups (real data, falls back to chat store)
+  const [groupList, setGroupList] = useState([])
+  const [groupsLoading, setGroupsLoading] = useState(true)
+  const [groupsError, setGroupsError] = useState(null)
+  const { chats } = useChatStore()
+
+  const groupsList = groupList.length
+    ? groupList
+    : chats.filter((chat) => chat.isGroup || chat.type === 'group')
+
+  const fetchGroups = async () => {
+    setGroupsLoading(true)
+    setGroupsError(null)
+    try {
+      const { data } = await api.get('/groups')
+      setGroupList(Array.isArray(data?.groups) ? data.groups : [])
+    } catch (error) {
+      setGroupsError(
+        error.response?.status === 401
+          ? 'Sign in to see your groups'
+          : error.response?.data?.message || 'Could not load groups'
+      )
+      setGroupList([])
+    } finally {
+      setGroupsLoading(false)
+    }
+  }
 
   useEffect(() => {
+    fetchGroups()
     fetchChats()
     gbFeaturesStore.fetchGBFeatures()
+  }, [])
+
+  useEffect(() => {
     loadAnnouncements()
     calculateGroupStats()
-  }, [])
+  }, [groupsList.length])
 
   useEffect(() => {
     calculateGroupStats()
@@ -194,7 +224,7 @@ const GroupsPage = () => {
       
       setSelectedGroups(new Set())
       setShowBulkActions(false)
-      await fetchChats()
+      await fetchGroups()
     } catch (error) {
       toast.error('Failed to perform bulk action')
     } finally {
@@ -239,24 +269,58 @@ const GroupsPage = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await fetchChats()
+    await fetchGroups()
     await gbFeaturesStore.fetchGBFeatures()
-    calculateGroupStats()
-    setTimeout(() => setRefreshing(false), 1000)
+    setTimeout(() => setRefreshing(false), 600)
   }
 
   const handleCreateGroupSuccess = async (newGroup) => {
-    console.log('Group created successfully:', newGroup)
-    await fetchChats()
     setIsCreateGroupOpen(false)
-    toast.success('Group created successfully! 🎉')
+    if (newGroup?._id) {
+      setGroupList((previous) => [newGroup, ...previous.filter((g) => g._id !== newGroup._id)])
+    }
+    await fetchGroups()
+    toast.success('Group created')
   }
 
   const handleGroupClick = (group) => {
-    // Set the group as active chat to open chat area
     setActiveChat(group)
-    // Navigate to chats page (path is /chats or / in App.jsx)
     navigate('/chats')
+  }
+
+  /** Per-group actions used by the card menu */
+  const handleGroupAction = async (group, action) => {
+    const id = group._id
+    try {
+      if (action === 'star') {
+        const { data } = await api.patch(`/groups/${id}/star`)
+        setGroupList((previous) =>
+          previous.map((g) => (g._id === id ? { ...g, isStarred: data?.isStarred ?? !g.isStarred } : g))
+        )
+      } else if (action === 'archive') {
+        const { data } = await api.patch(`/groups/${id}/archive`)
+        setGroupList((previous) =>
+          previous.map((g) => (g._id === id ? { ...g, isArchived: data?.isArchived ?? !g.isArchived } : g))
+        )
+      } else if (action === 'mute') {
+        await api.post(`/groups/${id}/mute`)
+        setGroupList((previous) =>
+          previous.map((g) => (g._id === id ? { ...g, isMuted: !g.isMuted } : g))
+        )
+      } else if (action === 'leave') {
+        if (!window.confirm(`Leave ${group.name}?`)) return
+        await api.post(`/groups/${id}/leave`)
+        setGroupList((previous) => previous.filter((g) => g._id !== id))
+        toast.success('You left the group')
+      } else if (action === 'delete') {
+        if (!window.confirm(`Delete ${group.name} for everyone?`)) return
+        await api.delete(`/groups/${id}`)
+        setGroupList((previous) => previous.filter((g) => g._id !== id))
+        toast.success('Group deleted')
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || `Could not ${action} this group`)
+    }
   }
 
   const handleAnnouncementClick = (announcement) => {
@@ -329,7 +393,7 @@ const GroupsPage = () => {
         durationHours: pollData.durationHours || 24
       })
 
-      toast.success('Poll created successfully! 📊')
+      toast.success('Poll created')
       setShowPollCreator(false)
       
       // Refresh groups data to show new poll
@@ -361,7 +425,7 @@ const GroupsPage = () => {
         targetAudience: announcementData.targetAudience || 'all'
       })
 
-      toast.success('Announcement created successfully! 📢')
+      toast.success('Announcement published')
       setShowAnnouncementCreator(false)
       
       // Refresh groups data to show new announcement
@@ -395,7 +459,7 @@ const GroupsPage = () => {
         sendReminder: eventData.sendReminder || true
       })
 
-      toast.success('Event created successfully! 📅')
+      toast.success('Event created')
       setShowEventCreator(false)
       
       // Refresh groups data to show new event
@@ -422,7 +486,7 @@ const GroupsPage = () => {
         optionId: optionId
       })
 
-      toast.success('Vote submitted! ✓')
+      toast.success('Vote submitted')
       
       // Refresh polls data
       fetchChats()
@@ -449,9 +513,9 @@ const GroupsPage = () => {
       })
 
       const statusMessages = {
-        going: 'See you there! 🎉',
-        maybe: 'Maybe response recorded 🤔',
-        'not-going': 'Sorry you can\'t make it 😢',
+        going: 'See you there!',
+        maybe: 'Maybe response recorded',
+        'not-going': "Sorry you can't make it",
       }
       toast.success(statusMessages[status] || 'RSVP submitted!')
       
@@ -467,7 +531,7 @@ const GroupsPage = () => {
 
   // More Options handlers
   const handleImportGroups = () => {
-    toast.info('Import groups feature coming soon! 📥')
+    toast('Import groups is not available yet')
     setShowMoreOptions(false)
   }
 
@@ -477,12 +541,12 @@ const GroupsPage = () => {
   }
 
   const handleGroupSettings = () => {
-    toast.info('Global group settings coming soon! ⚙️')
+    toast('Global group settings are not available yet')
     setShowMoreOptions(false)
   }
 
   const handleHelpSupport = () => {
-    toast.info('Opening help & support... 📚')
+    toast('Opening help & support')
     setShowMoreOptions(false)
     // In a real app, this would navigate to help page or open support chat
   }
@@ -544,45 +608,64 @@ const GroupsPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 pb-16 overflow-hidden scrollbar-hide">
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleRefresh}
-            className={clsx('p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all', refreshing && 'animate-spin')}
-          >
-            <ArrowPathIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsCreateGroupOpen(true)}
-          >
-            <PlusIcon className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Desktop Header */}
-      <div className="hidden md:flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{groupsList.length} groups</p>
-          </div>
+    <div className="flex flex-col h-full min-h-0 bg-gray-50 dark:bg-gray-950">
+      <PageHeader
+        title="Groups"
+        subtitle={
+          groupsLoading
+            ? 'Loading groups…'
+            : groupsError
+            ? groupsError
+            : `${groupsList.length} group${groupsList.length === 1 ? '' : 's'}`
+        }
+        icon={UserGroupIcon}
+        actions={
+          <>
+            <button
+              onClick={handleRefresh}
+              aria-label="Refresh groups"
+              className={clsx(
+                'p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+                refreshing && 'animate-spin'
+              )}
+            >
+              <ArrowPathIcon className="w-5 h-5" />
+            </button>
+            <Button variant="primary" size="sm" onClick={() => setIsCreateGroupOpen(true)}>
+              <PlusIcon className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">New group</span>
+            </Button>
+          </>
+        }
+      >
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setShowGroupInsights(!showGroupInsights)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className={clsx(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
+              showGroupInsights
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+            )}
           >
             <ChartBarIcon className="w-4 h-4" />
-            <span className="text-sm">Insights</span>
+            Insights
           </button>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={clsx(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
+              showArchived
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+            )}
+          >
+            <ArchiveBoxIcon className="w-4 h-4" />
+            Archived
+          </button>
+
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-0.5 ml-auto">
             {[
               { id: 'list', icon: QueueListIcon, label: 'List' },
               { id: 'grid', icon: UsersIcon, label: 'Grid' },
@@ -591,43 +674,20 @@ const GroupsPage = () => {
               <button
                 key={mode.id}
                 onClick={() => setViewMode(mode.id)}
+                aria-label={`${mode.label} view`}
                 className={clsx(
-                  'p-1.5 rounded transition-colors',
-                  viewMode === mode.id ? 'bg-white dark:bg-gray-700 shadow-sm' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                  'p-1.5 rounded-full transition-colors',
+                  viewMode === mode.id
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400'
                 )}
-                title={mode.label}
               >
                 <mode.icon className="w-4 h-4" />
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setShowArchived(!showArchived)}
-            className={clsx(
-              'p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors',
-              showArchived && 'text-primary-600'
-            )}
-            title={showArchived ? 'Hide Archived' : 'Show Archived'}
-          >
-            <ArchiveBoxIcon className="w-5 h-5" />
-          </button>
-          <button
-            onClick={handleRefresh}
-            className={clsx('p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all', refreshing && 'animate-spin')}
-            title="Refresh"
-          >
-            <ArrowPathIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsCreateGroupOpen(true)}
-          >
-            <PlusIcon className="w-4 h-4 mr-1" />
-            New Group
-          </Button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Group Insights */}
       <AnimatePresence>
@@ -636,10 +696,10 @@ const GroupsPage = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="hidden md:block border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl overflow-hidden"
+            className="border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl overflow-hidden"
           >
             <div className="p-4">
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary-600">{groupStats.totalGroups}</div>
                   <div className="text-xs text-gray-500">Total Groups</div>
@@ -898,7 +958,7 @@ const GroupsPage = () => {
       )}
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         {activeTab === 'groups' && (
           <div className={clsx(
             viewMode === 'grid' ? 'p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 
@@ -1139,8 +1199,14 @@ const GroupsPage = () => {
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>{formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}</span>
                     <div className="flex items-center gap-3">
-                      <span>👍 {announcement.likes}</span>
-                      <span>💬 {announcement.comments}</span>
+                      <span className="flex items-center gap-1">
+                        <HandThumbUpIcon className="w-3.5 h-3.5" />
+                        {announcement.likes}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <ChatBubbleLeftIcon className="w-3.5 h-3.5" />
+                        {announcement.comments}
+                      </span>
                     </div>
                   </div>
                 </motion.div>

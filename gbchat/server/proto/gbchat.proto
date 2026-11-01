@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package gbchat.v1;
+
+// Internal service-to-service contract.
+// The public API stays REST + Socket.IO; gRPC is used between GBChat nodes
+// (and by trusted internal tooling) for presence lookups and notification
+// fan-out that must reach every replica.
+
+message Empty {}
+
+message NodeInfo {
+  string node_id = 1;
+  string version = 2;
+  string hostname = 3;
+  int32 pid = 4;
+  int64 uptime_seconds = 5;
+  string started_at = 6;
+  bool redis = 7;
+  int32 connections = 8;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool healthy = 1;
+  NodeInfo node = 2;
+  string message = 3;
+}
+
+message PresenceRequest {
+  string user_id = 1;
+}
+
+message PresenceResponse {
+  string user_id = 1;
+  bool online = 2;
+  string status = 3;
+  int64 last_seen_ms = 4;
+  repeated string socket_ids = 5;
+  string served_by = 6;
+}
+
+message SetStatusRequest {
+  string user_id = 1;
+  string status = 2;
+}
+
+message NotificationRequest {
+  // Target users. Empty = broadcast to every connected client.
+  repeated string user_ids = 1;
+  string title = 2;
+  string body = 3;
+  string type = 4;
+  // Optional deep-link payload serialised as JSON
+  string data_json = 5;
+  // Socket.IO event name (default: notification)
+  string event = 6;
+}
+
+message NotificationAck {
+  bool accepted = 1;
+  int32 delivered_to = 2;
+  string served_by = 3;
+}
+
+service HealthService {
+  rpc Ping(HealthRequest) returns (HealthResponse);
+}
+
+service PresenceService {
+  rpc GetPresence(PresenceRequest) returns (PresenceResponse);
+  rpc SetStatus(SetStatusRequest) returns (PresenceResponse);
+}
+
+service NotificationService {
+  rpc Send(NotificationRequest) returns (NotificationAck);
+}

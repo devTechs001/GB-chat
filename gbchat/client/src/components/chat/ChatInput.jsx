@@ -99,7 +99,7 @@ const ChatInput = ({ onSendMessage, replyTo, chatId }) => {
   ]
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+    <div className="flex-shrink-0 border-t border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 safe-area-bottom">
       {/* Attached files preview */}
       {attachedFiles.length > 0 && (
         <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">

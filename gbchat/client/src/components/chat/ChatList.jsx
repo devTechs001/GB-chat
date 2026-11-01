@@ -1,14 +1,37 @@
 import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MagnifyingGlassIcon, PlusIcon, FunnelIcon } from '@heroicons/react/24/outline'
+import {
+  MagnifyingGlassIcon,
+  PlusIcon,
+  FunnelIcon,
+  XMarkIcon,
+  ChatBubbleLeftRightIcon,
+  InboxIcon,
+  EnvelopeOpenIcon,
+  UserGroupIcon,
+  ArchiveBoxIcon,
+  ArrowDownOnSquareIcon,
+  ArrowsUpDownIcon,
+  BarsArrowDownIcon,
+  BoltIcon,
+  PhoneIcon,
+  UsersIcon,
+  BookOpenIcon,
+  CalendarDaysIcon,
+  StarIcon,
+} from '@heroicons/react/24/outline'
 import useChatStore from '../../store/useChatStore'
 import ChatListItem from './ChatListItem'
 import Button from '../common/Button'
 import NewChatModal from './NewChatModal'
+import PageHeader from '../layout/PageHeader'
+import EmptyState from '../layout/EmptyState'
 import clsx from 'clsx'
 
 const ChatList = ({ onChatSelect, className }) => {
-  const { chats, searchQuery, setSearchQuery, isLoading } = useChatStore()
+  const navigate = useNavigate()
+  const { chats, searchQuery, setSearchQuery, loading: isLoading, error, fetchChats } = useChatStore()
   const [filter, setFilter] = useState('all') // all, unread, groups, archived
   const [sortBy, setSortBy] = useState('date') // date, name, unread
   const [showNewChatModal, setShowNewChatModal] = useState(false)
@@ -56,133 +79,202 @@ const ChatList = ({ onChatSelect, className }) => {
   }, [chats, filter, searchQuery, sortBy])
 
   const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'unread', label: 'Unread' },
-    { id: 'groups', label: 'Groups' },
-    { id: 'archived', label: 'Archived' },
+    { id: 'all', label: 'All', icon: InboxIcon },
+    { id: 'unread', label: 'Unread', icon: EnvelopeOpenIcon },
+    { id: 'groups', label: 'Groups', icon: UserGroupIcon },
+    { id: 'archived', label: 'Archived', icon: ArchiveBoxIcon },
+  ]
+
+  const sortOptions = [
+    { id: 'date', label: 'Newest', icon: ArrowDownOnSquareIcon },
+    { id: 'name', label: 'Name', icon: BarsArrowDownIcon },
+    { id: 'unread', label: 'Unread first', icon: ArrowsUpDownIcon },
+  ]
+
+  /* Icon shortcuts — the "home" navigation strip under the search field */
+  const shortcuts = [
+    { id: 'new', label: 'New chat', icon: PlusIcon, tone: 'text-primary-600 dark:text-primary-400', onClick: () => setShowNewChatModal(true) },
+    { id: 'stories', label: 'Stories', icon: BoltIcon, tone: 'text-amber-500', onClick: () => navigate('/stories') },
+    { id: 'calls', label: 'Calls', icon: PhoneIcon, tone: 'text-green-500', onClick: () => navigate('/calls') },
+    { id: 'groups', label: 'Groups', icon: UsersIcon, tone: 'text-blue-500', onClick: () => navigate('/groups') },
+    { id: 'contacts', label: 'Contacts', icon: BookOpenIcon, tone: 'text-purple-500', onClick: () => navigate('/contacts') },
+    { id: 'media', label: 'Starred', icon: StarIcon, tone: 'text-rose-500', onClick: () => navigate('/profile') },
   ]
 
   const totalUnread = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
 
   return (
     <div className={clsx(
-      'flex flex-col h-full bg-white dark:bg-gray-900',
-      'w-full md:w-80 lg:w-96',
-      'border-r border-gray-200 dark:border-gray-700',
+      'flex flex-col h-full min-h-0 bg-white dark:bg-gray-900',
+      'w-full',
       className
     )}>
-      {/* Header with Gradient GB Style */}
-      <div className="flex-shrink-0 p-4 space-y-3 border-b border-gray-200 dark:border-gray-700 relative overflow-hidden">
-        {/* Decorative gradient blob */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-primary-400/20 to-primary-600/20 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-primary-600 via-primary-500 to-primary-400 bg-clip-text text-transparent">
-              Chats
-            </h2>
-            {totalUnread > 0 && (
-              <span className="px-2 py-0.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white text-xs font-bold rounded-full shadow-lg shadow-primary-500/30">
-                {totalUnread}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1 relative z-10">
+      <PageHeader
+        title="Chats"
+        subtitle={`${filteredChats.length} conversation${filteredChats.length === 1 ? '' : 's'}`}
+        badge={totalUnread}
+        icon={ChatBubbleLeftRightIcon}
+        actions={
+          <>
             {/* Sort dropdown */}
             <div className="relative group">
-              <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors">
-                <FunnelIcon className="w-4 h-4" />
+              <button
+                aria-label="Sort conversations"
+                className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <FunnelIcon className="w-5 h-5" />
               </button>
-              <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 w-32 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                <button onClick={() => setSortBy('date')} className={clsx('w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700', sortBy === 'date' && 'text-primary-500')}>Date</button>
-                <button onClick={() => setSortBy('name')} className={clsx('w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700', sortBy === 'name' && 'text-primary-500')}>Name</button>
-                <button onClick={() => setSortBy('unread')} className={clsx('w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700', sortBy === 'unread' && 'text-primary-500')}>Unread</button>
+              <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 w-36 opacity-0 invisible group-hover:opacity-100 group-hover:visible focus-within:opacity-100 focus-within:visible transition-all z-50">
+                {sortOptions.map((option) => {
+                  const Icon = option.icon
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => setSortBy(option.id)}
+                      className={clsx(
+                        'w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 inline-flex items-center gap-2',
+                        sortBy === option.id && 'text-primary-600 dark:text-primary-400 font-medium'
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {option.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             <Button
-              variant="ghost"
-              size="sm"
-              icon={<PlusIcon className="w-5 h-5" />}
-              className="md:hidden"
-              aria-label="New Chat"
-              onClick={() => setShowNewChatModal(true)}
-            />
-            <Button
               variant="primary"
               size="sm"
               icon={<PlusIcon className="w-4 h-4" />}
-              className="hidden md:flex"
+              aria-label="New chat"
               onClick={() => setShowNewChatModal(true)}
             >
-              New Chat
+              <span className="hidden sm:inline">New chat</span>
             </Button>
-          </div>
-        </div>
-
-        {/* Search Bar with GB Styling */}
+          </>
+        }
+      >
+        {/* Search */}
         <div className="relative">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
-            type="text"
+            type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full pl-10 pr-10 py-2.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:outline-none text-gray-900 dark:text-white placeholder-gray-400 shadow-sm transition-all"
+            aria-label="Search conversations"
+            className="w-full pl-10 pr-10 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl border border-transparent focus:border-primary-500 focus:bg-white dark:focus:bg-gray-900 text-sm focus:ring-2 focus:ring-primary-500/40 focus:outline-none text-gray-900 dark:text-white placeholder-gray-400 transition-all"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <MagnifyingGlassIcon className="w-4 h-4 rotate-45" />
+            <button
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded"
+            >
+              <XMarkIcon className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        {/* Filter Pills with GB Styling */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 relative z-10">
-          <AnimatePresence>
-            {filters.map((filterItem, idx) => (
-              <motion.button
+        {/* Filters */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          {filters.map((filterItem) => {
+            const Icon = filterItem.icon
+            return (
+              <button
                 key={filterItem.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.03 }}
                 onClick={() => setFilter(filterItem.id)}
                 className={clsx(
-                  'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all',
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
                   filter === filterItem.id
-                    ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/30'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:shadow-sm'
+                    ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/30'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 )}
               >
+                <Icon className="w-3.5 h-3.5" />
                 {filterItem.label}
-              </motion.button>
-            ))}
-          </AnimatePresence>
+              </button>
+            )
+          })}
+        </div>
+      </PageHeader>
+
+      {/* Home shortcut icons */}
+      <div className="flex-shrink-0 border-b border-gray-100 dark:border-gray-800 px-3 py-2">
+        <div className="grid grid-cols-6 gap-1">
+          {shortcuts.map((shortcut) => {
+            const Icon = shortcut.icon
+            return (
+              <button
+                key={shortcut.id}
+                type="button"
+                onClick={shortcut.onClick}
+                className="flex flex-col items-center gap-1 rounded-xl py-2 tap-target transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800/70">
+                  <Icon className={clsx('w-5 h-5', shortcut.tone)} />
+                </span>
+                <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">
+                  {shortcut.label}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
       {/* Chat List - Scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         {isLoading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {[0, 1, 2, 3, 4].map((row) => (
+              <div key={row} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-800" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-1/3 rounded bg-gray-200 dark:bg-gray-800" />
+                  <div className="h-3 w-2/3 rounded bg-gray-100 dark:bg-gray-800/70" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error && filteredChats.length === 0 ? (
+          <div className="p-6 text-center">
+            <p className="text-sm text-gray-500">{error}</p>
+            <button
+              onClick={() => fetchChats()}
+              className="mt-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              Try again
+            </button>
           </div>
         ) : filteredChats.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 px-4">
-            <p className="text-gray-500 dark:text-gray-400 text-center">
-              {searchQuery ? 'No chats found' : 'No conversations yet'}
-            </p>
-          </div>
+          <EmptyState
+            icon={ChatBubbleLeftRightIcon}
+            title={searchQuery ? 'No chats found' : 'No conversations yet'}
+            description={
+              searchQuery
+                ? `Nothing matches “${searchQuery}”. Try a different name or keyword.`
+                : 'Start chatting by creating a new conversation.'
+            }
+            action={
+              !searchQuery && (
+                <Button variant="primary" size="sm" onClick={() => setShowNewChatModal(true)}>
+                  New chat
+                </Button>
+              )
+            }
+          />
         ) : (
           <AnimatePresence>
             {filteredChats.map((chat, index) => (
               <motion.div
                 key={chat._id || `chat-${index}`}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                transition={{ delay: index * 0.05 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.2) }}
               >
                 <ChatListItem
                   chat={chat}

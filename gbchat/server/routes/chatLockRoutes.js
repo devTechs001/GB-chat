@@ -30,6 +30,7 @@ router.post('/lock', lockChat);
 
 // Unlock a chat
 router.post('/unlock', unlockChat);
+router.post('/unlock-biometric', unlockChat);
 
 // Toggle lock with PIN verification
 router.post('/toggle', toggleLock);

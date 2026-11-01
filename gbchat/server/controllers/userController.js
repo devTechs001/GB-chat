@@ -1,5 +1,8 @@
 // server/controllers/userController.js
 import User from "../models/User.js";
+import Chat from "../models/Chat.js";
+import Message from "../models/Message.js";
+import Story from "../models/Story.js";
 import cloudinary from "../config/cloudinary.js";
 
 export const searchUsers = async (req, res, next) => {
@@ -15,7 +18,7 @@ export const searchUsers = async (req, res, next) => {
         { phone: { $regex: q, $options: "i" } },
       ],
     })
-      .select("fullName email phone avatar about status lastSeen")
+      .select("fullName username email phone avatar about status lastSeen isVerified")
       .limit(20);
 
     res.json(users);
@@ -27,7 +30,7 @@ export const searchUsers = async (req, res, next) => {
 export const getUserProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select(
-      "fullName email phone avatar about status lastSeen privacy"
+      "fullName username email phone avatar about status lastSeen privacy isVerified createdAt website location coverPhoto pronouns"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -50,7 +53,141 @@ export const getUserProfile = async (req, res, next) => {
       delete profile.about;
     }
 
+    // Additive extras used by the redesigned profile page. They never reveal
+    // anything the caller could not already see, and failures are non-fatal.
+    try {
+      const chatIds = await Chat.find({ participants: { $in: [req.user._id, user._id] } })
+        .select("_id name avatar isGroup participants")
+        .lean();
+
+      const directChatIds = chatIds.filter((c) => !c.isGroup).map((c) => c._id);
+      const groupChats = chatIds.filter((c) => c.isGroup);
+
+      const media = await Message.find({
+        chat: { $in: directChatIds },
+        type: { $in: ["image", "video"] },
+        "content.media.url": { $exists: true, $ne: "" },
+        deletedFor: { $ne: req.user._id },
+      })
+        .sort({ createdAt: -1 })
+        .limit(12)
+        .select("type content.media createdAt sender")
+        .lean();
+
+      profile.commonGroups = groupChats.slice(0, 10).map((group) => ({
+        _id: group._id,
+        name: group.name || "Group",
+        avatar: group.avatar || "",
+        memberCount: group.participants?.length || 0,
+      }));
+
+      profile.sharedMedia = media.map((message) => ({
+        _id: message._id,
+        type: message.type,
+        url: message.content?.media?.url,
+        thumbnail: message.content?.media?.thumbnail || message.content?.media?.url,
+        createdAt: message.createdAt,
+      }));
+
+      profile.contact = req.user.contacts?.some(
+        (id) => String(id) === String(user._id)
+      ) || false;
+    } catch (extrasError) {
+      console.warn("[profile] extras unavailable:", extrasError.message);
+    }
+
     res.json(profile);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Profile statistics (contacts, chats, groups, media, stories)
+// @route   GET /api/users/:id/stats
+// @access  Private
+// @note    One aggregate call keeps the profile page to a single request
+//          instead of five, which matters once the API is behind a limiter.
+export const getProfileStats = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId).select("contacts createdAt isVerified");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const chats = await Chat.find({ participants: { $in: [userId] } })
+      .select("_id isGroup participants")
+      .lean();
+
+    const directIds = chats.filter((c) => !c.isGroup).map((c) => c._id);
+    const groupIds = chats.filter((c) => c.isGroup).map((c) => c._id);
+
+    const [messagesSent, mediaCount, storiesCount] = await Promise.all([
+      Message.countDocuments({ sender: userId, deletedFor: { $ne: userId } }),
+      Message.countDocuments({
+        chat: { $in: directIds },
+        type: { $in: ["image", "video", "audio", "voice", "document"] },
+      }),
+      Story.countDocuments({ user: userId }),
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        contacts: user.contacts?.length || 0,
+        chats: directIds.length,
+        groups: groupIds.length,
+        messagesSent,
+        media: mediaCount,
+        stories: storiesCount,
+        memberSince: user.createdAt,
+        isVerified: user.isVerified,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Shared media / links between the caller and this user
+// @route   GET /api/users/:id/media
+// @access  Private
+export const getUserMedia = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const limit = Math.min(Number(req.query.limit) || 24, 60);
+
+    const chats = await Chat.find({
+      participants: { $in: [req.user._id, userId] },
+      isGroup: false,
+    })
+      .select("_id")
+      .lean();
+
+    const chatIds = chats.map((c) => c._id);
+
+    const messages = await Message.find({
+      chat: { $in: chatIds },
+      deletedFor: { $ne: req.user._id },
+      $or: [
+        { type: { $in: ["image", "video"] } },
+        { "content.text": { $regex: "https?://", $options: "i" } },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select("type content.media.url content.media.thumbnail content.text createdAt")
+      .lean();
+
+    res.json({
+      success: true,
+      media: messages.map((message) => ({
+        _id: message._id,
+        type: message.type,
+        url: message.content?.media?.url || null,
+        thumbnail: message.content?.media?.thumbnail || message.content?.media?.url || null,
+        text: message.content?.text || "",
+        createdAt: message.createdAt,
+      })),
+    });
   } catch (error) {
     next(error);
   }
@@ -124,6 +261,40 @@ export const uploadAvatar = async (req, res, next) => {
   }
 };
 
+// @desc    Remove the current user's avatar
+// @route   DELETE /api/users/avatar
+export const removeAvatar = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const previous = user.avatar;
+
+    // Best-effort cleanup of locally stored files
+    if (previous && previous.startsWith('/uploads/')) {
+      try {
+        const fs = await import('fs');
+        const path = await import('path');
+        const filePath = path.join(process.cwd(), previous.replace(/^\//, ''));
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (cleanupError) {
+        console.warn('Avatar file cleanup skipped:', cleanupError.message);
+      }
+    }
+
+    user.avatar = '';
+    await user.save();
+
+    const safeUser = await User.findById(user._id).select(
+      'fullName email phone avatar about status theme privacy notifications'
+    );
+
+    res.json({ message: "Avatar removed", avatar: null, user: safeUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const blockUser = async (req, res, next) => {
   try {
     const { userId } = req.params;
@@ -152,6 +323,60 @@ export const getOnlineUsers = async (req, res, next) => {
     }).select("_id fullName avatar");
 
     res.json(onlineUsers);
+  } catch (error) {
+    next(error);
+  }
+};
+/**
+ * POST /api/users/:userId/unblock
+ * Explicit counterpart to /:userId/block (which toggles).
+ */
+export const unblockUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(req.user._id);
+
+    user.blockedUsers = (user.blockedUsers || []).filter(
+      (id) => id.toString() !== userId
+    );
+    await user.save();
+
+    res.json({ message: "User unblocked", blocked: false });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/users/blocked
+ * Returns the accounts the current user has blocked.
+ */
+export const getBlockedUsers = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).populate(
+      "blockedUsers",
+      "fullName avatar phone about status lastSeen"
+    );
+
+    res.json(user.blockedUsers || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** PATCH /api/users/status — update the presence line */
+export const updateStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ message: "Status is required" });
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { status },
+      { new: true }
+    ).select("-password");
+
+    res.json(user);
   } catch (error) {
     next(error);
   }

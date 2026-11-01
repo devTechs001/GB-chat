@@ -4,9 +4,35 @@ import { XMarkIcon, PhotoIcon, VideoCameraIcon, DocumentIcon, MicrophoneIcon } f
 import api from '../../lib/api'
 import clsx from 'clsx'
 
+const TYPE_GROUPS = {
+  image: 'images',
+  video: 'videos',
+  document: 'docs',
+  audio: 'audio',
+  voice: 'audio',
+}
+
+/** Server returns Message docs: { type, content: { media: {...} }, createdAt } */
+const normalizeMedia = (message, index) => {
+  const file = message?.content?.media || {}
+  return {
+    _id: message?._id || `media-${index}`,
+    type: message?.type || 'document',
+    url: file.url || message?.url || '',
+    thumbnail: file.thumbnail || file.url || '',
+    name: file.filename || message?.name || 'Attachment',
+    size: file.fileSize || 0,
+    duration: file.duration || 0,
+    createdAt: message?.createdAt,
+    sender: message?.sender,
+  }
+}
+
 const MediaGallery = ({ isOpen, onClose, chatId }) => {
   const [media, setMedia] = useState([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [preview, setPreview] = useState(null)
   const [filter, setFilter] = useState('all') // all, images, videos, docs, audio
 
   useEffect(() => {
@@ -17,26 +43,21 @@ const MediaGallery = ({ isOpen, onClose, chatId }) => {
 
   const fetchMedia = async () => {
     setLoading(true)
+    setError(null)
     try {
       const { data } = await api.get(`/chats/${chatId}/media`)
-      setMedia(data.media || data || [])
-    } catch (error) {
-      console.error('Failed to fetch media:', error)
+      const list = Array.isArray(data) ? data : data?.media || []
+      setMedia(list.map(normalizeMedia))
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not load shared media')
       setMedia([])
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredMedia = filter === 'all' 
-    ? media 
-    : media.filter(m => {
-        if (filter === 'images') return m.type === 'image'
-        if (filter === 'videos') return m.type === 'video'
-        if (filter === 'docs') return m.type === 'document'
-        if (filter === 'audio') return m.type === 'audio' || m.type === 'voice'
-        return true
-      })
+  const filteredMedia =
+    filter === 'all' ? media : media.filter((item) => TYPE_GROUPS[item.type] === filter)
 
   const getMediaIcon = (type) => {
     switch (type) {
@@ -112,8 +133,23 @@ const MediaGallery = ({ isOpen, onClose, chatId }) => {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
-            <div className="flex items-center justify-center h-40">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="aspect-square rounded-lg bg-gray-200/70 dark:bg-gray-800 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-40 text-gray-500 gap-2">
+              <p className="text-sm">{error}</p>
+              <button
+                onClick={fetchMedia}
+                className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
+              >
+                Try again
+              </button>
             </div>
           ) : filteredMedia.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-gray-400">
@@ -125,38 +161,85 @@ const MediaGallery = ({ isOpen, onClose, chatId }) => {
               {filteredMedia.map((item, idx) => {
                 const Icon = getMediaIcon(item.type)
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={item._id || idx}
-                    className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative group cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => (item.url ? setPreview(item) : null)}
+                    className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative group cursor-pointer hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    {item.type === 'image' ? (
+                    {item.type === 'image' && item.url ? (
                       <img
-                        src={item.url}
-                        alt="Media"
-                        className="w-full h-full object-cover"
+                        src={item.thumbnail || item.url}
+                        alt={item.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     ) : item.type === 'video' ? (
-                      <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-full h-full flex items-center justify-center bg-gray-900/5 dark:bg-black/30">
                         <Icon className="w-12 h-12 text-gray-400" />
                       </div>
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center p-2">
                         <Icon className="w-10 h-10 text-gray-400 mb-2" />
-                        <p className="text-xs text-gray-500 truncate text-center">{item.name || 'Document'}</p>
+                        <p className="text-xs text-gray-500 truncate text-center w-full px-1">
+                          {item.name}
+                        </p>
                       </div>
                     )}
-                    
-                    {/* Type badge */}
-                    <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
+
+                    <span className="absolute top-2 right-2 bg-black/60 text-white px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide">
                       {item.type}
-                    </div>
-                  </div>
+                    </span>
+                  </button>
                 )
               })}
             </div>
           )}
         </div>
       </motion.div>
+
+      {/* Preview lightbox */}
+      <AnimatePresence>
+        {preview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/90 z-10 flex items-center justify-center p-4 pointer-events-auto"
+            onClick={() => setPreview(null)}
+          >
+            <button
+              onClick={() => setPreview(null)}
+              aria-label="Close preview"
+              className="absolute top-4 right-4 p-2 rounded-full text-white bg-white/10 hover:bg-white/20"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+            {preview.type === 'image' ? (
+              <img
+                src={preview.url}
+                alt={preview.name}
+                className="max-h-full max-w-full object-contain rounded-lg"
+              />
+            ) : preview.type === 'video' ? (
+              <video src={preview.url} controls className="max-h-full max-w-full rounded-lg" />
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-white">
+                {React.createElement(getMediaIcon(preview.type), { className: 'w-16 h-16' })}
+                <p className="text-sm">{preview.name}</p>
+                <a
+                  href={preview.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-full bg-primary-600 text-white text-sm"
+                >
+                  Open file
+                </a>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -49,7 +49,7 @@ const MessageTranslator = ({ messageId, content, type = 'text' }) => {
 
     setIsTranslating(true)
     try {
-      const { data } = await api.post('/messages/translate', {
+      const { data } = await api.post('/translations/translate', {
         messageId,
         text: content,
         targetLang,

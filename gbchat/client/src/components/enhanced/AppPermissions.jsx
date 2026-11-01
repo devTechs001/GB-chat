@@ -11,6 +11,8 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
+import api from '../../lib/api'
+import toast from 'react-hot-toast'
 
 const PERMISSIONS = [
   {
@@ -49,10 +51,44 @@ const PERMISSIONS = [
 
 const AppPermissions = ({ isOpen, onClose }) => {
   const [permissions, setPermissions] = useState({})
+  const [serverState, setServerState] = useState(null)
+  const [busy, setBusy] = useState(null)
 
   useEffect(() => {
-    if (isOpen) checkPermissions()
+    if (!isOpen) return
+    checkPermissions()
+    loadServerPermissions()
   }, [isOpen])
+
+  /** Persisted, per-account permission state (POST /api/permissions/device/:key) */
+  const loadServerPermissions = async () => {
+    try {
+      const { data } = await api.get('/permissions')
+      setServerState(data?.data?.devicePermissions || null)
+    } catch {
+      setServerState(null)
+    }
+  }
+
+  const persistPermission = async (key, granted) => {
+    try {
+      const device = navigator.userAgent.slice(0, 120)
+      if (key === 'microphone') {
+        await api.post('/permissions/device/microphone', { granted, device })
+      } else if (key === 'camera') {
+        await api.post('/permissions/device/camera', { granted, device })
+      } else if (key === 'notifications') {
+        await api.post('/permissions/device/notifications', { granted, device })
+      } else if (key === 'contacts') {
+        await api.post('/permissions/device/contacts', { granted, device })
+      } else {
+        await api.post('/permissions/device/media', { granted, device })
+      }
+      await loadServerPermissions()
+    } catch {
+      /* persistence is best-effort; the browser state is what matters */
+    }
+  }
 
   const checkPermissions = async () => {
     const results = {}
@@ -77,16 +113,32 @@ const AppPermissions = ({ isOpen, onClose }) => {
   }
 
   const requestPermission = async (key) => {
+    setBusy(key)
     try {
       if (key === 'notifications') {
         if ('Notification' in window) {
           const result = await Notification.requestPermission()
           setPermissions(p => ({ ...p, [key]: result }))
+          await persistPermission(key, result === 'granted')
         }
       } else if (key === 'contacts') {
         if ('contacts' in navigator && 'ContactsManager' in window) {
           const contacts = await navigator.contacts.select(['name', 'email'], { multiple: true })
           setPermissions(p => ({ ...p, [key]: contacts.length > 0 ? 'granted' : 'denied' }))
+          await persistPermission(key, contacts.length > 0)
+          if (contacts.length) {
+            // Import the picked contacts through the real contacts API
+            await Promise.allSettled(
+              contacts.map((contact) =>
+                api.post('/contacts', {
+                  name: contact.name?.[0] || 'Unnamed contact',
+                  phoneNumber: contact.tel?.[0] || contact.phoneNumber?.[0] || contact.email?.[0] || 'n/a',
+                  email: contact.email?.[0],
+                })
+              )
+            )
+            toast.success(`${contacts.length} contact${contacts.length > 1 ? 's' : ''} imported`)
+          }
         } else {
           setPermissions(p => ({ ...p, [key]: 'unsupported' }))
         }
@@ -95,9 +147,13 @@ const AppPermissions = ({ isOpen, onClose }) => {
         const stream = await navigator.mediaDevices.getUserMedia(constraints)
         stream.getTracks().forEach(t => t.stop())
         setPermissions(p => ({ ...p, [key]: 'granted' }))
+        await persistPermission(key, true)
       }
     } catch {
       setPermissions(p => ({ ...p, [key]: 'denied' }))
+      await persistPermission(key, false)
+    } finally {
+      setBusy(null)
     }
   }
 
@@ -181,15 +237,38 @@ const AppPermissions = ({ isOpen, onClose }) => {
                   {state !== 'granted' && state !== 'denied' && state !== 'blocked' && (
                     <button
                       onClick={() => requestPermission(perm.key)}
-                      className="px-3 py-1 text-xs font-medium bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                      disabled={busy === perm.key}
+                      className="px-3 py-1 text-xs font-medium bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors disabled:opacity-60"
                     >
-                      Allow
+                      {busy === perm.key ? '…' : 'Allow'}
                     </button>
                   )}
                 </div>
               </div>
             )
           })}
+        </div>
+
+        <div className="px-4 pb-2 flex items-center justify-between text-[11px] text-gray-400">
+          <span>
+            {serverState
+              ? 'Permissions synced to your account'
+              : 'Permissions apply to this browser'}
+          </span>
+          <button
+            onClick={async () => {
+              try {
+                await api.post('/permissions/reset')
+                await loadServerPermissions()
+                toast.success('Permission history reset')
+              } catch {
+                toast.error('Could not reset permissions')
+              }
+            }}
+            className="font-medium text-gray-500 hover:text-red-500"
+          >
+            Reset history
+          </button>
         </div>
 
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">

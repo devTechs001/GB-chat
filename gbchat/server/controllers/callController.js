@@ -54,11 +54,15 @@ export const initiateCall = asyncHandler(async (req, res) => {
     status: 'initiated',
   });
 
-  // Emit socket event to participant
+  // Emit socket event to participant (their personal room = their user id)
   const io = req.app.get('io');
-  if (!isGroup) {
+  if (io && !isGroup) {
+    const populated = await Call.findById(call._id).populate('caller', 'fullName avatar');
     io.to(participantId.toString()).emit('incomingCall', {
-      call: call.populate('caller', 'fullName avatar'),
+      call: populated,
+      callId: call._id,
+      type,
+      caller: populated.caller,
     });
   }
 

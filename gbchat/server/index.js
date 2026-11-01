@@ -13,7 +13,19 @@ import { connectDB } from "./config/db.js";
 import { initializeSocket } from "./socket/index.js";
 import { corsOptions } from "./config/cors.js";
 import { errorHandler } from "./middleware/errorHandler.js";
-import { rateLimiter } from "./middleware/rateLimiter.js";
+import {
+  rateLimiter,
+  authLimiter,
+  passwordResetLimiter,
+  writeLimiter,
+  uploadLimiter,
+  searchLimiter,
+  callLimiter,
+  registerLimiter,
+} from "./middleware/rateLimiter.js";
+import { startGrpcServer } from "./grpc/server.js";
+import { closeRedis } from "./config/redis.js";
+import systemRoutes from "./routes/systemRoutes.js";
 import { initializeAdmin } from "./utils/initAdmin.js";
 
 import authRoutes from "./routes/authRoutes.js";
@@ -73,9 +85,13 @@ app.use(helmet({
   },
 }));
 
+// Behind nginx / a cloud LB, req.ip must come from X-Forwarded-For so that
+// per-IP rate limits and logs stay accurate.
+app.set("trust proxy", process.env.TRUST_PROXY || 1);
+
 app.use(cors(corsOptions));
 app.use(compression());
-app.use(morgan("dev"));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 // Set proper MIME types
 app.use(express.static('client/dist', {
@@ -97,15 +113,27 @@ app.use(rateLimiter);
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
-// Routes
+// System / probes / internal diagnostics
+app.use("/api/system", systemRoutes);
+
+// Routes (per-route rate limiting)
+// Authentication: strict, password resets stricter still
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", registerLimiter);
+app.use("/api/auth/verify-otp", authLimiter);
+app.use("/api/auth/forgot-password", passwordResetLimiter);
+app.use("/api/auth/reset-password", passwordResetLimiter);
+
 app.use("/api/auth", authRoutes);
+app.use("/api/users/avatar", uploadLimiter);
+app.use("/api/users/search", searchLimiter);
 app.use("/api/users", userRoutes);
 app.use("/api/chats", chatRoutes);
-app.use("/api/messages", messageRoutes);
+app.use("/api/messages", writeLimiter, messageRoutes);
 app.use("/api/groups", groupRoutes);
-app.use("/api/stories", storyRoutes);
+app.use("/api/stories", writeLimiter, storyRoutes);
 app.use("/api/channels", channelRoutes);
-app.use("/api/calls", callRoutes);
+app.use("/api/calls", callLimiter, callRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/privacy", privacyRoutes);
 app.use("/api/gb-features", gbFeaturesRoutes);
@@ -128,9 +156,14 @@ app.use("/api/permissions", permissionRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/recovery", recoveryRoutes);
 
-// Health check
+// Health check (kept for backwards compatibility with Render/Netlify probes)
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({
+    status: "ok",
+    uptime: Math.floor(process.uptime()),
+    pid: process.pid,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Serve SPA for all non-API routes
@@ -146,8 +179,35 @@ const PORT = process.env.PORT || 5000;
 connectDB().then(async () => {
   // Initialize admin user
   await initializeAdmin();
-  
+
+  // Internal gRPC API (presence + notification fan-out across nodes)
+  await startGrpcServer({ io }).catch((error) =>
+    console.warn("[grpc] failed to start:", error.message)
+  );
+
   server.listen(PORT, () => {
     console.log(`🚀 GBChat server running on port ${PORT}`);
+    console.log(`   pid ${process.pid} · node ${process.env.NODE_ID || "local"}`);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown — lets the load balancer drain in-flight requests before
+// the container/worker exits (important when running several replicas).
+// ---------------------------------------------------------------------------
+const shutdown = async (signal) => {
+  console.log(`[shutdown] ${signal} received — draining…`);
+  server.close(async () => {
+    await closeRedis();
+    try {
+      await (await import("./config/db.js")).default?.connection?.close?.();
+    } catch {
+      /* optional */
+    }
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 15000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

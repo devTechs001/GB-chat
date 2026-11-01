@@ -10,6 +10,7 @@ import {
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import useChatStore from '../../store/useChatStore';
+import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -52,13 +53,23 @@ const NewChatModal = ({ isOpen, onClose }) => {
 
     setLoading(true);
     try {
-      // For single user, create direct chat
+      // One person -> direct chat, several -> real group via POST /groups
       if (selectedUsers.length === 1) {
         await createChat(selectedUsers[0]._id);
-        toast.success('Chat created successfully');
+        toast.success('Chat created');
       } else {
-        // For multiple users, would create group (handled separately)
-        toast.success('Creating group chat...');
+        const name =
+          window.prompt('Group name', selectedUsers.map((user) => user.name).join(', ')) ||
+          'New group'
+        const { data } = await api.post('/groups', {
+          name,
+          members: selectedUsers.map((user) => user._id),
+        })
+        const newChat = data.chat || data
+        if (newChat?._id) {
+          await useChatStore.getState().fetchChats()
+          toast.success('Group created')
+        }
       }
       onClose();
       setSelectedUsers([]);
@@ -70,8 +81,23 @@ const NewChatModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleCreateGroup = () => {
-    toast.info('Group creation feature coming soon');
+  const handleCreateGroup = async () => {
+    if (selectedUsers.length < 2) {
+      toast.error('Select at least two people');
+      return;
+    }
+    try {
+      const name =
+        window.prompt('Group name', selectedUsers.map((user) => user.name).join(', ')) ||
+        'New group';
+      await api.post('/groups', { name, members: selectedUsers.map((user) => user._id) });
+      await useChatStore.getState().fetchChats();
+      toast.success('Group created');
+      onClose();
+      setSelectedUsers([]);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Could not create the group');
+    }
   };
 
   return (

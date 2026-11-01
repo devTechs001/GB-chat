@@ -5,6 +5,7 @@ import crypto from "crypto";
 import phoneVerificationService from "../services/phoneVerificationService.js";
 import { getIO } from "../socket/index.js";
 import nodemailer from "nodemailer";
+import jwt from "jsonwebtoken";
 
 export const register = async (req, res, next) => {
   try {
@@ -179,14 +180,44 @@ export const getMe = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-    const { fullName, about, avatar, phone, theme, privacy, notifications } =
-      req.body;
+    const {
+      fullName,
+      about,
+      avatar,
+      phone,
+      theme,
+      privacy,
+      notifications,
+      username,
+      website,
+      location,
+      coverPhoto,
+      pronouns,
+    } = req.body;
 
     const updateData = {};
     if (fullName) updateData.fullName = fullName;
     if (about !== undefined) updateData.about = about;
     if (avatar) updateData.avatar = avatar;
     if (phone) updateData.phone = phone;
+    // Public-profile fields (all optional)
+    if (website !== undefined) updateData.website = String(website).slice(0, 200);
+    if (location !== undefined) updateData.location = String(location).slice(0, 100);
+    if (coverPhoto !== undefined) updateData.coverPhoto = coverPhoto;
+    if (pronouns !== undefined) updateData.pronouns = String(pronouns).slice(0, 30);
+    if (username !== undefined) {
+      const handle = String(username).trim().toLowerCase().replace(/^@/, "");
+      if (handle && !/^[a-z0-9._]{3,30}$/.test(handle)) {
+        return res.status(400).json({
+          message: "Username must be 3–30 characters: letters, numbers, dots or underscores",
+        });
+      }
+      if (handle) {
+        const taken = await User.findOne({ username: handle, _id: { $ne: req.user._id } });
+        if (taken) return res.status(409).json({ message: "That username is already taken" });
+      }
+      updateData.username = handle || undefined;
+    }
     if (theme) updateData.theme = { ...req.user.theme, ...theme };
     if (privacy) updateData.privacy = { ...req.user.privacy, ...privacy };
     if (notifications)
@@ -197,6 +228,7 @@ export const updateProfile = async (req, res, next) => {
 
     const user = await User.findByIdAndUpdate(req.user._id, updateData, {
       new: true,
+      runValidators: true,
     });
 
     // Emit real-time profile update to all connected clients
@@ -205,9 +237,13 @@ export const updateProfile = async (req, res, next) => {
       io.emit('user:profileUpdated', {
         userId: user._id,
         fullName: user.fullName,
+        username: user.username,
         about: user.about,
         phone: user.phone,
         avatar: user.avatar,
+        coverPhoto: user.coverPhoto,
+        website: user.website,
+        location: user.location,
         status: user.status,
       });
     }
@@ -489,6 +525,131 @@ export const resetPasswordPhone = async (req, res, next) => {
     await user.save();
 
     res.json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+/**
+ * POST /api/auth/refresh
+ * Exchanges a still-valid refresh token (or the current bearer token) for a
+ * fresh access token. Access tokens last 30 days, so this is mostly used by the
+ * client interceptor to recover from an expired local copy.
+ */
+export const refreshToken = async (req, res, next) => {
+  try {
+    const bearer = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : null;
+
+    const candidate = req.body?.refreshToken || bearer;
+
+    if (!candidate) {
+      return res.status(401).json({ message: "Refresh token required" });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(candidate, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({ message: "Invalid or expired refresh token" });
+    }
+
+    const userId = decoded.userId || decoded.id;
+    const user = await User.findById(userId);
+    if (!user) return res.status(401).json({ message: "User no longer exists" });
+
+    const token = generateToken(user._id, res);
+    const refresh = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "60d",
+    });
+
+    res.json({ token, refreshToken: refresh });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/auth/resend-otp
+ * Issues a fresh email verification code (the client's OTPVerify screen).
+ */
+export const resendOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "No account with that email" });
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = { code, expiresAt: new Date(Date.now() + 10 * 60 * 1000) };
+    await user.save();
+
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port: parseInt(process.env.SMTP_PORT || "587"),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+
+      await transporter.sendMail({
+        from: `"GBChat" <${process.env.SMTP_FROM || "noreply@gbchat.com"}>`,
+        to: email,
+        subject: "Your GBChat verification code",
+        text: `Your verification code is ${code}. It expires in 10 minutes.`,
+      });
+    } catch (mailError) {
+      // Do not fail the request if SMTP is not configured in this environment
+      console.warn("OTP email could not be sent:", mailError.message);
+    }
+
+    res.json({
+      message: "Verification code sent",
+      // Exposed only outside production to keep local testing possible
+      ...(process.env.NODE_ENV !== "production" ? { code } : {}),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/auth/verify-otp
+ * Verifies an emailed code and signs the user in.
+ */
+export const verifyOtp = async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and code are required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.otp?.code || user.otp.code !== String(code)) {
+      return res.status(400).json({ message: "Invalid verification code" });
+    }
+    if (user.otp.expiresAt && user.otp.expiresAt < new Date()) {
+      return res.status(400).json({ message: "Verification code expired" });
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;
+    await user.save();
+
+    const token = generateToken(user._id, res);
+
+    res.json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      isVerified: user.isVerified,
+      token,
+    });
   } catch (error) {
     next(error);
   }

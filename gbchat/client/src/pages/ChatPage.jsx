@@ -1,31 +1,38 @@
-import React, { useState, useEffect } from 'react'
-import { useOutletContext } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import ChatList from '../components/chat/ChatList'
-import EnhancedChatList from '../components/enhanced/EnhancedChatList'
-import FeatureFAB from '../components/enhanced/FeatureFAB'
-import ContactPermissions from '../components/enhanced/ContactPermissions'
 import ChatArea from '../components/chat/ChatArea'
 import StoryBar from '../components/stories/StoryBar'
 import ErrorBoundary from '../components/common/ErrorBoundary'
-import useChatStore from '../store/useChatStore'
-import useMediaQuery from '../hooks/useMediaQuery'
-import clsx from 'clsx'
+import EmptyState from '../components/layout/EmptyState'
+import FeatureFAB from '../components/enhanced/FeatureFAB'
+import ContactPermissions from '../components/enhanced/ContactPermissions'
 import StarredMessages from '../components/chat/StarredMessages'
 import PinnedMessages from '../components/chat/PinnedMessages'
 import ChatProfileDrawer from '../components/chat/ChatProfileDrawer'
 import NewChatModal from '../components/chat/NewChatModal'
 import AppPermissions from '../components/enhanced/AppPermissions'
+import useChatStore from '../store/useChatStore'
 import useGBFeaturesStore from '../store/useGBFeaturesStore'
+import clsx from 'clsx'
 
+/**
+ * ChatPage — two-pane messaging layout.
+ *
+ *   lg+  : list pane (380px) + conversation pane side by side
+ *   < lg : one pane at a time (list ⇄ conversation) with an explicit back action
+ *
+ * The active conversation is mirrored in the URL (`?chat=<id>`) so it survives
+ * refreshes and can be opened from a profile page.
+ */
 const ChatPage = () => {
-  const { toggleSidebar, isSidebarOpen } = useOutletContext()
-  const { activeChat, setActiveChat, fetchChats, chats } = useChatStore()
+  const { closeSidebar } = useOutletContext() || {}
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const { activeChat, setActiveChat, fetchChats, chats, createChat } = useChatStore()
   const { initGBFeatures } = useGBFeaturesStore()
-  const isMobile = useMediaQuery('(max-width: 768px)')
-  const [showChatList, setShowChatList] = useState(!isMobile)
-  const [useEnhanced, setUseEnhanced] = useState(false) // Use regular ChatList with new features
+
   const [showPermissions, setShowPermissions] = useState(false)
   const [contacts, setContacts] = useState([])
   const [showStarred, setShowStarred] = useState(false)
@@ -34,50 +41,71 @@ const ChatPage = () => {
   const [showNewChatModal, setShowNewChatModal] = useState(false)
   const [showAppPermissions, setShowAppPermissions] = useState(false)
 
+  const chatIdFromUrl = searchParams.get('chat')
+  // Ids we already tried to resolve from the URL, so a local fallback chat can
+  // never trigger an endless create loop.
+  const resolvedDeepLinks = useRef(new Set())
+
   useEffect(() => {
     fetchChats()
     initGBFeatures()
-    // Load contacts (in real app, fetch from API)
+    // Placeholder directory used by the permissions modal
     setContacts([
       { _id: '1', name: 'John Doe', phoneNumber: '+1234567890', isBlocked: false, isFavorite: true },
       { _id: '2', name: 'Jane Smith', phoneNumber: '+1234567891', isBlocked: true, isFavorite: false },
     ])
-  }, [])
+  }, [fetchChats, initGBFeatures])
 
+  // Deep link: /?chat=<id> or /?chat=<userId> (from a profile page)
   useEffect(() => {
-    // On mobile, hide chat list when a chat is selected
-    if (isMobile && activeChat) {
-      setShowChatList(false)
-    }
-  }, [activeChat, isMobile])
+    if (!chatIdFromUrl) return
+    if (String(activeChat?._id) === String(chatIdFromUrl)) return
+    if (resolvedDeepLinks.current.has(chatIdFromUrl)) return
 
-  const handleChatSelect = (chat) => {
-    setActiveChat(chat)
-    if (isMobile) {
-      setShowChatList(false)
-    }
-  }
+    const existing = (chats || []).find(
+      (chat) =>
+        String(chat?._id) === String(chatIdFromUrl) ||
+        chat?.participants?.some(
+          (participant) =>
+            String(participant?.user?._id || participant?.user || participant) === String(chatIdFromUrl)
+        )
+    )
 
-  const handleBackToList = () => {
-    if (isMobile) {
-      setActiveChat(null)
-      setShowChatList(true)
+    if (existing) {
+      resolvedDeepLinks.current.add(chatIdFromUrl)
+      setActiveChat(existing)
+      return
     }
-  }
 
-  const handleInfoClick = () => {
-    setShowProfileDrawer(true)
-  }
+    let cancelled = false
+    resolvedDeepLinks.current.add(chatIdFromUrl)
+    createChat?.(chatIdFromUrl).then((chat) => {
+      if (!cancelled && chat) setActiveChat(chat)
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatIdFromUrl, chats.length])
+
+  const selectChat = useCallback(
+    (chat) => {
+      closeSidebar?.()
+      setActiveChat(chat)
+      setSearchParams(chat?._id ? { chat: chat._id } : {}, { replace: true })
+    },
+    [closeSidebar, setActiveChat, setSearchParams]
+  )
+
+  const clearActiveChat = useCallback(() => {
+    setActiveChat(null)
+    setSearchParams({}, { replace: true })
+  }, [setActiveChat, setSearchParams])
 
   const handleFABAction = (actionId) => {
-    console.log('FAB Action:', actionId)
-    // Handle different FAB actions
     switch (actionId) {
       case 'new-chat':
         setShowNewChatModal(true)
-        break
-      case 'new-group':
-        // Open create group modal
         break
       case 'add-contact':
         setShowPermissions(true)
@@ -91,140 +119,77 @@ const ChatPage = () => {
       case 'pinned-messages':
         setShowPinned(true)
         break
-      // ... handle other actions
+      default:
+        break
     }
   }
 
+  const showConversationOnMobile = Boolean(activeChat)
+
   return (
-    <div className="flex flex-col h-full scrollbar-hide">
-      {/* Mobile Header with Menu Button */}
-      {isMobile && showChatList && (
-        <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4">
-          <button
-            onClick={toggleSidebar}
-            className="p-2 -ml-2 text-gray-600 dark:text-gray-400"
-          >
-            {isSidebarOpen ? (
-              <XMarkIcon className="w-6 h-6" />
-            ) : (
-              <Bars3Icon className="w-6 h-6" />
-            )}
-          </button>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">GBChat</h1>
-          <div className="w-8" /> {/* Spacer for balance */}
-        </div>
-      )}
-
-      {/* Story Bar - Always visible on top */}
-      <div className={clsx(
-        'hidden md:block',
-        isMobile && showChatList && 'mt-14'
-      )}>
+    <div className="flex h-full min-h-0 w-full bg-gray-100 dark:bg-gray-950">
+      {/* ---------------- List pane ---------------- */}
+      <section
+        className={clsx(
+          'flex-col h-full min-h-0 bg-white dark:bg-gray-900',
+          'w-full lg:w-[380px] xl:w-[400px] lg:flex-shrink-0',
+          'lg:border-r lg:border-gray-200/80 dark:lg:border-gray-800',
+          showConversationOnMobile ? 'hidden lg:flex' : 'flex'
+        )}
+        aria-label="Conversations"
+      >
         <ErrorBoundary>
-          <StoryBar />
+          <StoryBar compact />
         </ErrorBoundary>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex overflow-hidden scrollbar-hide">
-        {/* Chat List - Conditional rendering on mobile */}
-        <motion.div
-          initial={false}
-          animate={{
-            x: isMobile && !showChatList ? '-100%' : 0,
-            display: isMobile && !showChatList ? 'none' : 'flex',
-          }}
-          className={clsx(
-            'flex-shrink-0',
-            isMobile ? 'absolute inset-0 z-10' : 'relative'
-          )}
-        >
-          {useEnhanced ? (
-            <EnhancedChatList chats={chats} onChatSelect={handleChatSelect} />
-          ) : (
-            <ChatList onChatSelect={handleChatSelect} />
-          )}
-        </motion.div>
-
-        {/* Chat Area - Full screen on mobile when chat selected */}
-        <div className={clsx(
-          'flex-1 flex flex-col',
-          isMobile && showChatList && 'hidden'
-        )}>
-          {!activeChat && !isMobile ? (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-dark-bg">
-              <div className="text-center px-4">
-                <div className="w-32 h-32 mx-auto mb-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-16 h-16 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  GBChat Web
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
-                  Send and receive messages without keeping your phone online.
-                  Use GBChat on up to 4 linked devices and 1 phone at the same time.
-                </p>
-                <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                    </svg>
-                    End-to-end encrypted
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <ChatArea onBack={handleBackToList} onInfoClick={handleInfoClick} />
-          )}
+        <div className="flex-1 min-h-0">
+          <ChatList onChatSelect={selectChat} />
         </div>
-      </div>
+      </section>
 
-      {/* Floating Action Button - Only show in chat list, not in chat area */}
+      {/* ---------------- Conversation pane ---------------- */}
+      <section
+        className={clsx(
+          'flex-1 min-w-0 min-h-0 flex-col h-full',
+          showConversationOnMobile ? 'flex' : 'hidden lg:flex'
+        )}
+        aria-label="Conversation"
+      >
+        {activeChat ? (
+          <ErrorBoundary>
+            <ChatArea
+              onBack={clearActiveChat}
+              onInfoClick={() => setShowProfileDrawer(true)}
+            />
+          </ErrorBoundary>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-6">
+            <div className="max-w-md text-center">
+              <EmptyState
+                icon={ChatBubbleLeftRightIcon}
+                title="GBChat for Web"
+                description="Pick a conversation on the left to start messaging. Your chats are synced across up to 4 linked devices."
+              />
+              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                End-to-end encrypted · Private by design
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Floating quick actions (list view only) */}
       {!activeChat && <FeatureFAB onAction={handleFABAction} />}
 
-      {/* Contact Permissions Modal */}
+      {/* Modals */}
       <ContactPermissions
         isOpen={showPermissions}
         onClose={() => setShowPermissions(false)}
         contacts={contacts}
       />
-
-      {/* Starred Messages Modal */}
-      {showStarred && (
-        <StarredMessages onClose={() => setShowStarred(false)} />
-      )}
-
-      {/* Pinned Messages Modal */}
-      {showPinned && (
-        <PinnedMessages onClose={() => setShowPinned(false)} />
-      )}
-
-      {/* New Chat Modal */}
-      <NewChatModal
-        isOpen={showNewChatModal}
-        onClose={() => setShowNewChatModal(false)}
-      />
-
-      {/* App Permissions Modal */}
-      <AppPermissions
-        isOpen={showAppPermissions}
-        onClose={() => setShowAppPermissions(false)}
-      />
-
-      {/* Chat Profile Drawer - GB Features */}
+      {showStarred && <StarredMessages onClose={() => setShowStarred(false)} />}
+      {showPinned && <PinnedMessages onClose={() => setShowPinned(false)} />}
+      <NewChatModal isOpen={showNewChatModal} onClose={() => setShowNewChatModal(false)} />
+      <AppPermissions isOpen={showAppPermissions} onClose={() => setShowAppPermissions(false)} />
       <ChatProfileDrawer
         isOpen={showProfileDrawer}
         onClose={() => setShowProfileDrawer(false)}

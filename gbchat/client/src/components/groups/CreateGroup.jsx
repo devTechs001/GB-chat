@@ -165,7 +165,7 @@ const CreateGroup = ({ isOpen, onClose, onSuccess }) => {
         formData.append('avatar', groupData.avatar)
       }
 
-      const { data } = await api.post('/groups/create', formData, {
+      const { data } = await api.post('/groups', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 

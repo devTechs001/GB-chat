@@ -1,8 +1,71 @@
 import { create } from 'zustand'
 import api from '../lib/api'
+import useAuthStore from './useAuthStore'
+import { isDemoMode } from '../lib/api'
 import toast from 'react-hot-toast'
 
 // Sample data for development/demo
+
+/** Convert a server Chat document into the shape the chat UI renders */
+const normalizeChat = (chat, meId) => {
+  if (!chat) return null
+
+  const participants = chat.participants || []
+  const others = participants.filter(
+    (participant) => String(participant?.user?._id || participant?.user) !== String(meId)
+  )
+  const other = others[0]?.user
+
+  const lastMessage = chat.lastMessage
+  const lastMessageText =
+    lastMessage?.content?.text ||
+    (lastMessage?.type && lastMessage.type !== 'text'
+      ? `${lastMessage.type[0].toUpperCase()}${lastMessage.type.slice(1)}`
+      : '')
+
+  const myMembership = participants.find(
+    (participant) => String(participant?.user?._id || participant?.user) === String(meId)
+  )
+
+  return {
+    ...chat,
+    _id: chat._id || chat.id,
+    isGroup: chat.type === 'group' || Boolean(chat.groupInfo),
+    name:
+      chat.type === 'group'
+        ? chat.groupInfo?.name || 'Group'
+        : other?.fullName || other?.name || chat.name || 'Unknown contact',
+    avatar: chat.type === 'group' ? chat.groupInfo?.avatar || null : other?.avatar || null,
+    userId: other?._id || other?.id || null,
+    about: other?.about || '',
+    isOnline: other?.status === 'online',
+    lastSeen: other?.lastSeen || null,
+    unreadCount: myMembership?.unreadCount || 0,
+    isPinned: Boolean(chat.isPinned || myMembership?.isPinned),
+    isMuted: Boolean(chat.isMuted || myMembership?.isMuted),
+    isArchived: Boolean(chat.isArchived || myMembership?.isArchived),
+    lastMessage: lastMessage
+      ? {
+          _id: lastMessage._id,
+          text: lastMessageText,
+          senderId: lastMessage.sender?._id || lastMessage.sender,
+          senderName: lastMessage.sender?.fullName,
+          createdAt: lastMessage.createdAt,
+          status: lastMessage.status,
+          type: lastMessage.type,
+        }
+      : null,
+    lastMessageAt:
+      lastMessage?.createdAt || chat.lastMessageAt || chat.updatedAt || chat.createdAt,
+    members: participants.map((participant) => ({
+      user: participant.user,
+      role: participant.role,
+    })),
+    memberCount: participants.length,
+    participants,
+  }
+}
+
 const sampleChats = [
   {
     _id: '1',
@@ -661,7 +724,7 @@ const sampleEvents = [
 
 const useChatStore = create((set, get) => ({
   // State
-  chats: sampleChats,
+  chats: [],
   messages: sampleMessages,
   groups: sampleGroups,
   announcements: sampleAnnouncements,
@@ -673,11 +736,82 @@ const useChatStore = create((set, get) => ({
   loading: false,
   error: null,
   unreadCounts: {},
-  onlineUsers: {},
+  onlineUsers: [],
   typingUsers: {},
   
   // Actions
   setLoading: (loading) => set({ loading }),
+
+  /* ---------- Realtime helpers used by hooks/useSocket ---------- */
+  receiveMessage: (message) => {
+    if (!message) return
+    const chatId = message.chat?._id || message.chat
+
+    set((state) => {
+      const exists = state.messages.some((m) => m._id === message._id)
+      const messages = exists ? state.messages : [...state.messages, message]
+
+      const chats = state.chats.map((chat) => {
+        if (String(chat._id) !== String(chatId)) return chat
+        return {
+          ...chat,
+          lastMessage: {
+            _id: message._id,
+            text: message.content?.text || message.type,
+            senderId: message.sender?._id || message.sender,
+            createdAt: message.createdAt || new Date().toISOString(),
+            type: message.type,
+          },
+          lastMessageAt: message.createdAt || new Date().toISOString(),
+          unreadCount:
+            String(state.activeChat?._id) === String(chatId)
+              ? 0
+              : (chat.unreadCount || 0) + 1,
+        }
+      })
+
+      return { messages, chats }
+    })
+  },
+
+  updateMessageStatus: (messageId, status) => {
+    set((state) => ({
+      messages: state.messages.map((message) =>
+        message._id === messageId ? { ...message, status } : message
+      ),
+    }))
+  },
+
+  setTyping: (chatId, userId, isTyping) => {
+    set((state) => {
+      const current = state.typingUsers[chatId] || []
+      const next = isTyping
+        ? [...new Set([...current, userId])]
+        : current.filter((id) => String(id) !== String(userId))
+      return { typingUsers: { ...state.typingUsers, [chatId]: next } }
+    })
+  },
+
+  setOnlineUsers: (users) => {
+    const list = Array.isArray(users) ? users : Object.keys(users || {})
+    set({ onlineUsers: list })
+  },
+
+  updateContact: (userId, data) => {
+    if (!userId || !data) return
+    set((state) => ({
+      chats: state.chats.map((chat) =>
+        String(chat.userId) === String(userId)
+          ? {
+              ...chat,
+              name: data.fullName || chat.name,
+              avatar: data.avatar || chat.avatar,
+              about: data.about ?? chat.about,
+            }
+          : chat
+      ),
+    }))
+  },
   setError: (error) => set({ error }),
   setActiveChat: (chat) => set({ activeChat: chat, currentChat: chat }),
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -685,12 +819,39 @@ const useChatStore = create((set, get) => ({
   // Fetch functions
   fetchChats: async () => {
     set({ loading: true, error: null })
+
+    // Offline demo session keeps the sample conversations
+    if (isDemoMode()) {
+      set({ chats: sampleChats, loading: false, usingSampleChats: true, error: null })
+      return sampleChats
+    }
+
     try {
-      // In a real app, this would be an API call
-      // For now, we'll use the sample data
-      set({ chats: sampleChats, loading: false })
+      const authUser = useAuthStore.getState().user
+      const meId = authUser?._id || authUser?.id
+      const { data } = await api.get('/chats')
+      const list = Array.isArray(data) ? data : data.chats || []
+      const normalized = list.map((chat) => normalizeChat(chat, meId)).filter(Boolean)
+
+      if (normalized.length > 0) {
+        set({ chats: normalized, loading: false, usingSampleChats: false })
+      } else {
+        // Genuinely no conversations yet — keep the list empty instead of faking data
+        set({ chats: [], loading: false, usingSampleChats: false })
+      }
+      return normalized
     } catch (error) {
-      set({ error: error.message, loading: false })
+      console.warn('[ChatStore] fetchChats failed:', error?.message)
+      const isAuthError = error?.response?.status === 401
+      set({
+        chats: isAuthError ? sampleChats : get().chats,
+        loading: false,
+        usingSampleChats: isAuthError,
+        error: isAuthError
+          ? 'Sign in to load your conversations'
+          : 'Could not load conversations',
+      })
+      return []
     }
   },
   
@@ -730,17 +891,9 @@ const useChatStore = create((set, get) => ({
   createChat: async (userId) => {
     try {
       const { data } = await api.post('/chats', { participantId: userId })
-      const chat = {
-        _id: data._id || data.id,
-        name: data.name || data.participants?.find(p => String(p.user?._id || p.user) !== String(get().user?._id))?.user?.fullName || 'New Chat',
-        avatar: data.avatar || null,
-        isGroup: data.type === 'group',
-        isPinned: false,
-        unreadCount: 0,
-        lastMessage: null,
-        lastMessageAt: data.createdAt || new Date().toISOString(),
-        participants: data.participants || [],
-      }
+      const authUser = useAuthStore.getState().user
+      const meId = authUser?._id || authUser?.id
+      const chat = normalizeChat(data.chat || data, meId)
       set(state => {
         if (state.chats.find(c => c._id === chat._id)) return state
         return { chats: [chat, ...state.chats] }
@@ -766,59 +919,110 @@ const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (chatId, content, attachments = [], replyTo = null) => {
+    const authUser = useAuthStore.getState().user
+    const meId = authUser?._id || authUser?.id
+
+    let messageType = 'text'
+    const messageContent = { text: content || '' }
+
+    if (attachments.length > 0) {
+      const file = attachments[0]
+      const url = file.url || file.dataURL || file.secure_url
+      const mime = file.mimeType || file.type || ''
+
+      if (file.isVoice || mime.startsWith('audio/')) messageType = 'voice'
+      else if (mime.startsWith('image/')) messageType = 'image'
+      else if (mime.startsWith('video/')) messageType = 'video'
+      else messageType = 'document'
+
+      messageContent.media = {
+        url,
+        thumbnail: file.thumbnail || url,
+        filename: file.name || file.filename,
+        fileSize: file.size,
+        mimeType: mime,
+        duration: file.duration,
+      }
+    }
+
+    // Optimistic message — replaced by the server response below
+    const optimistic = {
+      _id: `temp-${Date.now()}`,
+      chat: chatId,
+      content: messageContent,
+      type: messageType,
+      sender: { _id: meId, fullName: authUser?.fullName || authUser?.name || 'You' },
+      status: 'sending',
+      createdAt: new Date().toISOString(),
+      replyTo: replyTo
+        ? { _id: replyTo._id, content: replyTo.content, sender: replyTo.sender }
+        : null,
+      pending: true,
+    }
+
+    set((state) => ({
+      messages: [...state.messages, optimistic],
+      chats: state.chats.map((chat) =>
+        String(chat._id) === String(chatId)
+          ? {
+              ...chat,
+              lastMessage: {
+                _id: optimistic._id,
+                text: content || messageType,
+                senderId: meId,
+                createdAt: optimistic.createdAt,
+                type: messageType,
+              },
+              lastMessageAt: optimistic.createdAt,
+            }
+          : chat
+      ),
+    }))
+
     try {
-      let messageType = 'text'
-      let messageContent = { text: content }
-
-      if (attachments.length > 0) {
-        const firstFile = attachments[0]
-        if (firstFile.type?.startsWith('image/')) {
-          messageType = 'image'
-          messageContent = { text: content, image: firstFile.url || firstFile.dataURL }
-        } else if (firstFile.type?.startsWith('video/')) {
-          messageType = 'video'
-          messageContent = { text: content, video: firstFile.url || firstFile.dataURL }
-        } else if (firstFile.type?.startsWith('audio/') || firstFile.isVoice) {
-          messageType = 'voice'
-          messageContent = { text: content, audio: firstFile.url || firstFile.dataURL, duration: firstFile.duration }
-        } else {
-          messageType = 'document'
-          messageContent = { text: content, file: firstFile.url || firstFile.dataURL, fileName: firstFile.name }
-        }
+      // The server accepts flat fields: { text, type, replyTo } (+ multipart media)
+      const rawFile = attachments[0]?.file || attachments[0]?.raw
+      let data
+      if (rawFile && typeof FormData !== 'undefined') {
+        const form = new FormData()
+        form.append('media', rawFile, rawFile.name || 'attachment')
+        form.append('text', content || '')
+        form.append('type', messageType)
+        if (replyTo?._id) form.append('replyTo', replyTo._id)
+        ;({ data } = await api.post(`/messages/${chatId}`, form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }))
+      } else {
+        ;({ data } = await api.post(`/messages/${chatId}`, {
+          text: content || '',
+          type: messageType,
+          replyTo: replyTo?._id,
+        }))
       }
 
-      const newMessage = {
-        _id: `m${Date.now()}`,
-        chat: chatId,
-        content: messageContent,
-        type: messageType,
-        sender: { _id: 'user1', name: 'You' },
-        status: 'sent',
-        createdAt: new Date().toISOString(),
-        replyTo: replyTo ? {
-          _id: replyTo._id,
-          content: replyTo.content,
-          sender: replyTo.sender,
-        } : null,
-      }
-      
-      set(state => ({
-        messages: [...state.messages, newMessage]
+      const saved = data?.message || data
+      set((state) => ({
+        messages: state.messages.map((message) =>
+          message._id === optimistic._id
+            ? { ...(saved && saved._id ? saved : message), pending: false, status: 'sent' }
+            : message
+        ),
       }))
-      
-      try {
-        await api.post(`/messages/${chatId}`, { content: messageContent, type: messageType, replyTo: replyTo?._id })
-      } catch (apiError) {
-        console.log('[ChatStore] API send failed, message saved locally')
-      }
-      
-      return newMessage
-    } catch (error) {
-      set({ error: error.message })
-      throw error
+      return saved || optimistic
+    } catch (apiError) {
+      set((state) => ({
+        messages: state.messages.map((message) =>
+          message._id === optimistic._id
+            ? { ...message, status: 'failed', pending: false }
+            : message
+        ),
+        error: apiError?.response?.data?.message || 'Message not sent',
+      }))
+      toast.error('Message not sent — tap to retry')
+      return optimistic
     }
   },
-  
+
   createGroup: async (groupData) => {
     try {
       const newGroup = {
