@@ -8,6 +8,8 @@ import {
   replyToStory,
   deleteStory,
   getMyStories,
+  getStory,
+  getStoryViewers,
 } from "../controllers/storyController.js";
 import { protect } from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
@@ -21,6 +23,9 @@ router.post("/", upload.single("media"), createStory);
 router.post("/:id/view", viewStory);
 router.post("/:id/react", reactToStory);
 router.post("/:id/reply", replyToStory);
+router.post("/:id/save", viewStory);
+router.get("/:id/viewers", getStoryViewers);
+router.get("/:id", getStory);
 router.delete("/:id", deleteStory);
 
 export default router;

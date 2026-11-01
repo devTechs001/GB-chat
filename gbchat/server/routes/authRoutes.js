@@ -2,6 +2,9 @@
 import express from "express";
 import {
   register,
+  refreshToken,
+  resendOtp,
+  verifyOtp,
   login,
   phoneLogin,
   logout,
@@ -19,6 +22,9 @@ import { initiatePhoneVerification, verifyPhoneNumber, resendVerificationCode } 
 const router = express.Router();
 
 router.post("/register", authLimiter, register);
+router.post("/refresh", refreshToken);
+router.post("/verify-otp", authLimiter, verifyOtp);
+router.post("/resend-otp", authLimiter, resendOtp);
 router.post("/login", authLimiter, login);
 router.post("/phone-login", authLimiter, phoneLogin);
 router.post("/phone-verify", authLimiter, initiatePhoneVerification);

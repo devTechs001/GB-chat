@@ -212,3 +212,38 @@ export const getMyStories = async (req, res, next) => {
     next(error);
   }
 };
+/** GET /api/stories/:id — single story (populated) */
+export const getStory = async (req, res, next) => {
+  try {
+    const story = await Story.findById(req.params.id)
+      .populate("user", "fullName avatar")
+      .populate("viewers.user", "fullName avatar")
+      .populate("replies.user", "fullName avatar");
+
+    if (!story) return res.status(404).json({ message: "Story not found" });
+
+    res.json(story);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** GET /api/stories/:id/viewers — only the owner can read the viewer list */
+export const getStoryViewers = async (req, res, next) => {
+  try {
+    const story = await Story.findById(req.params.id).populate(
+      "viewers.user",
+      "fullName avatar"
+    );
+
+    if (!story) return res.status(404).json({ message: "Story not found" });
+
+    if (story.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Only the story owner can see viewers" });
+    }
+
+    res.json(story.viewers || []);
+  } catch (error) {
+    next(error);
+  }
+};

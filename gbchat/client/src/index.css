@@ -5,19 +5,6 @@
 @layer base {
   * {
     @apply box-border;
-    /* Prevent text selection globally */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-
-  /* Allow text selection in input fields and editable elements */
-  input, textarea, [contenteditable="true"], .selectable {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
   }
 
   html {
@@ -33,7 +20,10 @@
     padding: 0;
     overflow: hidden;
     @apply antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   #root {
@@ -44,79 +34,95 @@
     overflow: hidden;
   }
 
-  /* Safe area for notched devices */
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+  /* Text is selectable everywhere by default; opt out where it hurts (buttons, nav) */
+  button,
+  [role="button"],
+  nav a,
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
   }
 
-  /* Hide scrollbars globally while maintaining functionality */
+  /* Desktop: slim, visible scrollbars that appear on hover */
   * {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225 / 0.8) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: rgb(71 85 105 / 0.8) transparent;
   }
 
   *::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, and Opera */
-    width: 0px;
-    background: transparent;
+    width: 8px;
+    height: 8px;
   }
 
   *::-webkit-scrollbar-track {
-    display: none;
     background: transparent;
   }
 
   *::-webkit-scrollbar-thumb {
-    display: none;
-    background: transparent;
+    background-color: rgb(203 213 225 / 0.85);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
 
-  *::-webkit-scrollbar-corner {
-    display: none;
-    background: transparent;
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(148 163 184);
+    background-clip: content-box;
   }
 
-  /* Hide scrollbars for specific elements */
-  .scrollbar-hide {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+  .dark *::-webkit-scrollbar-thumb {
+    background-color: rgb(71 85 105 / 0.9);
+    background-clip: content-box;
   }
 
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(100 116 139);
+    background-clip: content-box;
   }
 
-  /* Alternative scrollbar hiding for webkit browsers */
-  .scrollbar-hide::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+  /* Focus visibility (keyboard users) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-500, #0ea5e9);
+    outline-offset: 2px;
   }
 
-  /* Hide scrollbars but keep scrolling functionality */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  /* Safe areas for notched devices */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
   }
 
-  /* For mobile browsers */
   @supports (-webkit-touch-callout: none) {
-    * {
+    .app-scroll {
       -webkit-overflow-scrolling: touch;
     }
   }
 
-  /* Prevent pull-to-refresh on mobile */
+  /* Prevent pull-to-refresh on the app shell only */
   body {
     overscroll-behavior: none;
   }
 
-  /* Prevent touch actions that cause refresh/zoom */
   html, body, #root {
     touch-action: manipulation;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -187,6 +193,41 @@
     @apply chat-bubble bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white;
   }
   
+  /* ---- App shell primitives ------------------------------------------- */
+  /* Use on the outer wrapper of a routed page: it owns the height + scroll */
+  .page-shell {
+    @apply flex flex-col h-full min-h-0 w-full;
+  }
+
+  /* Use on the scrollable body of a page */
+  .page-scroll {
+    @apply flex-1 min-h-0 overflow-y-auto overscroll-contain;
+  }
+
+  /* Consistent surface card used across settings / lists */
+  .surface-card {
+    @apply bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-800
+           rounded-2xl shadow-sm;
+  }
+
+  .surface-muted {
+    @apply bg-gray-50 dark:bg-gray-900/60 border border-gray-200/60 dark:border-gray-800;
+  }
+
+  /* Sticky page header (shared across pages) */
+  .page-header {
+    @apply flex-shrink-0 bg-white/85 dark:bg-gray-900/85 backdrop-blur-xl
+           border-b border-gray-200/70 dark:border-gray-800;
+  }
+
+  /* Min 44px tap targets on touch devices */
+  @media (pointer: coarse) {
+    .tap-target {
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
   .sidebar-item {
     @apply flex items-center gap-3 px-4 py-3 rounded-lg
            hover:bg-gray-100 dark:hover:bg-gray-800
@@ -272,6 +313,20 @@
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
+  }
+
+  /* Opt-in slim scrollbar (kept for components that asked for it) */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   /* Smooth page transition */

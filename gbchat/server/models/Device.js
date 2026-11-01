@@ -45,6 +45,9 @@ const deviceSchema = new mongoose.Schema(
       type: String,
       expiresAt: Date,
     },
+    // Short pairing code (alternative to QR linking)
+    linkCode: String,
+    linkCodeExpiresAt: Date,
     isActive: {
       type: Boolean,
       default: true,

@@ -226,7 +226,7 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
       case 'clear':
         if (confirm('Clear all messages in this chat? This cannot be undone.')) {
           try {
-            await api.delete(`/chats/${chat._id}/messages`)
+            await api.delete(`/chats/${chat._id}/clear`)
             toast.success('Chat cleared')
             // Reload messages or navigate back
             window.location.reload()
@@ -239,7 +239,7 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
       case 'block':
         if (confirm('Block this contact? They won\'t be able to message you.')) {
           try {
-            await api.post(`/users/block/${chat.userId}`)
+            await api.post(`/users/${chat.userId}/block`)
             toast.success('Contact blocked')
             // Navigate back to chat list
             setTimeout(() => onBack?.(), 1000)
@@ -316,7 +316,7 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
           <button
             onClick={handleBack}
-            className="p-1 -ml-1 md:hidden hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+            className="p-1.5 -ml-1 lg:hidden rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             title="Back to chats"
           >
             <ArrowLeftIcon className="w-5 h-5" />
@@ -379,7 +379,8 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
 
           <button
             onClick={() => setShowSearch(!showSearch)}
-            className="hidden md:block p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+            className="hidden sm:block p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+            title="Search in chat"
           >
             <MagnifyingGlassIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>

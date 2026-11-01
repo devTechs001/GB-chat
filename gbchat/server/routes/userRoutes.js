@@ -5,6 +5,9 @@ import {
   getUserProfile,
   uploadAvatar,
   blockUser,
+  unblockUser,
+  getBlockedUsers,
+  updateStatus,
   getOnlineUsers,
 } from "../controllers/userController.js";
 import {
@@ -28,9 +31,12 @@ router.put("/privacy-settings", updatePrivacySettings);
 
 router.get("/search", searchUsers);
 router.get("/online", getOnlineUsers);
+router.get("/blocked", getBlockedUsers);
 router.get("/:id", getUserProfile);
 router.post("/avatar", uploadAvatarDisk.single("avatar"), uploadAvatar);
 router.patch("/profile", updateProfile);
+router.patch("/status", updateStatus);
 router.post("/:userId/block", blockUser);
+router.post("/:userId/unblock", unblockUser);
 
 export default router;

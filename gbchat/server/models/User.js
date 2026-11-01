@@ -114,6 +114,7 @@ const userSchema = new mongoose.Schema(
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     pinnedChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
     archivedChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
+    starredChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
     lockedChats: [
       {
         chat: { type: mongoose.Schema.Types.ObjectId, ref: "Chat" },

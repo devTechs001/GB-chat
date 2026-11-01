@@ -50,13 +50,6 @@ const ChatArea = ({ onInfoClick, onBack }) => {
     return null
   })()
 
-  // Debug: Log user loading
-  useEffect(() => {
-    console.log('[Auth] User in ChatArea:', user)
-    console.log('[Auth] User ID (with fallback):', userId)
-    console.log('[Auth] Full auth store:', authStore)
-  }, [user, userId, authStore])
-
   const { chatWallpaper, chatEffect } = useThemeStore()
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -83,12 +76,6 @@ const ChatArea = ({ onInfoClick, onBack }) => {
     const finalWallpaper = wallpaper || globalWallpaper || null
 
     setCurrentChatWallpaper(finalWallpaper)
-
-    console.log('[Wallpaper] Loaded for chat:', activeChat._id, {
-      perChat: wallpaper,
-      global: globalWallpaper,
-      final: finalWallpaper
-    })
   }, [activeChat])
 
   // Check chat lock status when active chat changes
@@ -141,19 +128,12 @@ const ChatArea = ({ onInfoClick, onBack }) => {
       // Only apply global wallpaper if chat doesn't have custom one
       if (!hasCustomWallpaper) {
         setCurrentChatWallpaper(event.detail.wallpaper)
-        console.log('[Wallpaper] Global wallpaper applied:', event.detail.wallpaper)
       }
     }
 
     window.addEventListener('global-wallpaper-change', handleGlobalWallpaperChange)
     return () => window.removeEventListener('global-wallpaper-change', handleGlobalWallpaperChange)
   }, [activeChat])
-
-  // Debug: Log wallpaper
-  useEffect(() => {
-    console.log('[Wallpaper] Chat wallpaper:', chatWallpaper)
-    console.log('[Wallpaper] Chat effect:', chatEffect)
-  }, [chatWallpaper, chatEffect])
 
   // Load messages when active chat changes
   useEffect(() => {
@@ -181,10 +161,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
       const isMine = senderId === currentUserId
 
       if (isMine && msg.status === 'sent') {
-        // Simulate delivered after 1 second
-        setTimeout(() => {
-          console.log('[Auto] Marking message as delivered:', msg._id)
-        }, 1000)
+        // Placeholder for real delivery receipts handled by socket events
       }
     })
   }, [messages, user])
@@ -192,9 +169,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
   const handleSendMessage = async (content, attachments) => {
     if (!activeChat) return
     try {
-      const sentMessage = await sendMsg(activeChat._id, content, attachments, replyTo)
-      console.log('[ChatArea] Message sent successfully:', sentMessage)
-      console.log('[ChatArea] Messages count after send:', messages?.length)
+      await sendMsg(activeChat._id, content, attachments, replyTo)
       // Scroll to bottom after message is sent
       setTimeout(() => scrollToBottom(), 100)
       setReplyTo(null)
@@ -240,29 +215,9 @@ const ChatArea = ({ onInfoClick, onBack }) => {
       return groups
     }, {})
 
-  // Debug logging
-  useEffect(() => {
-    console.log('=== ChatArea Debug ===')
-    console.log('Messages count:', messages?.length)
-    console.log('Current user:', user)
-    console.log('User ID:', user?._id || user?.id)
-    console.log('Active chat:', activeChat?._id)
-    if (messages?.length > 0) {
-      const lastMsg = messages[messages.length - 1]
-      console.log('Last message:', {
-        id: lastMsg._id,
-        sender: lastMsg.sender,
-        senderId: lastMsg.sender?._id,
-        content: lastMsg.content,
-        status: lastMsg.status
-      })
-    }
-    console.log('===================')
-  }, [messages, user, activeChat])
-
   if (!activeChat) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-dark-bg">
+      <div className="flex-1 min-h-0 flex items-center justify-center bg-gray-50 dark:bg-dark-bg">
         <div className="text-center px-4">
           <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-4 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
             <svg className="w-10 h-10 md:w-12 md:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,7 +236,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-dark-bg">
+    <div className="flex-1 min-h-0 flex flex-col h-full w-full bg-gray-50 dark:bg-dark-bg">
       {/* Chat Header - Fixed on mobile */}
       <ChatHeader
         chat={activeChat}
@@ -298,7 +253,7 @@ const ChatArea = ({ onInfoClick, onBack }) => {
       <div
         ref={chatContainerRef}
         className={clsx(
-          'flex-1 overflow-y-auto px-3 md:px-4 py-4 relative scrollbar-hide',
+          'flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 md:px-4 py-4 relative',
           currentChatWallpaper ? '' : 'bg-gray-100 dark:bg-dark-surface'
         )}
         style={{

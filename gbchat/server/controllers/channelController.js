@@ -161,3 +161,129 @@ export const getChannelPosts = async (req, res, next) => {
     next(error);
   }
 };
+/** GET /api/channels/:id — single channel with populated owner */
+export const getChannel = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id)
+      .populate("owner", "fullName avatar")
+      .populate("admins", "fullName avatar")
+      .populate("subscribers.user", "fullName avatar");
+
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    const isSubscribed = channel.subscribers.some(
+      (s) => s.user?._id?.toString() === req.user._id.toString()
+    );
+
+    res.json({ ...channel.toObject(), isSubscribed });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** POST /api/channels/:id/unsubscribe — idempotent unsubscribe */
+export const unsubscribeChannel = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    const before = channel.subscribers.length;
+    channel.subscribers = channel.subscribers.filter(
+      (s) => s.user.toString() !== req.user._id.toString()
+    );
+
+    if (channel.subscribers.length !== before) {
+      channel.subscriberCount = Math.max(0, (channel.subscriberCount || 1) - 1);
+      await channel.save();
+    }
+
+    res.json({ subscribed: false, subscriberCount: channel.subscriberCount });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** GET /api/channels/:id/stats — analytics payload */
+export const getChannelStats = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    const posts = await Message.countDocuments({ chat: channel._id });
+
+    res.json({
+      channelId: channel._id,
+      subscriberCount: channel.subscriberCount || channel.subscribers?.length || 0,
+      posts,
+      createdAt: channel.createdAt,
+      updatedAt: channel.updatedAt,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** PATCH /api/channels/:id — update name/description (owner or admin) */
+export const updateChannel = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    const isAdmin =
+      channel.owner.toString() === req.user._id.toString() ||
+      channel.admins.some((a) => a.toString() === req.user._id.toString());
+
+    if (!isAdmin) return res.status(403).json({ message: "Only admins can edit a channel" });
+
+    const { name, description, avatar, username } = req.body;
+    if (name !== undefined) channel.name = name;
+    if (description !== undefined) channel.description = description;
+    if (avatar !== undefined) channel.avatar = avatar;
+    if (username !== undefined) channel.username = username;
+
+    await channel.save();
+    res.json(channel);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** DELETE /api/channels/:id — owner only */
+export const deleteChannel = async (req, res, next) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    if (channel.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Only the owner can delete this channel" });
+    }
+
+    await channel.deleteOne();
+    res.json({ message: "Channel deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** POST /api/channels/posts/:postId/like — toggle a like on a channel post */
+export const likeChannelPost = async (req, res, next) => {
+  try {
+    const post = await Message.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const idx = post.reactions.findIndex(
+      (r) => r.user.toString() === req.user._id.toString()
+    );
+
+    if (idx > -1) {
+      post.reactions.splice(idx, 1);
+    } else {
+      post.reactions.push({ user: req.user._id, emoji: "❤️" });
+    }
+
+    await post.save();
+    res.json({ liked: idx === -1, likes: post.reactions.length });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -1,28 +1,40 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
+/**
+ * useMediaQuery
+ * Resolves synchronously on the first render (no mobile->desktop flash) and
+ * keeps itself in sync with the browser.
+ */
+const getMatches = (query) => {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false
+  }
+  return window.matchMedia(query).matches
+}
 
 const useMediaQuery = (query) => {
-  const [matches, setMatches] = useState(false)
+  const [matches, setMatches] = useState(() => getMatches(query))
 
   useEffect(() => {
-    const media = window.matchMedia(query)
-    
-    if (media.matches !== matches) {
-      setMatches(media.matches)
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return undefined
     }
 
-    const listener = () => setMatches(media.matches)
-    
-    // Modern browsers
+    const media = window.matchMedia(query)
+    const listener = (event) => setMatches(event.matches)
+
+    // Sync immediately in case the query changed between renders
+    setMatches(media.matches)
+
     if (media.addEventListener) {
       media.addEventListener('change', listener)
       return () => media.removeEventListener('change', listener)
-    } 
-    // Legacy browsers
-    else {
-      media.addListener(listener)
-      return () => media.removeListener(listener)
     }
-  }, [matches, query])
+
+    // Legacy Safari
+    media.addListener(listener)
+    return () => media.removeListener(listener)
+  }, [query])
 
   return matches
 }

@@ -595,3 +595,57 @@ export const getMessageReactions = async (req, res, next) => {
     next(error);
   }
 };
+/**
+ * POST /api/messages/:messageId/unstar
+ * Explicit counterpart to /star (which toggles). Idempotent.
+ */
+export const unstarMessage = async (req, res, next) => {
+  try {
+    const { messageId } = req.params;
+    const message = await Message.findById(messageId);
+
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    message.isStarred = message.isStarred.filter(
+      (id) => id.toString() !== req.user._id.toString()
+    );
+    await message.save();
+
+    res.json({ starred: false });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/messages/schedule
+ * Schedules a message for later delivery (previously this route was bound to
+ * the list handler, so nothing could actually be scheduled).
+ */
+export const scheduleMessage = async (req, res, next) => {
+  try {
+    const { chatId, chat, content, type = "text", scheduledAt, replyTo } = req.body;
+    const targetChat = chatId || chat;
+
+    if (!targetChat) {
+      return res.status(400).json({ message: "chatId is required" });
+    }
+    if (!scheduledAt || new Date(scheduledAt) <= new Date()) {
+      return res.status(400).json({ message: "scheduledAt must be in the future" });
+    }
+
+    const scheduled = await Message.create({
+      chat: targetChat,
+      sender: req.user._id,
+      content: typeof content === "string" ? { text: content } : content || { text: "" },
+      type,
+      replyTo: replyTo || undefined,
+      isScheduled: true,
+      scheduledAt: new Date(scheduledAt),
+    });
+
+    res.status(201).json(scheduled);
+  } catch (error) {
+    next(error);
+  }
+};

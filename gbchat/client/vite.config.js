@@ -12,12 +12,26 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
+    port: Number(process.env.PORT) || 5173,
+    strictPort: false,
+    // Allow tunnels / preview domains to reach the dev server
+    allowedHosts: true,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:5000",
+        target: process.env.VITE_DEV_API_TARGET || "http://127.0.0.1:5000",
+        changeOrigin: true,
+      },
+      "/uploads": {
+        target: process.env.VITE_DEV_API_TARGET || "http://127.0.0.1:5000",
         changeOrigin: true,
       },
     },
+  },
+  preview: {
+    host: true,
+    port: Number(process.env.PORT) || 4173,
+    allowedHosts: true,
   },
   build: {
     rollupOptions: {

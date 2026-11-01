@@ -42,9 +42,24 @@ const ProfilePage = () => {
   const fetchProfile = async () => {
     try {
       const { data } = await api.get(`/users/${userId}`)
-      setProfile(data.user)
+      setProfile(data?.user || data)
     } catch (error) {
-      toast.error('Failed to load profile')
+      // Offline / demo: fall back to the cached profile of the signed-in user
+      let fallback = null
+      try {
+        const stored = JSON.parse(localStorage.getItem('auth-storage') || 'null')
+        const currentUser = stored?.state?.user
+        if (currentUser && String(currentUser._id || currentUser.id) === String(userId)) {
+          fallback = currentUser
+        }
+      } catch {
+        /* ignore malformed storage */
+      }
+      if (fallback) {
+        setProfile(fallback)
+      } else {
+        toast.error('Failed to load profile')
+      }
     } finally {
       setLoading(false)
     }
@@ -97,17 +112,18 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-dark-bg pb-16 lg:pb-0">
+    <div className="h-full min-h-0 overflow-y-auto overscroll-contain bg-gray-50 dark:bg-dark-bg">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      <div className="sticky top-0 z-30 page-header px-4 py-3">
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+            aria-label="Back"
+            className="p-2 -ml-1 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
           >
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-semibold">Contact Info</h1>
+          <h1 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Contact info</h1>
           <Dropdown
             trigger={
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
@@ -132,7 +148,7 @@ const ProfilePage = () => {
           >
             <Avatar
               src={profile.avatar}
-              alt={profile.name}
+              alt={profile.fullName || profile.name || 'Contact'}
               size="xl"
               status={profile.isOnline ? 'online' : 'offline'}
               className="ring-4 ring-white dark:ring-gray-900"

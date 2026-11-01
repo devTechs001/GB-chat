@@ -316,3 +316,60 @@ export const getQRCodeStatus = async (req, res) => {
     res.status(500).json({ message: "Failed to get status", error: error.message });
   }
 };
+
+/**
+ * POST /api/devices/generate-code
+ * Short 6-digit pairing code (alternative to QR linking).
+ */
+export const generateLinkCode = async (req, res) => {
+  try {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    const device = await Device.create({
+      user: req.user._id,
+      deviceName: req.body?.deviceName || "Pending device",
+      deviceType: req.body?.deviceType || "unknown",
+      platform: req.body?.platform || "unknown",
+      deviceToken: crypto.randomBytes(32).toString("hex"),
+      sessionToken: crypto.randomBytes(64).toString("hex"),
+      linkCode: code,
+      linkCodeExpiresAt: expiresAt,
+      isActive: false,
+    });
+
+    res.json({ success: true, code, expiresAt, deviceId: device._id });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to generate link code", error: error.message });
+  }
+};
+
+/**
+ * POST /api/devices/verify-code
+ * Consumes a pairing code and activates the device.
+ */
+export const verifyLinkCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ message: "Code is required" });
+
+    const device = await Device.findOne({
+      linkCode: String(code),
+      linkCodeExpiresAt: { $gt: new Date() },
+    });
+
+    if (!device) {
+      return res.status(400).json({ message: "Invalid or expired code" });
+    }
+
+    device.isActive = true;
+    device.linkCode = undefined;
+    device.linkCodeExpiresAt = undefined;
+    device.lastSeen = new Date();
+    await device.save();
+
+    res.json({ success: true, deviceId: device._id });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to verify code", error: error.message });
+  }
+};

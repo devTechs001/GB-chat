@@ -1,5 +1,6 @@
 // server/controllers/groupController.js
 import Chat from "../models/Chat.js";
+import User from "../models/User.js";
 import Message from "../models/Message.js";
 import crypto from "crypto";
 
@@ -687,6 +688,214 @@ export const deleteAnnouncement = async (req, res, next) => {
     });
 
     res.json({ message: "Announcement deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+/**
+ * GET /api/groups/:id
+ * Full group (chat) details with populated members.
+ */
+export const getGroup = async (req, res, next) => {
+  try {
+    const group = await Chat.findOne({
+      _id: req.params.id,
+      type: { $in: ["group", "broadcast"] },
+    })
+      .populate("participants.user", "fullName avatar status lastSeen about")
+      .populate("lastMessage")
+      .populate("groupInfo.createdBy", "fullName avatar");
+
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    const isMember = group.participants.some(
+      (p) => p.user?._id?.toString() === req.user._id.toString()
+    );
+    if (!isMember) return res.status(403).json({ message: "Not a member of this group" });
+
+    res.json(group);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/groups/:id
+ * Only an admin/creator can delete a group.
+ */
+export const deleteGroup = async (req, res, next) => {
+  try {
+    const group = await Chat.findOne({
+      _id: req.params.id,
+      type: { $in: ["group", "broadcast"] },
+    });
+
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    const me = group.participants.find(
+      (p) => p.user.toString() === req.user._id.toString()
+    );
+    if (!me || me.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can delete this group" });
+    }
+
+    await Message.deleteMany({ chat: group._id });
+    await group.deleteOne();
+
+    res.json({ message: "Group deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** DELETE /api/groups/:id/members/:memberId/admin — demote an admin */
+export const removeAdmin = async (req, res, next) => {
+  try {
+    const group = await Chat.findById(req.params.id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    const me = group.participants.find(
+      (p) => p.user.toString() === req.user._id.toString()
+    );
+    if (!me || me.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can change roles" });
+    }
+
+    const participant = group.participants.find(
+      (p) => p.user.toString() === req.params.memberId
+    );
+    if (!participant) return res.status(404).json({ message: "Member not found" });
+
+    participant.role = "member";
+    await group.save();
+
+    res.json({ message: "Admin removed", participant });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** POST /api/groups/:id/mute and /unmute — per-user mute for a group chat */
+export const setGroupMute = async (req, res, next) => {
+  try {
+    const muted = req.path.endsWith("unmute") ? false : true;
+    const group = await Chat.findById(req.params.id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    const participant = group.participants.find(
+      (p) => p.user.toString() === req.user._id.toString()
+    );
+    if (!participant) return res.status(403).json({ message: "Not a member" });
+
+    participant.isMuted = muted;
+    participant.muteUntil = muted ? null : null;
+    await group.save();
+
+    res.json({ muted });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** POST /api/groups/bulk-invite — add several users to several groups */
+export const bulkInvite = async (req, res, next) => {
+  try {
+    const { groupIds = [], memberIds = [] } = req.body;
+
+    if (!groupIds.length || !memberIds.length) {
+      return res.status(400).json({ message: "groupIds and memberIds are required" });
+    }
+
+    let updated = 0;
+    for (const groupId of groupIds) {
+      const group = await Chat.findById(groupId);
+      if (!group) continue;
+
+      const me = group.participants.find(
+        (p) => p.user.toString() === req.user._id.toString()
+      );
+      if (!me || me.role !== "admin") continue;
+
+      memberIds.forEach((memberId) => {
+        const exists = group.participants.some(
+          (p) => p.user.toString() === String(memberId)
+        );
+        if (!exists) group.participants.push({ user: memberId, role: "member" });
+      });
+
+      await group.save();
+      updated += 1;
+    }
+
+    res.json({ message: "Invites sent", updatedGroups: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** POST /api/groups/export — JSON export of the requested groups */
+export const exportGroups = async (req, res, next) => {
+  try {
+    const { groups: groupIds } = req.body;
+    const query = { type: { $in: ["group", "broadcast"] } };
+
+    if (Array.isArray(groupIds) && groupIds.length) {
+      query._id = { $in: groupIds };
+    }
+
+    const groups = await Chat.find(query)
+      .populate("participants.user", "fullName phone avatar")
+      .lean();
+
+    res.json({
+      exportedAt: new Date().toISOString(),
+      count: groups.length,
+      groups,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/groups/:id/archive|star|mute
+ * Per-user flags for a group chat (stored on the user / participant).
+ */
+export const setGroupFlag = async (req, res, next) => {
+  try {
+    const flag = req.path.split("/").pop();
+    const groupId = req.params.id;
+    const user = await User.findById(req.user._id);
+
+    if (flag === "archive") {
+      const idx = user.archivedChats.indexOf(groupId);
+      idx > -1 ? user.archivedChats.splice(idx, 1) : user.archivedChats.push(groupId);
+      await user.save();
+      return res.json({ archived: idx === -1 });
+    }
+
+    if (flag === "star") {
+      const idx = user.starredChats.indexOf(groupId);
+      idx > -1 ? user.starredChats.splice(idx, 1) : user.starredChats.push(groupId);
+      await user.save();
+      return res.json({ starred: idx === -1 });
+    }
+
+    if (flag === "mute") {
+      const group = await Chat.findById(groupId);
+      if (!group) return res.status(404).json({ message: "Group not found" });
+
+      const participant = group.participants.find(
+        (p) => p.user.toString() === req.user._id.toString()
+      );
+      if (!participant) return res.status(403).json({ message: "Not a member" });
+
+      participant.isMuted = !participant.isMuted;
+      await group.save();
+      return res.json({ muted: participant.isMuted });
+    }
+
+    res.status(400).json({ message: "Unsupported flag" });
   } catch (error) {
     next(error);
   }

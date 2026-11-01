@@ -28,10 +28,10 @@ const ContactProfile = ({ contact, isOpen, onClose, onEdit }) => {
   const handleToggleFavorite = async () => {
     try {
       if (isFavorite) {
-        await api.delete(`/contacts/${contact._id}/favorite`)
+        await api.patch(`/contacts/${contact._id}/favorite`)
         toast.success('Removed from favorites')
       } else {
-        await api.post(`/contacts/${contact._id}/favorite`)
+        await api.patch(`/contacts/${contact._id}/favorite`)
         toast.success('Added to favorites')
       }
       setIsFavorite(!isFavorite)

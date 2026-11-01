@@ -68,6 +68,7 @@ import clsx from 'clsx'
 import { formatDistanceToNow } from 'date-fns'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
+import PageHeader from '../components/layout/PageHeader'
 
 const GroupsPage = () => {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
@@ -544,45 +545,58 @@ const GroupsPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 pb-16 overflow-hidden scrollbar-hide">
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleRefresh}
-            className={clsx('p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all', refreshing && 'animate-spin')}
-          >
-            <ArrowPathIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsCreateGroupOpen(true)}
-          >
-            <PlusIcon className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Desktop Header */}
-      <div className="hidden md:flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">👥 Groups</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{groupsList.length} groups</p>
-          </div>
+    <div className="flex flex-col h-full min-h-0 bg-gray-50 dark:bg-gray-950">
+      <PageHeader
+        title="Groups"
+        subtitle={`${groupsList.length} group${groupsList.length === 1 ? '' : 's'}`}
+        icon={UserGroupIcon}
+        actions={
+          <>
+            <button
+              onClick={handleRefresh}
+              aria-label="Refresh groups"
+              className={clsx(
+                'p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+                refreshing && 'animate-spin'
+              )}
+            >
+              <ArrowPathIcon className="w-5 h-5" />
+            </button>
+            <Button variant="primary" size="sm" onClick={() => setIsCreateGroupOpen(true)}>
+              <PlusIcon className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">New group</span>
+            </Button>
+          </>
+        }
+      >
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setShowGroupInsights(!showGroupInsights)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className={clsx(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
+              showGroupInsights
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+            )}
           >
             <ChartBarIcon className="w-4 h-4" />
-            <span className="text-sm">Insights</span>
+            Insights
           </button>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={clsx(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
+              showArchived
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+            )}
+          >
+            <ArchiveBoxIcon className="w-4 h-4" />
+            Archived
+          </button>
+
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-0.5 ml-auto">
             {[
               { id: 'list', icon: QueueListIcon, label: 'List' },
               { id: 'grid', icon: UsersIcon, label: 'Grid' },
@@ -591,43 +605,20 @@ const GroupsPage = () => {
               <button
                 key={mode.id}
                 onClick={() => setViewMode(mode.id)}
+                aria-label={`${mode.label} view`}
                 className={clsx(
-                  'p-1.5 rounded transition-colors',
-                  viewMode === mode.id ? 'bg-white dark:bg-gray-700 shadow-sm' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                  'p-1.5 rounded-full transition-colors',
+                  viewMode === mode.id
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400'
                 )}
-                title={mode.label}
               >
                 <mode.icon className="w-4 h-4" />
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setShowArchived(!showArchived)}
-            className={clsx(
-              'p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors',
-              showArchived && 'text-primary-600'
-            )}
-            title={showArchived ? 'Hide Archived' : 'Show Archived'}
-          >
-            <ArchiveBoxIcon className="w-5 h-5" />
-          </button>
-          <button
-            onClick={handleRefresh}
-            className={clsx('p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all', refreshing && 'animate-spin')}
-            title="Refresh"
-          >
-            <ArrowPathIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsCreateGroupOpen(true)}
-          >
-            <PlusIcon className="w-4 h-4 mr-1" />
-            New Group
-          </Button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Group Insights */}
       <AnimatePresence>
@@ -636,10 +627,10 @@ const GroupsPage = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="hidden md:block border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl overflow-hidden"
+            className="border-b border-gray-200/50 dark:border-gray-700/50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl overflow-hidden"
           >
             <div className="p-4">
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary-600">{groupStats.totalGroups}</div>
                   <div className="text-xs text-gray-500">Total Groups</div>
@@ -898,7 +889,7 @@ const GroupsPage = () => {
       )}
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         {activeTab === 'groups' && (
           <div className={clsx(
             viewMode === 'grid' ? 'p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 

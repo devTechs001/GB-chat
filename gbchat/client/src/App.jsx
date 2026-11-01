@@ -27,7 +27,7 @@ const TermsAndConditions = React.lazy(() => import('./pages/legal/TermsAndCondit
 const PrivacyPolicy = React.lazy(() => import('./pages/legal/PrivacyPolicy'))
 
 function App() {
-  const { user, isAuthenticated, isLoading, checkAuth } = useAuthStore()
+  const { user, isAuthenticated, isLoading, isDemo, checkAuth } = useAuthStore()
   const { theme, initTheme } = useThemeStore()
   const { connect, disconnect } = useSocket()
 
@@ -116,9 +116,9 @@ function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [appLockEnabled])
 
-  // Connect socket when user is authenticated
+  // Connect socket when user is authenticated (never in offline demo mode)
   useEffect(() => {
-    if (user && user._id) {
+    if (user && user._id && !isDemo) {
       console.log('[App] Connecting socket for user:', user._id)
       // Small delay to ensure server is ready
       const timer = setTimeout(() => {
@@ -130,7 +130,7 @@ function App() {
       disconnect()
     }
     return () => disconnect()
-  }, [user, connect, disconnect])
+  }, [user, isDemo, connect, disconnect])
 
   // Apply theme to document
   useEffect(() => {

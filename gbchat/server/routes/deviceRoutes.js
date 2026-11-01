@@ -2,6 +2,8 @@
 import express from "express";
 import {
   generateQRCode,
+  generateLinkCode,
+  verifyLinkCode,
   verifyQRCode,
   getLinkedDevices,
   unlinkDevice,
@@ -20,6 +22,8 @@ router.use(protect);
 
 // QR Code generation and verification
 router.post("/generate-qr", authLimiter, generateQRCode);
+router.post("/generate-code", authLimiter, generateLinkCode);
+router.post("/verify-code", authLimiter, verifyLinkCode);
 router.post("/verify-qr", authLimiter, verifyQRCode);
 router.get("/qr-status/:deviceId", getQRCodeStatus);
 

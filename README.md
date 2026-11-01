@@ -254,6 +254,11 @@ GB-chat/
 
 ## 📚 API Documentation
 
+> **Endpoint contract check:** `npm run check:endpoints` compares every endpoint the client calls with the routes mounted in `gbchat/server`. It currently reports **0 unmatched calls** across 382 server routes. The full UI/layout + endpoint review lives in [`gbchat/docs/UI_AND_API_REVIEW.md`](gbchat/docs/UI_AND_API_REVIEW.md).
+
+> **Try the UI without a backend:** the auth screen has an *Enter demo* action that loads the app with sample chats, stories, channels and calls — no MongoDB or Express required (`npm run client:dev`).
+
+
 ### Base URLs
 | Environment | URL |
 |-------------|-----|

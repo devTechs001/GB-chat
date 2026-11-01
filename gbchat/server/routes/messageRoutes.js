@@ -8,6 +8,8 @@ import {
   addReaction,
   removeReaction,
   starMessage,
+  unstarMessage,
+  scheduleMessage,
   forwardMessage,
   getStarredMessages,
   searchMessages,
@@ -39,11 +41,15 @@ router.delete("/:messageId", deleteMessage);
 router.post("/:messageId/react", addReaction);
 router.delete("/:messageId/react/:emoji", removeReaction);
 router.post("/:messageId/star", starMessage);
+router.post("/:messageId/unstar", unstarMessage);
 router.post("/:messageId/forward", forwardMessage);
 router.get("/:messageId/reactions", getMessageReactions);
 
 // Scheduled messages
-router.post("/schedule", getScheduledMessages);
+// NOTE: POST /schedule now creates a scheduled message (it used to be bound to
+// the list handler, which made scheduling impossible). GET /scheduled lists them.
+router.post("/schedule", scheduleMessage);
+router.get("/schedule", getScheduledMessages);
 router.post("/cancel-schedule", cancelScheduledMessage);
 
 export default router;

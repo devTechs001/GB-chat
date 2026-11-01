@@ -3,10 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion'
 import LoginForm from '../components/auth/LoginForm'
 import RegisterForm from '../components/auth/RegisterForm'
 import ForgotPassword from '../components/auth/ForgotPassword'
+import useAuthStore from '../store/useAuthStore'
 import clsx from 'clsx'
 
 const AuthPage = () => {
   const [activeTab, setActiveTab] = useState('login')
+  const enterDemo = useAuthStore((state) => state.enterDemo)
+  const [demoLoading, setDemoLoading] = useState(false)
+
+  const handleExploreDemo = () => {
+    setDemoLoading(true)
+    // Give the user a beat of feedback, then drop into the app shell
+    setTimeout(() => {
+      enterDemo()
+      setDemoLoading(false)
+    }, 250)
+  }
 
   const features = [
     { icon: '🔒', title: 'End-to-End Encryption', desc: 'Your messages are secure' },
@@ -279,6 +291,33 @@ const AuthPage = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Demo entry point — lets the UI be explored without a backend */}
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+              <span className="text-xs uppercase tracking-wide text-gray-400">or</span>
+              <span className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+            </div>
+            <button
+              type="button"
+              onClick={handleExploreDemo}
+              disabled={demoLoading}
+              className={clsx(
+                'w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl',
+                'border border-gray-300 dark:border-gray-700 bg-white/70 dark:bg-gray-900/60',
+                'text-sm font-semibold text-gray-700 dark:text-gray-200',
+                'hover:bg-white dark:hover:bg-gray-900 hover:border-primary-400 dark:hover:border-primary-600',
+                'transition disabled:opacity-60'
+              )}
+            >
+              <span aria-hidden="true">🚀</span>
+              {demoLoading ? 'Opening demo…' : 'Explore demo without an account'}
+            </button>
+            <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">
+              Demo runs on sample data and never leaves your browser.
+            </p>
+          </div>
 
           {/* Mobile Features - Enhanced */}
           <div className="lg:hidden mt-12 grid grid-cols-3 gap-4">

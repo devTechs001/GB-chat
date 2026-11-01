@@ -38,7 +38,7 @@ const CacheCleaner = () => {
 
   const fetchCacheData = async () => {
     try {
-      const { data } = await api.get('/storage/cache')
+      const { data } = await api.get('/storage/usage')
       setCacheData(data)
       // Load auto-clean settings from localStorage
       const savedAutoClean = localStorage.getItem('auto-clean-enabled')
@@ -86,7 +86,7 @@ const CacheCleaner = () => {
   const handleCleanCache = async (type) => {
     setCleaning(true)
     try {
-      await api.delete(`/storage/cache/${type}`)
+      await api.delete(`/storage/clear/${type}`)
       toast.success('Cache cleared successfully!')
       localStorage.setItem('last-cache-clear', new Date().toISOString())
       fetchCacheData()

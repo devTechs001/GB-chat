@@ -156,3 +156,57 @@ export const getOnlineUsers = async (req, res, next) => {
     next(error);
   }
 };
+/**
+ * POST /api/users/:userId/unblock
+ * Explicit counterpart to /:userId/block (which toggles).
+ */
+export const unblockUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(req.user._id);
+
+    user.blockedUsers = (user.blockedUsers || []).filter(
+      (id) => id.toString() !== userId
+    );
+    await user.save();
+
+    res.json({ message: "User unblocked", blocked: false });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/users/blocked
+ * Returns the accounts the current user has blocked.
+ */
+export const getBlockedUsers = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).populate(
+      "blockedUsers",
+      "fullName avatar phone about status lastSeen"
+    );
+
+    res.json(user.blockedUsers || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** PATCH /api/users/status — update the presence line */
+export const updateStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ message: "Status is required" });
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { status },
+      { new: true }
+    ).select("-password");
+
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+};
