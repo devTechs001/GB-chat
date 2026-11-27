@@ -11,6 +11,7 @@ import {
   reportClientError,
   getClientErrors,
   clearClientErrors,
+  systemConfig,
 } from '../controllers/systemController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -22,6 +23,7 @@ router.get('/ready', readiness);
 
 // Diagnostics (admin/operator surface — requires auth)
 router.get('/info', protect, systemInfo);
+router.get('/config', protect, systemConfig);
 router.get('/metrics', protect, systemMetrics);
 router.post('/metrics/reset', protect, resetSystemMetrics);
 router.get('/presence/:userId', protect, presenceLookup);

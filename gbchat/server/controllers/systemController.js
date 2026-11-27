@@ -8,6 +8,7 @@ import { rateLimitInfo } from '../middleware/rateLimiter.js';
 import { grpcStatus, grpcGetPresence, grpcNotify } from '../grpc/client.js';
 import { NODE_ID } from '../grpc/server.js';
 import { recordClientError, clientErrorSnapshot, resetClientErrors } from '../services/errorDigest.js';
+import { validateEnv } from '../config/validateEnv.js';
 
 const STARTED_AT = new Date();
 
@@ -163,4 +164,20 @@ export const getClientErrors = asyncHandler(async (req, res) => {
 export const clearClientErrors = asyncHandler(async (req, res) => {
   resetClientErrors();
   res.json({ success: true, message: 'Client error buffer cleared' });
+});
+
+
+// @desc    Report configuration problems the operator must fix
+// @route   GET /api/system/config
+// @access  Private
+// The same checks the boot sequence runs, exposed so a deploy can be inspected
+// without reading logs: `{ ok, errors, warnings, strict }`.
+export const systemConfig = asyncHandler(async (req, res) => {
+  const result = validateEnv({ strict: false, logger: { warn() {}, error() {} } });
+  res.json({
+    success: true,
+    ok: result.errors.length === 0,
+    errors: result.errors,
+    warnings: result.warnings,
+  });
 });

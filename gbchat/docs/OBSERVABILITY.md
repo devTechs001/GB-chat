@@ -147,3 +147,26 @@ The route error boundary and two global handlers (`window.onerror`,
 * **Client side.** Reports are deduped per session (same crash once a minute)
   and sent with `keepalive` so they survive the tab closing mid-unload.
 
+## Error responses
+
+One envelope for every failure, with the id that produced it:
+
+```json
+{ "success": false, "code": "DATABASE_UNAVAILABLE",
+  "message": "The database is unavailable. Please retry in a moment." }
+```
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` / `INVALID_ID` / `DUPLICATE_KEY` / `INVALID_BODY` | bad input, bad ObjectId, unique index, unparsable JSON |
+| 413 | `PAYLOAD_TOO_LARGE` | over the body limit |
+| 401 | `NO_TOKEN` / `TOKEN_EXPIRED` / `INVALID_TOKEN` / `USER_NOT_FOUND` | auth |
+| 404 | `NOT_FOUND` | no route matches (always JSON, never the SPA HTML) |
+| 503 | `DATABASE_UNAVAILABLE` | mongoose cannot reach Mongo — retryable |
+| 500 | `INTERNAL_ERROR` | anything else; the message is generic in production |
+
+Logging is split accordingly: **5xx logs the stack**, 4xx logs a single line, both
+prefixed `Error [<request-id>]: <status> <method> <url>`. Configuration problems
+are reported separately at boot and via `GET /api/system/config`
+(`{ ok, errors, warnings }`).
+

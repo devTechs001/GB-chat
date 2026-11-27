@@ -4,6 +4,7 @@ import "./config/env.js";
 
 import express from "express";
 import { createServer } from "http";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -11,11 +12,13 @@ import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
 import path from "path";
+import { existsSync } from "fs";
 
 import { connectDB } from "./config/db.js";
 import { initializeSocket } from "./socket/index.js";
 import { corsOptions } from "./config/cors.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { validateEnv } from "./config/validateEnv.js";
 import {
   rateLimiter,
   authLimiter,
@@ -105,8 +108,24 @@ app.use(metricsMiddleware);
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
+/**
+ * Where the built SPA lives.
+ *
+ * The old code used the relative path `client/dist`, resolved against whatever
+ * cwd the process happened to have. Started from the repo root (`npm start`) it
+ * pointed at `./client/dist`; started from `gbchat/server` (`npm run dev`, Docker,
+ * most process managers) it pointed at `./server/client/dist` — which does not
+ * exist, so every page returned `404 ENOENT: stat …/server/client/dist/index.html`
+ * while the API kept working. The path is now anchored to this file.
+ */
+const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
+const CLIENT_DIST = [
+  path.resolve(SERVER_DIR, "../client/dist"),
+  path.resolve(SERVER_DIR, "../../client/dist"),
+].find((dir) => existsSync(path.join(dir, "index.html")));
+
 // Set proper MIME types
-app.use(express.static('client/dist', {
+app.use(express.static(CLIENT_DIST || path.resolve(SERVER_DIR, "../client/dist"), {
   setHeaders: (res, path) => {
     if (path.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript');
@@ -194,8 +213,11 @@ app.use("/api", (req, res) => {
 });
 
 // Serve SPA for all non-API routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'client/dist/index.html'));
+app.get('*', (req, res, next) => {
+  // `next()` when the build is missing: a JSON 404 from errorHandler is far
+  // easier to diagnose than an HTML-less ENOENT from sendFile.
+  if (!CLIENT_DIST) return next();
+  return res.sendFile(path.join(CLIENT_DIST, 'index.html'));
 });
 
 // Error handling
@@ -219,6 +241,13 @@ const startHttp = () => {
  * and the process keeps retrying Mongo in the background instead of dying.
  */
 const start = async () => {
+  // Fail fast on a configuration that cannot work (production only); warn
+  // everywhere else so a fresh clone with .env.example still boots.
+  const env = validateEnv();
+  if (!env.ok && String(process.env.ALLOW_INVALID_ENV || "") !== "true") {
+    process.exit(1);
+  }
+
   let dbReady = false;
 
   try {

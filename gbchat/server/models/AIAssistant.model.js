@@ -1,5 +1,5 @@
 // models/AIAssistant.model.js
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const aiAssistantSchema = new mongoose.Schema({
     userId: {
@@ -121,4 +121,6 @@ const aiAssistantSchema = new mongoose.Schema({
 // Indexes
 aiAssistantSchema.index({ userId: 1, enabled: 1 });
 
-module.exports = mongoose.models.AIAssistant || mongoose.model('AIAssistant', aiAssistantSchema);
+const AIAssistant = mongoose.models.AIAssistant || mongoose.model("AIAssistant", aiAssistantSchema);
+
+export default AIAssistant;
