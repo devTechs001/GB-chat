@@ -77,6 +77,8 @@ const useCallStore = create((set, get) => ({
   isLoading: false,
   historyError: null,
   isMockHistory: false,
+  stats: null,
+  statsError: null,
 
   fetchCallHistory: async () => {
     set({ isLoading: true, historyError: null })
@@ -104,6 +106,97 @@ const useCallStore = create((set, get) => ({
             ? 'Sign in to see your call history'
             : 'Could not load call history',
       })
+    }
+  },
+
+  /**
+   * GET /api/calls/stats — totals by type. The endpoint has existed since the
+   * call router landed; nothing called it, so the Calls page had no summary.
+   */
+  fetchCallStats: async () => {
+    if (isDemoMode()) {
+      const history = get().callHistory.length ? get().callHistory : DEMO_CALL_HISTORY
+      set({
+        stats: {
+          total: history.length,
+          audio: history.filter((call) => call.type !== 'video').length,
+          video: history.filter((call) => call.type === 'video').length,
+          missed: history.filter((call) => call.status === 'missed').length,
+        },
+        statsError: null,
+      })
+      return get().stats
+    }
+
+    try {
+      const { data } = await api.get('/calls/stats')
+      set({ stats: data?.data || data?.stats || null, statsError: null })
+      return get().stats
+    } catch (error) {
+      set({
+        stats: null,
+        statsError:
+          error?.response?.status === 401 ? 'Sign in to see call stats' : 'Could not load call stats',
+      })
+      return null
+    }
+  },
+
+  /** GET /api/calls/:callId — full record for one call (detail drawer) */
+  fetchCall: async (callId) => {
+    if (!callId) return null
+    try {
+      const { data } = await api.get(`/calls/${callId}`)
+      const call = data?.data || data?.call
+      return call ? normalizeCall(call) : null
+    } catch {
+      return null
+    }
+  },
+
+  /** GET /api/calls/active — calls still ringing or in progress for this user */
+  fetchActiveCalls: async () => {
+    try {
+      const { data } = await api.get('/calls/active')
+      const list = data?.data || data?.calls || []
+      return Array.isArray(list) ? list.map(normalizeCall) : []
+    } catch {
+      return []
+    }
+  },
+
+  /**
+   * POST /api/calls/:callId/cancel — caller hangs up while it is still ringing.
+   * `endCall` is for connected calls; cancelling tells the peer to stop ringing
+   * instead of logging a connected call.
+   */
+  cancelCall: async (callId) => {
+    const id = callId || get().activeCall?._id
+    set({ activeCall: null, incomingCall: null })
+    if (!id) return { success: true }
+    try {
+      await api.post(`/calls/${id}/cancel`)
+    } catch {
+      /* already ended or gone */
+    }
+    get().fetchCallHistory()
+    return { success: true }
+  },
+
+  /** POST /api/calls/:callId/add-participant — add someone to a group call */
+  addParticipant: async (callId, participantId) => {
+    const id = callId || get().activeCall?._id
+    if (!id || !participantId) return { success: false }
+    try {
+      const { data } = await api.post(`/calls/${id}/add-participant`, { participantId })
+      const call = data?.data || data?.call
+      if (call && get().activeCall) {
+        set({ activeCall: { ...get().activeCall, ...normalizeCall(call) } })
+      }
+      return { success: true }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not add the participant')
+      return { success: false, error }
     }
   },
 

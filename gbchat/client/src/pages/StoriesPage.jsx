@@ -14,6 +14,7 @@ import {
 import StoryCard from '../components/stories/StoryCard'
 import StoryCardEnhanced from '../components/stories/StoryCardEnhanced'
 import StoryViewer from '../components/stories/StoryViewer'
+import StoryRing from '../components/stories/StoryRing'
 import StoryCreator from '../components/stories/StoryCreator'
 import StoryHighlights from '../components/stories/StoryHighlights'
 import StoryAnalytics from '../components/stories/StoryAnalytics'
@@ -396,23 +397,20 @@ const StoriesPage = () => {
         <div className="px-4 pt-4 md:px-6">
           <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
             {authorGroups.map((group) => (
-              <button
+              <StoryRing
                 key={group.id}
+                story={group}
+                name={group.name}
+                avatar={group.avatar}
+                isOwn={group.id === meId}
+                seen={(group.stories[0]?.viewers || []).some(
+                  (entry) => String(entry?.user?._id || entry?.user || entry) === String(meId)
+                )}
                 onClick={() => {
                   setViewingStory(group.stories[0])
                   setCurrentIndex(0)
                 }}
-                className="flex w-16 flex-none flex-col items-center gap-1"
-              >
-                <span className="rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 p-[2px]">
-                  <span className="block rounded-full bg-gray-50 p-[2px] dark:bg-gray-950">
-                    <Avatar src={group.avatar} alt={group.name} size="md" />
-                  </span>
-                </span>
-                <span className="w-full truncate text-center text-[10px] text-gray-600 dark:text-gray-400">
-                  {group.id === meId ? 'You' : group.name.split(' ')[0]}
-                </span>
-              </button>
+              />
             ))}
           </div>
         </div>

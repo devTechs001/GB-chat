@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   ChatBubbleLeftRightIcon,
   UserGroupIcon,
@@ -18,6 +19,7 @@ import {
 import useAuthStore from '../../store/useAuthStore'
 import { UsersIcon } from '@heroicons/react/24/outline'
 import NotificationCenter from '../notifications/NotificationCenter'
+import ThemePicker from '../settings/ThemePicker'
 import useThemeStore from '../../store/useThemeStore'
 import useChatStore from '../../store/useChatStore'
 import Avatar from '../common/Avatar'
@@ -40,7 +42,7 @@ const NAV_ITEMS = [
 const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onClose }) => {
   const location = useLocation()
   const { user, logout } = useAuthStore()
-  const { theme, setTheme, getAvailableThemes } = useThemeStore()
+  const { theme, getAvailableThemes } = useThemeStore()
   const chats = useChatStore((state) => state.chats)
 
   const isDrawer = variant === 'drawer'
@@ -60,9 +62,9 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
     return (themes?.[theme]?.mode || 'light') === 'dark'
   }, [theme, getAvailableThemes])
 
-  const toggleTheme = () => {
-    setTheme(isDarkTheme ? 'light' : 'dark')
-  }
+  // Light/dark quick toggle lives in the header; the full palette picker opens
+  // from the footer so all 11 themes are reachable without opening Settings.
+  const [showThemePicker, setShowThemePicker] = useState(false)
 
   const isItemActive = (href) => {
     if (href === '/chats') {
@@ -115,17 +117,7 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
               </button>
             ) : (
               !isCollapsed && (
-                <button
-                  onClick={toggleTheme}
-                  aria-label="Toggle theme"
-                  className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                  {isDarkTheme ? (
-                    <SunIcon className="w-5 h-5 text-yellow-500" />
-                  ) : (
-                    <MoonIcon className="w-5 h-5" />
-                  )}
-                </button>
+                <ThemePicker compact />
               )
             )}
           </div>
@@ -216,6 +208,21 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
 
       {/* ---------- Footer ---------- */}
       <div className={clsx('flex-shrink-0 border-t border-gray-200/80 dark:border-gray-800', isCollapsed ? 'p-2' : 'p-3')}>
+        <AnimatePresence>
+          {showThemePicker && !isCollapsed && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mb-2 rounded-xl border border-gray-200/80 p-2.5 dark:border-gray-800">
+                <ThemePicker />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {!isCollapsed && (
           <div className="flex items-center gap-3 px-2 pb-2 text-[11px] text-gray-400 dark:text-gray-500">
             <NavLink to="/terms" className="hover:text-primary-500 transition-colors">Terms</NavLink>
@@ -225,6 +232,24 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
         )}
 
         <div className={clsx('flex items-center', isCollapsed ? 'flex-col gap-1' : 'gap-1')}>
+          <button
+            onClick={() => setShowThemePicker((open) => !open)}
+            title="Change theme"
+            aria-label="Change theme"
+            aria-expanded={showThemePicker}
+            className={clsx(
+              'flex items-center rounded-xl text-gray-600 dark:text-gray-300',
+              'hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+              isCollapsed ? 'justify-center p-3' : 'justify-center px-3 py-2.5'
+            )}
+          >
+            {isDarkTheme ? (
+              <MoonIcon className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <SunIcon className="w-5 h-5 flex-shrink-0" />
+            )}
+          </button>
+
           <button
             onClick={logout}
             title="Log out"

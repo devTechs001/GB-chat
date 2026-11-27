@@ -69,6 +69,18 @@ services:
       # The dedicated `worker` service owns the cron jobs in this stack.
       SCHEDULER_ENABLED: "false"
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
+      # ---- Microservice composition -------------------------------------
+      # GATEWAY_ROUTES lists the services that own their prefixes. Anything
+      # not listed stays mounted inside the API replicas, so the stack boots
+      # and behaves exactly as before with `GATEWAY_ROUTES` unset/empty.
+      GATEWAY_ENABLED: ${GATEWAY_ENABLED:-false}
+      GATEWAY_ROUTES: ${GATEWAY_ROUTES:-}
+      GATEWAY_IDENTITY_URL: http://identity:5001
+      GATEWAY_MESSAGING_URL: http://messaging:5002
+      GATEWAY_SOCIAL_URL: http://social:5003
+      GATEWAY_CONTENT_URL: http://content:5004
+      GATEWAY_DATA_URL: http://data:5005
+      GATEWAY_TIMEOUT_MS: ${GATEWAY_TIMEOUT_MS:-30000}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -90,6 +102,122 @@ services:
     environment:
       <<: *server-env
       NODE_ID: server2
+
+  # ---- Microservices -----------------------------------------------------
+  # One container per service, same image, same routers — the entrypoint just
+  # narrows the route table. Scale one independently:
+  #   docker compose up -d --scale social=3
+  # They are profile-gated (`--profile services`) so a plain `docker compose up`
+  # starts the monolith exactly as before.
+  #
+  # Socket.IO and gRPC stay on the API replicas: realtime needs sticky sessions
+  # and a Redis adapter, which is a separate problem from stateless HTTP routes.
+  identity: &service-template
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    profiles: ["services"]
+    restart: unless-stopped
+    command: ["node", "services/gateway/serviceEntry.js", "identity"]
+    environment:
+      <<: *server-env
+      SERVICE: identity
+      PORT: 5001
+      NODE_ID: identity
+      GRPC_ENABLED: "false"
+      SCHEDULER_ENABLED: "false"
+      GATEWAY_ENABLED: "false"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+    expose: ["5001"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5001/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    networks: [gbchat-network]
+
+  messaging:
+    <<: *service-template
+    command: ["node", "services/gateway/serviceEntry.js", "messaging"]
+    environment:
+      <<: *server-env
+      SERVICE: messaging
+      PORT: 5002
+      NODE_ID: messaging
+      GRPC_ENABLED: "false"
+      SCHEDULER_ENABLED: "false"
+      GATEWAY_ENABLED: "false"
+    expose: ["5002"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5002/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  social:
+    <<: *service-template
+    command: ["node", "services/gateway/serviceEntry.js", "social"]
+    environment:
+      <<: *server-env
+      SERVICE: social
+      PORT: 5003
+      NODE_ID: social
+      GRPC_ENABLED: "false"
+      SCHEDULER_ENABLED: "false"
+      GATEWAY_ENABLED: "false"
+    expose: ["5003"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5003/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  content:
+    <<: *service-template
+    command: ["node", "services/gateway/serviceEntry.js", "content"]
+    environment:
+      <<: *server-env
+      SERVICE: content
+      PORT: 5004
+      NODE_ID: content
+      GRPC_ENABLED: "false"
+      SCHEDULER_ENABLED: "false"
+      GATEWAY_ENABLED: "false"
+    expose: ["5004"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5004/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  data:
+    <<: *service-template
+    command: ["node", "services/gateway/serviceEntry.js", "data"]
+    environment:
+      <<: *server-env
+      SERVICE: data
+      PORT: 5005
+      NODE_ID: data
+      GRPC_ENABLED: "false"
+      SCHEDULER_ENABLED: "false"
+      GATEWAY_ENABLED: "false"
+    expose: ["5005"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5005/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
 
   # ---- Background worker ------------------------------------------------
   # Shares the API image, runs the maintenance loop (story expiry, scheduled

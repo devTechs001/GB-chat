@@ -68,6 +68,13 @@ import { metricsMiddleware, requestId } from "./middleware/observability.js";
 import localBackupRoutes from "./routes/localBackupRoutes.js";
 import offlineRoutes from "./routes/offlineRoutes.js";
 import recoveryRoutes from "./routes/recoveryRoutes.js";
+import {
+  gatewayEnabled,
+  migratedServiceIds,
+  isProxied,
+  servicesSnapshot,
+} from "./services/gateway/registry.js";
+import { createProxyMiddleware, breakerSnapshots, resetBreakers } from "./services/gateway/proxyMiddleware.js";
 
 dotenv.config();
 
@@ -147,50 +154,93 @@ app.use('/uploads', express.static('uploads'));
 // System / probes / internal diagnostics
 app.use("/api/system", systemRoutes);
 
+// ---------------------------------------------------------------------------
+// Microservice gateway (opt-in).
+//
+// `GATEWAY_ENABLED=false` (the default) registers a no-op middleware and every
+// route below mounts in-process exactly as before — local dev is unaffected.
+//
+// `GATEWAY_ENABLED=true GATEWAY_ROUTES=social` forwards only /api/social-owned
+// prefixes to `GATEWAY_SOCIAL_URL` and skips their local mounts. The same
+// handler code serves both shapes, so a migrated prefix behaves identically.
+// ---------------------------------------------------------------------------
+const GATEWAY_ON = gatewayEnabled();
+app.use(createProxyMiddleware());
+const isRemote = (prefix) => GATEWAY_ON && isProxied(prefix);
+const mountIfLocal = (prefix) => !isRemote(prefix);
+
+if (GATEWAY_ON) {
+  console.log(
+    `⛩️  gateway enabled — forwarding ${migratedServiceIds().join(", ") || "nothing"} (in-process: the rest)`
+  );
+}
+
 // Routes (per-route rate limiting)
 // Authentication: strict, password resets stricter still
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", registerLimiter);
-app.use("/api/auth/verify-otp", authLimiter);
-app.use("/api/auth/forgot-password", passwordResetLimiter);
-app.use("/api/auth/reset-password", passwordResetLimiter);
+if (mountIfLocal("/api/auth")) {
+  app.use("/api/auth/login", authLimiter);
+  app.use("/api/auth/register", registerLimiter);
+  app.use("/api/auth/verify-otp", authLimiter);
+  app.use("/api/auth/forgot-password", passwordResetLimiter);
+  app.use("/api/auth/reset-password", passwordResetLimiter);
 
-app.use("/api/auth", authRoutes);
-app.use("/api/users/avatar", uploadLimiter);
-app.use("/api/users/search", searchLimiter);
-app.use("/api/users", userRoutes);
-app.use("/api/chats", chatRoutes);
-app.use("/api/messages", writeLimiter, messageRoutes);
-app.use("/api/groups", groupRoutes);
-app.use("/api/stories", writeLimiter, storyRoutes);
-app.use("/api/channels", channelRoutes);
-app.use("/api/calls", callLimiter, callRoutes);
-app.use("/api/contacts", contactRoutes);
-app.use("/api/privacy", privacyRoutes);
-app.use("/api/gb-features", gbFeaturesRoutes);
-app.use("/api/chat-lock", chatLockRoutes);
-app.use("/api/devices", deviceRoutes);
-app.use("/api/push", pushRoutes);
+  app.use("/api/auth", authRoutes);
+  app.use("/api/users/avatar", uploadLimiter);
+  app.use("/api/users/search", searchLimiter);
+  app.use("/api/users", userRoutes);
+  app.use("/api/contacts", contactRoutes);
+  app.use("/api/devices", deviceRoutes);
+  app.use("/api/privacy", privacyRoutes);
+  app.use("/api/push", pushRoutes);
+  app.use("/api/account", accountRoutes);
+  app.use("/api/recovery", recoveryRoutes);
+}
+if (mountIfLocal("/api/chats")) app.use("/api/chats", chatRoutes);
+if (mountIfLocal("/api/messages")) app.use("/api/messages", writeLimiter, messageRoutes);
+if (mountIfLocal("/api/groups")) app.use("/api/groups", groupRoutes);
+if (mountIfLocal("/api/stories")) app.use("/api/stories", writeLimiter, storyRoutes);
+if (mountIfLocal("/api/channels")) app.use("/api/channels", channelRoutes);
+if (mountIfLocal("/api/calls")) app.use("/api/calls", callLimiter, callRoutes);
+if (mountIfLocal("/api/gb-features")) app.use("/api/gb-features", gbFeaturesRoutes);
+if (mountIfLocal("/api/chat-lock")) app.use("/api/chat-lock", chatLockRoutes);
 
 // Settings routes
-app.use("/api/appearance", appearanceRoutes);
-app.use("/api/chat-settings", chatSettingsRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/storage", storageRoutes);
-app.use("/api/account", accountRoutes);
-app.use("/api/chat-display", chatDisplayRoutes);
-app.use("/api/emoji", emojiRoutes);
-app.use("/api/translations", translationRoutes);
-app.use("/api/gb-settings", gbSettingsRoutes);
+if (mountIfLocal("/api/appearance")) app.use("/api/appearance", appearanceRoutes);
+if (mountIfLocal("/api/chat-settings")) app.use("/api/chat-settings", chatSettingsRoutes);
+if (mountIfLocal("/api/notifications")) app.use("/api/notifications", notificationRoutes);
+if (mountIfLocal("/api/storage")) app.use("/api/storage", storageRoutes);
+if (mountIfLocal("/api/chat-display")) app.use("/api/chat-display", chatDisplayRoutes);
+if (mountIfLocal("/api/emoji")) app.use("/api/emoji", emojiRoutes);
+if (mountIfLocal("/api/translations")) app.use("/api/translations", translationRoutes);
+if (mountIfLocal("/api/gb-settings")) app.use("/api/gb-settings", gbSettingsRoutes);
 
 // Permissions, Backup, and Recovery routes
-app.use("/api/permissions", permissionRoutes);
+if (mountIfLocal("/api/permissions")) app.use("/api/permissions", permissionRoutes);
 // Local (SQLite) + offline mirror endpoints must be mounted before the
 // Mongo-backed /api/backup router so its "/:backupId" route cannot swallow them.
-app.use("/api/backup/local", localBackupRoutes);
-app.use("/api/backup/offline", offlineRoutes);
-app.use("/api/backup", backupRoutes);
-app.use("/api/recovery", recoveryRoutes);
+if (mountIfLocal("/api/backup")) {
+  app.use("/api/backup/local", localBackupRoutes);
+  app.use("/api/backup/offline", offlineRoutes);
+  app.use("/api/backup", backupRoutes);
+}
+
+// Gateway self-diagnostics: which services exist, which are migrated, and the
+// live breaker state. Mounted after the proxy so a remote `/api/system` would
+// still win — it never is, system routes are always local (probes must work
+// even when every service is down).
+app.get("/api/system/gateway", (req, res) => {
+  res.json({
+    success: true,
+    enabled: GATEWAY_ON,
+    migrated: migratedServiceIds(),
+    services: servicesSnapshot(),
+    breakers: breakerSnapshots(),
+  });
+});
+app.post("/api/system/gateway/reset", (req, res) => {
+  resetBreakers();
+  res.json({ success: true, message: "Circuit breakers reset" });
+});
 
 // Health check (kept for backwards compatibility with Render/Netlify probes)
 app.get("/api/health", (req, res) => {

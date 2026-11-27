@@ -39,11 +39,28 @@ const languages = [
 
 const MessageTranslator = ({ messageId, content, type = 'text' }) => {
   const [showTranslator, setShowTranslator] = useState(false)
+  const panelRef = useRef(null)
   const [detectedLang, setDetectedLang] = useState('auto')
   const [targetLang, setTargetLang] = useState('en')
   const [translatedText, setTranslatedText] = useState('')
   const [isTranslating, setIsTranslating] = useState(false)
   const [hasTranslated, setHasTranslated] = useState(false)
+
+  // A popover that only closes via its own X leaves the bubble's other actions
+  // unreachable underneath it. Escape and an outside click both dismiss it.
+  useEffect(() => {
+    if (!showTranslator) return undefined
+    const onPointerDown = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) setShowTranslator(false)
+    }
+    const onKeyDown = (event) => event.key === 'Escape' && setShowTranslator(false)
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [showTranslator])
 
   const handleTranslate = async () => {
     if (!content || content.trim() === '') return
@@ -57,13 +74,18 @@ const MessageTranslator = ({ messageId, content, type = 'text' }) => {
         sourceLang: detectedLang === 'auto' ? undefined : detectedLang,
       })
 
-      setTranslatedText(data.translatedText)
-      setDetectedLang(data.detectedLang || 'auto')
+      // The API answers `{ success, data: { translatedText, detectedLang } }`
+      // (server/controllers/translationController.js). Read both shapes so a
+      // future flattening of the envelope cannot silently blank the panel.
+      const payload = data?.data || data || {}
+      if (!payload.translatedText) throw new Error(payload.message || 'Empty translation')
+
+      setTranslatedText(payload.translatedText)
+      setDetectedLang(payload.detectedLang || 'auto')
       setHasTranslated(true)
       toast.success('Message translated')
     } catch (error) {
-      toast.error('Translation failed')
-      console.error('Translation error:', error)
+      toast.error(error?.response?.data?.message || 'Translation failed')
     } finally {
       setIsTranslating(false)
     }
@@ -75,10 +97,13 @@ const MessageTranslator = ({ messageId, content, type = 'text' }) => {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={panelRef}>
       {/* Translate button */}
       <button
+        type="button"
         onClick={() => setShowTranslator(!showTranslator)}
+        aria-expanded={showTranslator}
+        aria-label="Translate this message"
         className={clsx(
           'flex items-center gap-1 text-xs px-2 py-1 rounded-full transition-colors',
           hasTranslated
@@ -116,6 +141,7 @@ const MessageTranslator = ({ messageId, content, type = 'text' }) => {
               </div>
               <button
                 onClick={() => setShowTranslator(false)}
+                aria-label="Close translator"
                 className="text-white/80 hover:text-white"
               >
                 <XMarkIcon className="w-4 h-4" />

@@ -13,6 +13,7 @@ Welcome to the GBChat technical documentation. This folder contains comprehensiv
 - [Observability](./OBSERVABILITY.md) — request ids, per-route latency percentiles, Prometheus output, gRPC trace propagation, browser crash digest, crash isolation, error-response contract.
 - [Web Push](./PUSH_NOTIFICATIONS.md) — VAPID setup, subscription storage, delivery hooks, service-worker behaviour, troubleshooting.
 - [Scaling & infrastructure](./SCALING_AND_INFRA.md) — rate limits, gRPC, replicas, Docker, background worker.
+- [Microservices](./MICROSERVICES.md) — the opt-in service split: gateway, registry, circuit breakers, per-service entrypoints, Docker profiles, rollback.
 
 ### 1. [Documentation README](./README.md)
 **Start here!** Overview of all documentation and quick start guide.

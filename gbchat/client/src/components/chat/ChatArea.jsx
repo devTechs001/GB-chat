@@ -465,6 +465,9 @@ const ChatArea = ({ onInfoClick, onBack }) => {
                     isSelected={selectedMessages.includes(messageId)}
                     showAvatar={!isMine}
                     onSchedule={() => setShowScheduleModal(true)}
+                    onDeleted={(messageId, forEveryone) =>
+                      useChatStore.getState().removeMessage?.(messageId, forEveryone)
+                    }
                   />
                 </motion.div>
                 );
