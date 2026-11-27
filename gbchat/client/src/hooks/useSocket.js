@@ -80,6 +80,16 @@ const attachHandlers = (socket) => {
   socket.on('message:update', ({ messageId, updates }) => {
     useChatStore.getState().updateMessageStatus?.(messageId, updates?.status)
   })
+
+  // Deletions. The server emits `messageDeleted` to every participant's room;
+  // without a listener the bubble stayed on screen until a manual refresh.
+  const handleMessageDeleted = (payload = {}) => {
+    const messageId = payload.messageId || payload._id
+    if (!messageId) return
+    useChatStore.getState().removeMessage?.(messageId, payload.forEveryone !== false)
+  }
+  socket.on('messageDeleted', handleMessageDeleted)
+  socket.on('message:deleted', handleMessageDeleted)
   socket.on('messagesDelivered', ({ messageIds }) => {
     messageIds?.forEach((id) => useChatStore.getState().updateMessageStatus?.(id, 'delivered'))
   })

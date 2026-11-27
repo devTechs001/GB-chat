@@ -11,6 +11,9 @@ import { presenceHandler } from "./handlers/presenceHandler.js";
 import { typingHandler } from "./handlers/typingHandler.js";
 import { callHandler } from "./handlers/callHandler.js";
 import { deviceHandler } from "./handlers/deviceHandler.js";
+import { notificationHandler } from "./handlers/notificationHandler.js";
+import { registerSocketServer } from "../services/socketService.js";
+import { buildSocketOptions } from "../config/socket.js";
 
 const onlineUsers = new Map();
 let ioInstance = null; // Store IO instance for external access
@@ -20,22 +23,9 @@ export const getOnlineUsers = () => onlineUsers;
 export const getIO = () => ioInstance;
 
 export const initializeSocket = (server) => {
-  const io = new Server(server, {
-    cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:5173",
-      credentials: true,
-      methods: ["GET", "POST"],
-    },
-    pingTimeout: 60000,
-    pingInterval: 25000,
-    transports: ['websocket', 'polling'], // Allow both transports
-    // Horizontal scaling: several nodes can share one client connection stream
-    maxHttpBufferSize: Number(process.env.SOCKET_MAX_BUFFER) || 1e6,
-    connectionStateRecovery: {
-      maxDisconnectionDuration: 2 * 60 * 1000,
-      skipMiddlewares: true,
-    },
-  });
+  // Options come from config/socket.js so a deployment can tune them through
+  // the environment instead of editing this file.
+  const io = new Server(server, buildSocketOptions());
 
   // Cross-node fan-out (multi-server): every node publishes to Redis and the
   // adapter broadcasts to the other replicas, so a socket on node B receives
@@ -50,8 +40,10 @@ export const initializeSocket = (server) => {
       .catch((error) => console.warn("[socket] Redis adapter unavailable:", error.message));
   }
 
-  // Store IO instance
+  // Store IO instance (also into services/socketService, which controllers and
+  // jobs use to emit without importing this module — that would be a cycle).
   ioInstance = io;
+  registerSocketServer(io);
 
   // Auth middleware
   io.use(async (socket, next) => {
@@ -113,6 +105,7 @@ export const initializeSocket = (server) => {
     typingHandler(io, socket);
     callHandler(io, socket, onlineUsers);
     deviceHandler(io, socket, onlineUsers);
+    notificationHandler(io, socket);
 
     // Join chat rooms
     socket.on("joinChat", (chatId) => {

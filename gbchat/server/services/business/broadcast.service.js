@@ -1,7 +1,7 @@
 // services/business/broadcast.service.js
-const Message = require('../../models/Message');
-const Chat = require('../../models/Chat');
-const User = require('../../models/User');
+import Message from "../../models/Message.js";
+import Chat from "../../models/Chat.js";
+import User from "../../models/User.js";
 
 class BroadcastService {
     constructor() {
@@ -184,4 +184,7 @@ class BroadcastService {
     }
 }
 
-module.exports = new BroadcastService();
+const broadcastService = new BroadcastService();
+
+export default broadcastService;
+export { BroadcastService };

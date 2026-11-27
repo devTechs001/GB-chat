@@ -1,5 +1,5 @@
 // models/Payment.model.js
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema({
     userId: {
@@ -118,4 +118,6 @@ paymentSchema.statics.getUserAnalytics = async function(userId) {
     return result;
 };
 
-module.exports = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
+const Payment = mongoose.models.Payment || mongoose.model("Payment", paymentSchema);
+
+export default Payment;

@@ -1,13 +1,17 @@
 import React from 'react'
 import clsx from 'clsx'
 
-/** Base shimmer block */
+/**
+ * Base placeholder block.
+ *
+ * Uses a moving highlight (`.skeleton`) rather than `animate-pulse`: a pulse
+ * makes a whole screen of placeholders breathe in unison, which reads as
+ * "broken" — a directional shimmer reads as "loading".
+ */
 export const Skeleton = ({ className }) => (
   <div
-    className={clsx(
-      'animate-pulse rounded-lg bg-gray-200/80 dark:bg-gray-800',
-      className
-    )}
+    aria-hidden="true"
+    className={clsx('skeleton rounded-lg bg-gray-200/80 dark:bg-gray-800', className)}
   />
 )
 

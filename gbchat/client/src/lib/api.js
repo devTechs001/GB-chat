@@ -94,10 +94,32 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    const message = error.response?.data?.message || 'Something went wrong'
+    const status = error.response.status
+    const requestId = error.response.headers?.['x-request-id']
 
-    if (error.code !== 'ERR_CANCELED' && [400, 403, 404, 500].includes(error.response.status)) {
-      toast.error(message)
+    // 503 means the server is up but a dependency (usually MongoDB) is not —
+    // say so and mention retrying, instead of the generic "Something went wrong".
+    if (status === 503) {
+      toast.error(
+        error.response?.data?.message || 'The service is briefly unavailable. Please retry.'
+      )
+      return Promise.reject(error)
+    }
+
+    // 401 is handled above (refresh or redirect); 429 gets its own copy so the
+    // user knows to wait rather than retry immediately.
+    if (status === 429) {
+      toast.error(error.response?.data?.message || 'Too many requests — please slow down')
+      return Promise.reject(error)
+    }
+
+    const message =
+      error.response?.data?.message ||
+      (status >= 500 ? 'Something went wrong on our side' : 'Something went wrong')
+
+    if (error.code !== 'ERR_CANCELED' && [400, 403, 404, 409, 422, 500, 502, 504].includes(status)) {
+      // The request id lets a user quote one line that maps to a server log.
+      toast.error(requestId ? `${message} (ref ${String(requestId).slice(0, 8)})` : message)
     }
 
     return Promise.reject(error)

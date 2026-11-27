@@ -14,6 +14,8 @@ import {
   SunIcon,
 } from '@heroicons/react/24/outline'
 import useThemeStore from '../../store/useThemeStore'
+import WallpaperGallery from './WallpaperGallery'
+import { resolveWallpaper, serializeWallpaper } from '../../lib/wallpapers'
 import Button from '../common/Button'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
@@ -85,45 +87,31 @@ const AppearanceSettings = () => {
     { id: 'none', name: 'None' },
   ]
 
-  const wallpapers = [
-    { id: 'none', name: 'None', thumbnail: null },
-    { id: 'default', name: 'Default', thumbnail: '/wallpapers/default-thumb.jpg', url: '/wallpapers/default.jpg' },
-    { id: 'abstract', name: 'Abstract', thumbnail: '/wallpapers/abstract-thumb.jpg', url: '/wallpapers/abstract.jpg' },
-    { id: 'gradient1', name: 'Gradient Blue', thumbnail: '/wallpapers/gradient1-thumb.jpg', url: '/wallpapers/gradient1.jpg' },
-    { id: 'gradient2', name: 'Gradient Purple', thumbnail: '/wallpapers/gradient2-thumb.jpg', url: '/wallpapers/gradient2.jpg' },
-    { id: 'gradient3', name: 'Gradient Sunset', thumbnail: '/wallpapers/gradient3-thumb.jpg', url: '/wallpapers/gradient3.jpg' },
-    { id: 'gradient4', name: 'Gradient Ocean', thumbnail: '/wallpapers/gradient4-thumb.jpg', url: '/wallpapers/gradient4.jpg' },
-    { id: 'gradient5', name: 'Gradient Mint', thumbnail: '/wallpapers/gradient5-thumb.jpg', url: '/wallpapers/gradient5.jpg' },
-    { id: 'pattern1', name: 'Pattern Dots', thumbnail: '/wallpapers/pattern1-thumb.jpg', url: '/wallpapers/pattern1.jpg' },
-    { id: 'pattern2', name: 'Pattern Stripes', thumbnail: '/wallpapers/pattern2-thumb.jpg', url: '/wallpapers/pattern2.jpg' },
-    { id: 'pattern3', name: 'Pattern Waves', thumbnail: '/wallpapers/pattern3-thumb.jpg', url: '/wallpapers/pattern3.jpg' },
-    { id: 'nature1', name: 'Nature Forest', thumbnail: '/wallpapers/nature1-thumb.jpg', url: '/wallpapers/nature1.jpg' },
-    { id: 'nature2', name: 'Nature Beach', thumbnail: '/wallpapers/nature2-thumb.jpg', url: '/wallpapers/nature2.jpg' },
-    { id: 'nature3', name: 'Nature Mountains', thumbnail: '/wallpapers/nature3-thumb.jpg', url: '/wallpapers/nature3.jpg' },
-    { id: 'custom', name: 'Custom', thumbnail: null },
-  ]
-
   const handleThemeChange = (themeId) => {
     setTheme(themeId)
     const themeData = allThemes[themeId]
     toast.success(`Theme changed to ${themeData?.name || themeId}`)
   }
 
-  const handleWallpaperUpload = (event) => {
-    const file = event.target.files[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Wallpaper size should be less than 5MB')
-        return
-      }
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setChatWallpaper(reader.result)
-        toast.success('Custom wallpaper applied')
-      }
-      reader.readAsDataURL(file)
+  /**
+   * Apply a wallpaper chosen in the gallery. The value is serialized
+   * ({ kind, value }) and mirrored into `global-wallpaper` in the shape the
+   * chat area reads, so the background changes immediately as well as on the
+   * next launch.
+   */
+  const applyWallpaper = (serialized, wallpaper) => {
+    setChatWallpaper(serialized)
+    setSelectedWallpaper(wallpaper?.id || serialized?.id || 'custom')
+    try {
+      const css = resolveWallpaper(serialized)
+      localStorage.setItem('global-wallpaper', JSON.stringify(serializeWallpaper(serialized)))
+      window.dispatchEvent(
+        new CustomEvent('global-wallpaper-change', { detail: { wallpaper: css } })
+      )
+    } catch {
+      /* private mode / quota — the store copy still applies */
     }
+    toast.success(wallpaper?.name ? `${wallpaper.name} applied` : 'Wallpaper applied')
   }
 
   const handleResetToDefaults = () => {
@@ -318,50 +306,7 @@ const AppearanceSettings = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Chat Wallpaper
         </h3>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-          {wallpapers.map((wallpaper) => (
-            <button
-              key={wallpaper.id}
-              onClick={() => {
-                if (wallpaper.id === 'custom') {
-                  document.getElementById('wallpaper-upload').click()
-                } else {
-                  setChatWallpaper(wallpaper.url)
-                  setSelectedWallpaper(wallpaper.id)
-                }
-              }}
-              className={clsx(
-                'aspect-[9/16] rounded-lg overflow-hidden border-2 transition-all',
-                selectedWallpaper === wallpaper.id
-                  ? 'border-primary-500 shadow-md'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-              )}
-            >
-              {wallpaper.thumbnail ? (
-                <img
-                  src={wallpaper.thumbnail}
-                  alt={wallpaper.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : wallpaper.id === 'none' ? (
-                <div className="w-full h-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">None</span>
-                </div>
-              ) : (
-                <div className="w-full h-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <PhotoIcon className="w-8 h-8 text-gray-400" />
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-        <input
-          id="wallpaper-upload"
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleWallpaperUpload}
-        />
+        <WallpaperGallery value={selectedWallpaper || chatWallpaper} onChange={applyWallpaper} />
       </div>
 
       {/* Additional Settings */}

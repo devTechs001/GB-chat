@@ -113,7 +113,7 @@ const ChatInput = ({ onSendMessage, replyTo, chatId }) => {
                   <img
                     src={file.dataURL || URL.createObjectURL(file.file || file)}
                     alt={file.name}
-                    className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg"
+                    className="h-16 w-16 rounded-xl object-cover ring-1 ring-black/5 dark:ring-white/10 md:h-20 md:w-20"
                   />
                 ) : (
                   <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">

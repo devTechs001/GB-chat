@@ -6,6 +6,7 @@ import Avatar from '../common/Avatar'
 import MessageStatus from './MessageStatus'
 import MessageReactions from './MessageReactions'
 import MessageActions from './MessageActions'
+import MessageTranslator from './MessageTranslator'
 import useThemeStore from '../../store/useThemeStore'
 import useGBFeaturesStore from '../../store/useGBFeaturesStore'
 import useAuthStore from '../../store/useAuthStore'
@@ -56,12 +57,23 @@ const ChatBubble = ({
   isSelected,
   showAvatar = true,
   onSchedule,
+  onDeleted,
 }) => {
   const [showActions, setShowActions] = useState(false)
   const [pressTimer, setPressTimer] = useState(null)
   const { bubbleStyle, messageAnimation } = useThemeStore()
   const { gbFeatures } = useGBFeaturesStore()
   const { user } = useAuthStore()
+
+  // Plain text of the message, when there is any worth translating.
+  const plainText =
+    typeof message.content === 'string'
+      ? message.content
+      : message.content?.text || message.content?.caption || ''
+  const canTranslate =
+    Boolean(plainText.trim()) &&
+    !message.isDeleted &&
+    (message.type === 'text' || !message.type || message.type === 'image' || message.type === 'video')
 
   const animVariant = messageAnimations[messageAnimation] || messageAnimations.slide
   const bubbleRadius = bubbleRadii[bubbleStyle] || bubbleRadii.modern
@@ -361,6 +373,16 @@ const ChatBubble = ({
               />
             )}
             {message.isEdited && <span className="italic text-[10px]">(edited)</span>}
+
+            {/* Per-message translation. The component and its /translations
+                endpoints existed but nothing rendered it, so the feature was
+                unreachable from the UI. Text messages only — media has no text
+                worth translating. */}
+            {canTranslate ? (
+              <span className="ml-auto">
+                <MessageTranslator messageId={messageId} content={plainText} />
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -381,6 +403,7 @@ const ChatBubble = ({
             onReply={onReply}
             chatId={message.chat?._id}
             onSchedule={onSchedule}
+            onDeleted={onDeleted}
             className="absolute top-0 right-0 md:block hidden"
           />
         )}

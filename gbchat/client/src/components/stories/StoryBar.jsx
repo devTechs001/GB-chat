@@ -32,8 +32,8 @@ const StoryBar = ({ compact = false }) => {
 
   return (
     <>
-      <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200/80 dark:border-gray-800">
-        <div className={compact ? 'px-3 py-2' : 'px-3 py-3 md:px-4 md:py-4'}>
+      <div className="flex-shrink-0 border-b border-gray-200/70 bg-white/70 dark:border-gray-800 dark:bg-gray-900/60">
+        <div className={compact ? 'px-3 py-2.5' : 'px-3 py-3 md:px-4 md:py-4'}>
           {!compact && (
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Stories
@@ -53,8 +53,10 @@ const StoryBar = ({ compact = false }) => {
                 className="relative"
               >
                 <div className={clsx(
-                  compact ? 'w-14 h-16' : 'w-16 h-20 md:w-20 md:h-24',
-                  'rounded-lg overflow-hidden',
+                  // Relative: the photo + scrim inside are absolutely
+                  // positioned against this tile, not the whole rail.
+                  'relative overflow-hidden rounded-xl',
+                  compact ? 'h-20 w-14' : 'h-24 w-16 md:h-24 md:w-[72px]',
                   'bg-gradient-to-b from-gray-100 to-gray-200',
                   'dark:from-gray-700 dark:to-gray-800',
                   'flex flex-col items-center justify-center',

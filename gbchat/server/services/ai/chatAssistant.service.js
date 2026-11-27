@@ -1,5 +1,5 @@
 // services/ai/chatAssistant.service.js
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 class ChatAssistantService {
     constructor() {
@@ -167,4 +167,7 @@ class ChatAssistantService {
     }
 }
 
-module.exports = new ChatAssistantService();
+const chatAssistant = new ChatAssistantService();
+
+export default chatAssistant;
+export { ChatAssistantService };

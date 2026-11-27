@@ -127,10 +127,7 @@ const MainLayout = () => {
       {/* ---------- Content ---------- */}
       <div className="flex-1 min-w-0 flex flex-col h-full">
         {/* Keyboard users land here first: one Tab, then jump past the nav. */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:left-3 focus:top-3 focus:rounded-xl focus:bg-primary-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
-        >
+        <a href="#main-content" className="skip-link">
           Skip to content
         </a>
         <OfflineBanner />

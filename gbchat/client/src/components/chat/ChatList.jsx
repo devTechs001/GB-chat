@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -35,6 +35,40 @@ const ChatList = ({ onChatSelect, className }) => {
   const [filter, setFilter] = useState('all') // all, unread, groups, archived
   const [sortBy, setSortBy] = useState('date') // date, name, unread
   const [showNewChatModal, setShowNewChatModal] = useState(false)
+  const searchRef = useRef(null)
+
+  /**
+   * One search, two ways in: ⌘K / Ctrl+K from anywhere, or the sidebar's
+   * "Search chats" button. Focus + select so typing replaces the old query.
+   */
+  useEffect(() => {
+    const focusSearch = () => {
+      const input = searchRef.current
+      if (!input) return
+      input.focus()
+      input.select()
+      input.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+
+    const onKeyDown = (event) => {
+      const isShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k'
+      if (!isShortcut) return
+      // Never hijack the browser's address-bar search when the user is typing
+      // in an input that is not ours.
+      const tag = document.activeElement?.tagName
+      const isOtherField = ['INPUT', 'TEXTAREA'].includes(tag) && document.activeElement !== searchRef.current
+      if (isOtherField) return
+      event.preventDefault()
+      focusSearch()
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('gbchat:focus-search', focusSearch)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('gbchat:focus-search', focusSearch)
+    }
+  }, [])
 
   const filteredChats = useMemo(() => {
     let filtered = [...chats].filter(chat => chat && chat._id) // Filter out undefined/null chats
@@ -160,6 +194,7 @@ const ChatList = ({ onChatSelect, className }) => {
         <div className="relative">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
+            ref={searchRef}
             type="search"
             data-search-input="chats"
             value={searchQuery}

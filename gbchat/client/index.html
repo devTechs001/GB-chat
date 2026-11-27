@@ -9,6 +9,14 @@
     <meta name="theme-color" content="#0ea5e9" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="GBChat - Ultimate Messaging Platform" />
+    <!-- Match the app's canvas from the very first paint, so opening the PWA or
+         a hard refresh never flashes a white screen before React mounts. -->
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      html { background-color: #f8fafc; }
+      @media (prefers-color-scheme: dark) { html { background-color: #0b1220; } }
+      html[data-mode='dark'] { background-color: #0b1220; }
+    </style>
 
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json" />
@@ -40,6 +48,12 @@
         const themeStorage = localStorage.getItem('theme-storage');
         if (themeStorage) {
           const { state } = JSON.parse(themeStorage);
+          // The stylesheet keys dark surfaces off data-mode; the boot script
+          // only set a class, so the first frame (and anything that relied on
+          // [data-mode]) rendered light. Set both, plus reduced motion.
+          if (state && state.reducedMotion) {
+            document.documentElement.dataset.reducedMotion = 'true';
+          }
           if (state && state.theme) {
             const themes = {
               light: 'light',
@@ -59,11 +73,14 @@
             };
             const themeClass = themes[state.theme] || 'light';
             document.documentElement.className = themeClass;
+            document.documentElement.dataset.mode = state.theme === 'light' ? 'light' : 'dark';
+            document.documentElement.dataset.theme = state.theme;
           }
         }
       } catch (e) {
         // Fall back to light theme if parsing fails
         document.documentElement.className = 'light';
+        document.documentElement.dataset.mode = 'light';
       }
     </script>
     <script type="module" src="/src/main.jsx"></script>

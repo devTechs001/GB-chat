@@ -16,6 +16,7 @@ import ChannelDetail from '../components/channels/ChannelDetail'
 import ChannelCreate from '../components/channels/ChannelCreate'
 import ChannelAnalytics from '../components/channels/ChannelAnalytics'
 import ChannelPostScheduler from '../components/channels/ChannelPostScheduler'
+import ChannelList from '../components/channels/ChannelList'
 import ChannelMonetization from '../components/channels/ChannelMonetization'
 import SearchBar from '../components/common/SearchBar'
 import Button from '../components/common/Button'
@@ -310,6 +311,33 @@ const ChannelsPage = () => {
 
       {/* Channels Grid */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-6">
+        {/* Your channels: the dense ChannelList is right for a narrow rail,
+            where ChannelCard's cover art would waste the whole column. */}
+        {activeTab === 'browse' && !searchQuery && (
+          <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr]">
+            <section aria-label="Your channels" className="rounded-xl border border-gray-200/70 bg-white/70 p-2 dark:border-gray-800 dark:bg-gray-900/60">
+              <header className="flex items-center justify-between px-2 pb-1.5 pt-1">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Yours
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setFilter('subscribed')}
+                  className="text-[11px] font-medium text-primary-600 hover:underline dark:text-primary-400"
+                >
+                  See all
+                </button>
+              </header>
+              <ChannelList
+                channels={[...ownedChannels, ...channels.filter((channel) => channel.isSubscribed && !ownedChannels.some((own) => String(own._id) === String(channel._id)))].slice(0, 8)}
+                loading={loading}
+                emptyLabel="Create or follow a channel to see it here"
+              />
+            </section>
+            <div className="hidden lg:block" aria-hidden="true" />
+          </div>
+        )}
+
         {activeTab === 'browse' && (
           <>
             {loading ? (

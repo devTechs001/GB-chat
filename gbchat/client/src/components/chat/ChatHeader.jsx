@@ -32,7 +32,9 @@ import useAuthStore from '../../store/useAuthStore'
 import CallInterface from '../calls/CallInterface'
 import useCallStore from '../../store/useCallStore'
 import ChatDisplaySettings from '../settings/ChatDisplaySettings'
-import WallpaperSelector from './WallpaperSelector'
+import Modal from '../common/Modal'
+import WallpaperGallery from '../settings/WallpaperGallery'
+import { resolveWallpaper, DEFAULT_WALLPAPER_ID } from '../../lib/wallpapers'
 import MediaGallery from './MediaGallery'
 import StarredMessagesModal from './StarredMessagesModal'
 import ChatLockSettings from './ChatLockSettings'
@@ -115,20 +117,40 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
     }
   }
 
-  const handleWallpaperChange = (wallpaperUrl) => {
-    // Store wallpaper per chat in localStorage
-    const chatWallpapers = JSON.parse(localStorage.getItem('chat-wallpapers') || '{}')
-    if (wallpaperUrl) {
-      chatWallpapers[chat._id] = wallpaperUrl
+  /**
+   * Per-chat wallpaper. Stored as a compact descriptor (`{ kind, value }`),
+   * never as a raw data-URI — a photo per conversation used to blow the
+   * localStorage quota. ChatArea resolves it through the same helper.
+   */
+  const handleWallpaperChange = (serialized, wallpaper) => {
+    let chatWallpapers = {}
+    try {
+      chatWallpapers = JSON.parse(localStorage.getItem('chat-wallpapers') || '{}')
+    } catch {
+      chatWallpapers = {}
+    }
+
+    if (serialized) {
+      chatWallpapers[chat._id] = serialized
     } else {
       delete chatWallpapers[chat._id]
     }
-    localStorage.setItem('chat-wallpapers', JSON.stringify(chatWallpapers))
 
-    // Dispatch custom event to update ChatArea
-    window.dispatchEvent(new CustomEvent('wallpaper-change', {
-      detail: { chatId: chat._id, wallpaper: wallpaperUrl }
-    }))
+    try {
+      localStorage.setItem('chat-wallpapers', JSON.stringify(chatWallpapers))
+    } catch {
+      toast.error('Could not save the wallpaper (storage full)')
+      return
+    }
+
+    // The payload is the *resolved CSS source*, which is what ChatArea renders.
+    window.dispatchEvent(
+      new CustomEvent('wallpaper-change', {
+        detail: { chatId: chat._id, wallpaper: serialized ? resolveWallpaper(serialized) : DEFAULT_WALLPAPER_ID },
+      })
+    )
+    toast.success(wallpaper?.name ? `${wallpaper.name} set for this chat` : 'Wallpaper updated')
+    setShowWallpaperSelector(false)
   }
 
   const quickSettings = [
@@ -515,13 +537,24 @@ const ChatHeader = ({ chat, onInfoClick, selectedCount, onClearSelection, onBack
         )}
       </AnimatePresence>
 
-      {/* Wallpaper Selector Modal */}
-      <WallpaperSelector
+      {/* Wallpaper picker (per chat) */}
+      <Modal
         isOpen={showWallpaperSelector}
         onClose={() => setShowWallpaperSelector(false)}
-        onSelect={handleWallpaperChange}
-        currentWallpaper={null}
-      />
+        title="Chat wallpaper"
+        size="lg"
+      >
+        <WallpaperGallery
+          value={(() => {
+            try {
+              return JSON.parse(localStorage.getItem('chat-wallpapers') || '{}')[chat?._id]
+            } catch {
+              return null
+            }
+          })()}
+          onChange={handleWallpaperChange}
+        />
+      </Modal>
 
       {/* Media Gallery Modal */}
       <MediaGallery

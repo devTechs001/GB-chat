@@ -59,31 +59,43 @@ const BottomNav = () => {
               key={item.name}
               to={item.href}
               aria-current={active ? 'page' : undefined}
-              className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-w-0 tap-target"
+              className="group relative flex flex-1 flex-col items-center justify-center gap-1 pt-2 pb-1.5 min-w-0 tap-target"
             >
               <span
                 className={clsx(
-                  'relative flex items-center justify-center w-9 h-7 rounded-lg transition-colors',
+                  'relative flex items-center justify-center w-10 h-7 rounded-full transition-all duration-200',
+                  'group-active:scale-90',
                   active
-                    ? 'bg-primary-500/12 text-primary-600 dark:text-primary-400'
-                    : 'text-gray-400 dark:text-gray-500'
+                    ? 'bg-primary-500/15 text-primary-600 dark:text-primary-300'
+                    : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                 )}
               >
-                <Icon className="w-[22px] h-[22px]" />
+                <Icon className={clsx('transition-transform', active ? 'w-[22px] h-[22px] -translate-y-px' : 'w-[22px] h-[22px]')} />
                 {showBadge && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
-                    {unreadTotal > 9 ? '9+' : unreadTotal}
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-gray-900">
+                    {unreadTotal > 99 ? '99+' : unreadTotal > 9 ? '9+' : unreadTotal}
                   </span>
                 )}
               </span>
               <span
                 className={clsx(
                   'text-[10px] leading-none font-semibold transition-colors truncate max-w-full',
-                  active ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-500'
+                  active
+                    ? 'text-primary-600 dark:text-primary-300'
+                    : 'text-gray-500 dark:text-gray-500'
                 )}
               >
                 {item.name}
               </span>
+              {/* Active dot: a second, non-colour cue so the current tab is
+                  identifiable without relying on colour alone. */}
+              <span
+                aria-hidden="true"
+                className={clsx(
+                  'h-1 w-1 rounded-full transition-opacity',
+                  active ? 'bg-primary-500 opacity-100' : 'opacity-0'
+                )}
+              />
             </NavLink>
           )
         })}

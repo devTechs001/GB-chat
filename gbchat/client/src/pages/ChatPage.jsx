@@ -132,7 +132,8 @@ const ChatPage = () => {
         className={clsx(
           'flex-col h-full min-h-0 bg-white dark:bg-gray-900',
           'w-full lg:w-[380px] xl:w-[400px] lg:flex-shrink-0',
-          'lg:border-r lg:border-gray-200/80 dark:lg:border-gray-800',
+          // Desktop: a glass pane with a soft edge instead of a hard divider.
+          'lg:shell-glass lg:pane-edge',
           showConversationOnMobile ? 'hidden lg:flex' : 'flex'
         )}
         aria-label="Conversations"

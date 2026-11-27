@@ -12,8 +12,10 @@ import useAuthStore from '../../store/useAuthStore'
 import useThemeStore from '../../store/useThemeStore'
 import api from '../../lib/api'
 import clsx from 'clsx'
-import { Star as StarIcon } from 'lucide-react'
+import { Star as StarIcon, Heart as HeartIcon } from 'lucide-react'
+import { ArrowDownIcon } from '@heroicons/react/24/outline'
 import { shallow } from 'zustand/shallow'
+import { resolveWallpaper, DEFAULT_WALLPAPER_ID } from '../../lib/wallpapers'
 
 const ChatArea = ({ onInfoClick, onBack }) => {
   const { toggleSidePanel } = useOutletContext()
@@ -57,6 +59,12 @@ const ChatArea = ({ onInfoClick, onBack }) => {
   const focusMessageId = searchParams.get('message')
   const [highlightedMessage, setHighlightedMessage] = useState(null)
   const messagesEndRef = useRef(null)
+  // "New messages" affordance: when the reader has scrolled up, new messages
+  // must not yank them away from what they were reading.
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false)
+  const [unseenCount, setUnseenCount] = useState(0)
+  // How many messages the list had on the previous render (new-message count).
+  const previousCount = useRef(0)
   const chatContainerRef = useRef(null)
   const [replyTo, setReplyTo] = useState(null)
   const [selectedMessages, setSelectedMessages] = useState([])
@@ -73,14 +81,24 @@ const ChatArea = ({ onInfoClick, onBack }) => {
       return
     }
 
-    const chatWallpapers = JSON.parse(localStorage.getItem('chat-wallpapers') || '{}')
-    const wallpaper = chatWallpapers[activeChat._id] || null
+    const readStored = (key) => {
+      const raw = localStorage.getItem(key)
+      if (!raw) return null
+      try {
+        return JSON.parse(raw)
+      } catch {
+        return raw // legacy: a bare URL or data-URI
+      }
+    }
 
-    // If no per-chat wallpaper, use global wallpaper
-    const globalWallpaper = localStorage.getItem('global-wallpaper')
-    const finalWallpaper = wallpaper || globalWallpaper || null
+    const chatWallpapers = readStored('chat-wallpapers') || {}
+    const perChat = chatWallpapers[activeChat._id] || null
+    const global = readStored('global-wallpaper')
 
-    setCurrentChatWallpaper(finalWallpaper)
+    // A per-chat choice wins; otherwise the global one; otherwise the app
+    // default. Everything goes through resolveWallpaper so a descriptor, an id
+    // and a legacy URL all produce the same CSS.
+    setCurrentChatWallpaper(perChat || global || DEFAULT_WALLPAPER_ID)
   }, [activeChat])
 
   // Check chat lock status when active chat changes
@@ -142,17 +160,55 @@ const ChatArea = ({ onInfoClick, onBack }) => {
 
   // Load messages when active chat changes
   useEffect(() => {
+    previousCount.current = 0
+    setUnseenCount(0)
+    setShowJumpToLatest(false)
     if (activeChat?._id) {
       fetchMessages(activeChat._id)
     }
   }, [activeChat?._id, fetchMessages])
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToBottom = (behavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior })
+    setShowJumpToLatest(false)
+    setUnseenCount(0)
+  }
+
+  // Distance from the bottom of the message list, in px.
+  const distanceFromBottom = () => {
+    const el = chatContainerRef.current
+    if (!el) return 0
+    return el.scrollHeight - el.scrollTop - el.clientHeight
   }
 
   useEffect(() => {
-    scrollToBottom()
+    const el = chatContainerRef.current
+    if (!el) return undefined
+
+    const onScroll = () => {
+      const nearBottom = distanceFromBottom() < 120
+      setShowJumpToLatest(!nearBottom)
+      if (nearBottom) setUnseenCount(0)
+    }
+
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const count = messages?.length || 0
+    const added = Math.max(count - previousCount.current, 0)
+    previousCount.current = count
+
+    // First paint of a conversation always lands at the newest message;
+    // afterwards we only follow when the reader is already near the bottom,
+    // otherwise their position would jump while they read back.
+    if (count === 0 || distanceFromBottom() < 160) {
+      scrollToBottom(count === 0 ? 'auto' : 'smooth')
+    } else if (added > 0) {
+      setUnseenCount((n) => n + added)
+      setShowJumpToLatest(true)
+    }
   }, [messages])
 
   /* Deep link to one message: scroll to it, flash a ring, then drop the param
@@ -285,18 +341,18 @@ const ChatArea = ({ onInfoClick, onBack }) => {
       <div
         ref={chatContainerRef}
         className={clsx(
-          'flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 md:px-4 py-4 relative',
-          currentChatWallpaper ? '' : 'bg-gray-100 dark:bg-dark-surface'
+          'flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 md:px-4 py-4 relative'
         )}
-        style={{
-          backgroundImage: currentChatWallpaper
-            ? `url('${currentChatWallpaper}')`
-            : `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239CA3AF' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3Cg fill='%239CA3AF' fill-opacity='0.04'%3E%3Cpath d='M36 14v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          backgroundSize: currentChatWallpaper ? 'cover' : '60px 60px',
-          backgroundPosition: 'center',
-          backgroundColor: currentChatWallpaper ? 'transparent' : '',
-          backgroundAttachment: 'scroll',
-        }}
+        style={(() => {
+          const css = resolveWallpaper(currentChatWallpaper) || resolveWallpaper(DEFAULT_WALLPAPER_ID)
+          return {
+            background: css?.background,
+            backgroundSize: css?.backgroundSize,
+            backgroundPosition: css?.backgroundPosition,
+            backgroundColor: 'transparent',
+            backgroundAttachment: 'scroll',
+          }
+        })()}
       >
         {/* Wallpaper overlay for better contrast */}
         <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-white/50 to-white/30 dark:from-black/30 dark:via-black/50 dark:to-black/30 pointer-events-none z-0" />
@@ -420,6 +476,9 @@ const ChatArea = ({ onInfoClick, onBack }) => {
                     isSelected={selectedMessages.includes(messageId)}
                     showAvatar={!isMine}
                     onSchedule={() => setShowScheduleModal(true)}
+                    onDeleted={(messageId, forEveryone) =>
+                      useChatStore.getState().removeMessage?.(messageId, forEveryone)
+                    }
                   />
                 </motion.div>
                 );
@@ -435,6 +494,27 @@ const ChatArea = ({ onInfoClick, onBack }) => {
         )}
         
         <div ref={messagesEndRef} />
+
+        {/* Jump-to-latest: only when the reader has scrolled away from the
+            newest message, so an incoming message never moves the view. */}
+        <AnimatePresence>
+          {showJumpToLatest && (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 12, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.9 }}
+              onClick={() => scrollToBottom()}
+              className="sticky bottom-2 mx-auto z-20 flex items-center gap-2 rounded-full bg-white/95 dark:bg-gray-800/95 backdrop-blur px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-100 shadow-lg ring-1 ring-black/5 dark:ring-white/10 hover:bg-white dark:hover:bg-gray-800"
+              aria-label="Jump to the latest message"
+            >
+              <ArrowDownIcon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              {unseenCount > 0
+                ? `${unseenCount} new message${unseenCount === 1 ? '' : 's'}`
+                : 'Latest'}
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Reply Preview - Mobile optimized */}

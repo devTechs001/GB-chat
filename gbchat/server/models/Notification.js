@@ -1,6 +1,7 @@
 // models/Notification.js
 import mongoose from 'mongoose';
 import { sendToUser } from '../services/webPushService.js';
+import { emitToUser } from '../services/socketService.js';
 
 /**
  * In-app notification feed.
@@ -86,6 +87,27 @@ notificationSchema.statics.createFor = async function createFor(payload) {
     // in-app feed is the source of truth; a push-service outage must never
     // fail the action that produced the notification, so this is not awaited.
     if (notification) {
+      // Realtime: a user with the app open sees the badge/feed update without
+      // refetching. socketService degrades to a no-op when no io exists
+      // (worker process, tests), so this never needs a guard here.
+      const payload = {
+        _id: String(notification._id),
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        actor: notification.actor,
+        chatId: notification.chatId,
+        storyId: notification.storyId,
+        groupId: notification.groupId,
+        callId: notification.callId,
+        actionUrl: notification.actionUrl,
+        data: notification.data,
+        isRead: Boolean(notification.isRead),
+        createdAt: notification.createdAt,
+      };
+      emitToUser(notification.user, 'notification', payload);
+      emitToUser(notification.user, 'notification:new', payload);
+
       sendToUser(notification.user, {
         title: notification.title,
         body: notification.body,

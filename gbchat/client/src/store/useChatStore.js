@@ -783,6 +783,28 @@ const useChatStore = create((set, get) => ({
     }))
   },
 
+  /**
+   * Remove a message locally after the server confirms the delete.
+   * `forEveryone` keeps a tombstone (the server replaces the content with
+   * "This message was deleted"), while a delete-for-me simply drops the row.
+   */
+  removeMessage: (messageId, forEveryone = true) => {
+    set((state) => ({
+      messages: forEveryone
+        ? state.messages.map((message) =>
+            message._id === messageId
+              ? {
+                  ...message,
+                  isDeleted: true,
+                  deletedForEveryone: true,
+                  content: { text: 'This message was deleted' },
+                }
+              : message
+          )
+        : state.messages.filter((message) => message._id !== messageId),
+    }))
+  },
+
   setTyping: (chatId, userId, isTyping) => {
     set((state) => {
       const current = state.typingUsers[chatId] || []

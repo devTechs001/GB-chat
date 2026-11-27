@@ -1,5 +1,5 @@
 // models/Analytics.model.js
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const analyticsSchema = new mongoose.Schema({
     userId: {
@@ -200,4 +200,6 @@ analyticsSchema.statics.getUserOverview = async function(userId, days = 7) {
     };
 };
 
-module.exports = mongoose.models.Analytics || mongoose.model('Analytics', analyticsSchema);
+const Analytics = mongoose.models.Analytics || mongoose.model("Analytics", analyticsSchema);
+
+export default Analytics;

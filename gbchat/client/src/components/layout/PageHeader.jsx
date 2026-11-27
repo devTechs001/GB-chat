@@ -40,7 +40,7 @@ const PageHeader = ({
         className
       )}
     >
-      <div className="flex items-center gap-3 px-4 py-3 md:px-6 md:py-4">
+      <div className="flex items-center gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4 lg:py-5">
         {/* Navigation drawer trigger – mobile/tablet only */}
         <button
           type="button"
@@ -52,14 +52,14 @@ const PageHeader = ({
         </button>
 
         {(Icon || emoji) && (
-          <div className="hidden sm:flex w-10 h-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400">
+          <div className="hidden sm:flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500/15 to-violet-500/10 text-primary-600 ring-1 ring-primary-500/15 dark:text-primary-400 lg:h-11 lg:w-11">
             {Icon ? <Icon className="w-5 h-5" /> : <span className="text-lg leading-none">{emoji}</span>}
           </div>
         )}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-lg md:text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate">
+            <h1 className="truncate text-lg font-bold tracking-tight text-gray-900 dark:text-white md:text-xl lg:text-[22px]">
               {title}
             </h1>
             {badge !== undefined && badge !== null && badge !== 0 && (
@@ -69,7 +69,7 @@ const PageHeader = ({
             )}
           </div>
           {subtitle && (
-            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400 md:text-sm">
               {subtitle}
             </p>
           )}

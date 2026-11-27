@@ -1,5 +1,5 @@
 // models/BusinessProfile.model.js
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const businessProfileSchema = new mongoose.Schema({
     userId: {
@@ -134,4 +134,6 @@ const businessProfileSchema = new mongoose.Schema({
 businessProfileSchema.index({ businessName: 'text', description: 'text' });
 businessProfileSchema.index({ category: 1, verified: 1 });
 
-module.exports = mongoose.models.BusinessProfile || mongoose.model('BusinessProfile', businessProfileSchema);
+const BusinessProfile = mongoose.models.BusinessProfile || mongoose.model("BusinessProfile", businessProfileSchema);
+
+export default BusinessProfile;

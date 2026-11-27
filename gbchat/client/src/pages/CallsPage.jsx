@@ -21,7 +21,17 @@ import EmptyState from '../components/layout/EmptyState'
 import clsx from 'clsx'
 
 const CallsPage = () => {
-  const { callHistory, activeCall, fetchCallHistory, initiateCall, isLoading, historyError } = useCallStore()
+  const {
+    callHistory,
+    activeCall,
+    fetchCallHistory,
+    fetchCallStats,
+    initiateCall,
+    cancelCall,
+    isLoading,
+    historyError,
+    stats,
+  } = useCallStore()
   const [filter, setFilter] = useState('all') // all, missed, incoming, outgoing
   const [searchQuery, setSearchQuery] = useState('')
   const [showCallInterface, setShowCallInterface] = useState(false)
@@ -29,6 +39,9 @@ const CallsPage = () => {
 
   useEffect(() => {
     fetchCallHistory()
+    // GET /api/calls/stats had no client caller at all; the header summary is
+    // what makes it worth the round trip.
+    fetchCallStats()
   }, [])
 
   const filteredCalls = (callHistory || []).filter((call) => {
@@ -127,6 +140,30 @@ const CallsPage = () => {
         </div>
       </PageHeader>
 
+      {/* Summary — real numbers from GET /api/calls/stats */}
+      {stats && (
+        <div className="grid grid-cols-4 gap-2 px-3 pt-3 sm:px-4">
+          {[
+            { label: 'Total', value: stats.total, tone: 'text-gray-900 dark:text-white' },
+            { label: 'Audio', value: stats.audio, tone: 'text-green-600 dark:text-green-400' },
+            { label: 'Video', value: stats.video, tone: 'text-blue-600 dark:text-blue-400' },
+            { label: 'Missed', value: stats.missed, tone: 'text-red-500 dark:text-red-400' },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-xl border border-gray-200/70 bg-white/80 px-2 py-2 text-center dark:border-gray-800 dark:bg-gray-900/60"
+            >
+              <p className={clsx('text-lg font-bold tabular-nums', item.tone)}>
+                {typeof item.value === 'number' ? item.value : '—'}
+              </p>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {item.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Call History */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         {Object.keys(groupedCalls).length === 0 ? (
@@ -193,7 +230,13 @@ const CallsPage = () => {
         <CallInterface
           callData={activeCall}
           onEnd={() => {
-            useCallStore.getState().endCall(activeCall._id)
+            // A call that never connected must be cancelled, not "ended":
+            // cancel tells the peer to stop ringing; end logs a connected call.
+            if (activeCall.status === 'ringing' || activeCall.status === 'initiated') {
+              cancelCall(activeCall._id)
+            } else {
+              useCallStore.getState().endCall(activeCall._id)
+            }
             setShowCallInterface(false)
           }}
         />

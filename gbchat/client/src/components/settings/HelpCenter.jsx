@@ -396,8 +396,9 @@ const HelpCenter = () => {
         </div>
       </div>
 
-      {/* Contact Support */}
-      <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-xl p-8 text-white text-center">
+      {/* Contact Support — brand gradient that matches the primary palette
+          (the old green/teal block was the only screen in the app using it). */}
+      <div className="bg-gradient-to-br from-primary-600 via-primary-500 to-indigo-500 rounded-2xl p-8 text-white text-center shadow-lg shadow-primary-600/20">
         <EnvelopeIcon className="w-12 h-12 mx-auto mb-4 opacity-80" />
         <h3 className="text-xl font-bold mb-2">Still need help?</h3>
         <p className="text-white/90 mb-6 max-w-md mx-auto">
@@ -405,14 +406,17 @@ const HelpCenter = () => {
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <a
-            href="mailto:support@gbchat.com"
-            className="px-6 py-3 bg-white text-green-600 rounded-lg font-medium hover:bg-green-50 transition-colors"
+            href="mailto:support@gbchat.app"
+            className="px-6 py-3 rounded-xl bg-white text-primary-700 font-semibold shadow-sm hover:bg-primary-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
-            Email Support
+            Email support
           </a>
-          <button className="px-6 py-3 bg-green-700/50 text-white rounded-lg font-medium hover:bg-green-700 transition-colors backdrop-blur-sm">
-            Live Chat
-          </button>
+          <a
+            href="mailto:support@gbchat.app?subject=Live%20chat%20request"
+            className="px-6 py-3 rounded-xl bg-white/15 text-white font-semibold backdrop-blur-sm hover:bg-white/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          >
+            Request a call
+          </a>
         </div>
       </div>
     </div>
