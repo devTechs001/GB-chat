@@ -205,9 +205,10 @@ const ChatListItem = ({ chat, onClick }) => {
         <Avatar
           src={displayAvatar}
           alt={displayName}
+          name={displayName}
           size="md"
           status={isOnline ? 'online' : 'offline'}
-          className="transition-transform group-hover:scale-105"
+          className="transition-transform duration-200 group-hover:scale-105"
         />
         {chat.isGroup && (
           <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-lg">

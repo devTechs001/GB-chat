@@ -1,157 +1,173 @@
-/**
- * Enhanced StoryCard Component
- * Features:
- * - Animated gradient rings for unviewed stories
- * - Close friends badge
- * - Media count indicator
- * - Like/favorite indicators
- * - Enhanced hover effects
- * - Story highlights support
- */
-
 import React from 'react'
 import { motion } from 'framer-motion'
-import { PlusIcon, StarIcon, HeartIcon, PlayIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, HeartIcon, PlayIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Avatar from '../common/Avatar'
 import clsx from 'clsx'
 
-const StoryCard = ({ 
-  story, 
-  onClick, 
-  isOwn = false, 
+/**
+ * StoryCard — the portrait tile used by the stories grid.
+ *
+ * Round 12 rewrite. The old card was a fixed `w-16 h-20` thumbnail dropped into
+ * a `grid-cols-2…6` layout: the cell was 200 px wide, the media 64 px, and the
+ * author name was clipped to `max-w-[80px]`. On desktop that read as a row of
+ * tiny stamps with unreadable labels.
+ *
+ * Now the tile **fills its cell** (`aspect-[9/16]`, `w-full`), the media is the
+ * card, and the author/time sit in a readable gradient footer. The ring/badges
+ * keep their meaning:
+ *   gradient ring  → unseen
+ *   grey ring      → seen
+ *   purple ring    → highlight
+ *   star           → close friend
+ */
+const mediaOf = (story) => {
+  const first = (story.media || [])[0] || {}
+  return {
+    src: first.thumbnail || first.url || story.thumbnail || null,
+    isVideo: first.type === 'video' || story.type === 'video',
+    count: (story.media || []).length,
+  }
+}
+
+const StoryCard = ({
+  story,
+  onClick,
+  isOwn = false,
   isCloseFriend = false,
-  isHighlight = false 
+  isHighlight = false,
+  className,
 }) => {
-  const owner = story.user || story.userId || {}
+  const owner = story?.user || story?.userId || {}
+  const authorName = isOwn ? 'Your story' : owner.fullName || owner.name || 'GBChat user'
+
   const viewerIds = [
-    ...(story.viewedBy || []),
-    ...(story.viewers || []).map((v) => v?.user?._id || v?.user),
-  ].filter(Boolean)
-  const hasUnviewed = story.currentUserId
-    ? !viewerIds.some((id) => String(id) === String(story.currentUserId))
+    ...(story?.viewedBy || []),
+    ...(story?.viewers || []).map((entry) => entry?.user?._id || entry?.user || entry),
+  ]
+    .filter(Boolean)
+    .map(String)
+
+  const hasUnviewed = story?.currentUserId
+    ? !viewerIds.includes(String(story.currentUserId))
     : true
-  const mediaCount = story.media?.length || 0
-  const isVideo = story.media?.[0]?.type === 'video'
+
+  const { src, isVideo, count } = mediaOf(story)
+  const viewCount = story?.viewCount ?? viewerIds.length
+  const hasReaction = Boolean(story?.myReaction || story?.isLiked)
+
+  const ringClass = isHighlight
+    ? 'ring-2 ring-violet-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-950'
+    : hasUnviewed && !isOwn
+      ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-950'
+      : 'ring-1 ring-gray-200 ring-offset-1 ring-offset-white dark:ring-gray-800 dark:ring-offset-gray-950'
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.05, y: -4 }}
-      whileTap={{ scale: 0.95 }}
+    <motion.button
+      type="button"
+      whileHover={{ y: -3 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="cursor-pointer group"
+      aria-label={`${authorName}${hasUnviewed ? ' — new' : ''}`}
+      className={clsx(
+        'group relative block w-full overflow-hidden rounded-2xl text-left',
+        'aspect-[9/16] shadow-sm transition-shadow hover:shadow-xl hover:shadow-black/10',
+        ringClass,
+        className
+      )}
     >
-      <div className="relative">
-        {/* Animated Gradient Ring */}
-        <div
+      {/* Media */}
+      {src ? (
+        <img
+          src={src}
+          alt={authorName}
+          loading="lazy"
+          decoding="async"
           className={clsx(
-            'relative w-16 h-20 md:w-20 md:h-24 rounded-2xl overflow-hidden transition-all duration-300',
-            'hover:shadow-lg hover:shadow-primary-500/20',
-            hasUnviewed && !isOwn && !isHighlight
-              ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900'
-              : isHighlight
-              ? 'ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900'
-              : 'ring-2 ring-gray-200 dark:ring-gray-700'
+            'absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]',
+            !hasUnviewed && !isOwn && 'saturate-[0.85]'
           )}
-        >
-          {/* Animated Gradient Border for Unviewed */}
-          {hasUnviewed && !isOwn && !isHighlight && (
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500 via-purple-500 to-pink-500 opacity-75" />
-          )}
-          
-          {/* Highlight Ring */}
-          {isHighlight && (
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 opacity-75" />
-          )}
+        />
+      ) : (
+        <span className="absolute inset-0 bg-gradient-to-br from-primary-500 via-violet-500 to-rose-500" />
+      )}
 
-          {/* Close Friends Badge */}
+      {/* Readability scrim: strong at top (badges) and bottom (label). */}
+      <span className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/75" />
+
+      {/* Top row: avatar + badges */}
+      <span className="absolute inset-x-0 top-0 flex items-start justify-between gap-1 p-2">
+        <span className="flex items-center gap-1.5">
+          <Avatar src={owner.avatar} alt={authorName} size="xs" className="ring-2 ring-white/80" />
           {isCloseFriend && (
-            <div className="absolute -top-1 -right-1 z-20 bg-green-500 rounded-full p-1 shadow-lg">
-              <StarSolidIcon className="w-3 h-3 text-white" />
-            </div>
+            <span
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 shadow"
+              title="Close friend"
+            >
+              <StarSolidIcon className="h-3 w-3 text-white" />
+            </span>
           )}
-
-          {/* Inner Content */}
-          <div className="absolute inset-0.5 bg-white dark:bg-gray-900 rounded-xl overflow-hidden">
-            <img
-              src={story.media?.[0]?.thumbnail || story.media?.[0]?.url}
-              alt={(story.user?.fullName || story.user?.name || owner.fullName || owner.name || 'User')}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-            
-            {/* Video Indicator */}
-            {isVideo && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center">
-                  <PlayIcon className="w-5 h-5 text-white ml-0.5" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60" />
-
-          {/* User Avatar */}
-          <div className="absolute top-1.5 left-1.5">
-            <Avatar
-              src={owner.avatar}
-              alt={(story.user?.fullName || story.user?.name || owner.fullName || owner.name || 'User')}
-              size="xs"
-              className={clsx(
-                'ring-2 transition-all duration-300',
-                hasUnviewed ? 'ring-primary-500' : 'ring-white dark:ring-gray-800'
-              )}
-            />
-          </div>
-
-          {/* Media Count Badge */}
-          {mediaCount > 1 && (
-            <div className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm rounded-full px-1.5 py-0.5">
-              <span className="text-xs font-bold text-white">{mediaCount}</span>
-            </div>
+        </span>
+        <span className="flex flex-col items-end gap-1">
+          {count > 1 && (
+            <span className="rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
+              {count}
+            </span>
           )}
-
-          {/* Add More Badge (for own story) */}
-          {isOwn && (
-            <div className="absolute bottom-1.5 right-1.5 w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-              <PlusIcon className="w-4 h-4 text-white" />
-            </div>
-          )}
-
-          {/* My reaction on this specific story */}
-          {(story.myReaction || story.isLiked) && (
-            <div className="absolute bottom-1.5 left-1.5 text-red-500">
-              <HeartSolidIcon className="w-4 h-4 drop-shadow-lg" />
-            </div>
-          )}
-        </div>
-
-        {/* User Name */}
-        <p className="mt-2 text-xs text-center font-medium text-gray-900 dark:text-white truncate max-w-[80px] md:max-w-[90px]">
-          {isOwn ? 'My story' : owner.fullName || owner.name || 'User'}
-        </p>
-
-        {/* Time and Status */}
-        <div className="flex items-center justify-center gap-1 mt-0.5">
-          {story.createdAt && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {story.createdAt ? (
-                new Date(story.createdAt).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-              ) : (
-                'Recent'
-              )}
-            </p>
+          {isOwn && viewCount > 0 && (
+            <span className="flex items-center gap-0.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
+              <EyeIcon className="h-3 w-3" />
+              {viewCount}
+            </span>
           )}
           {hasUnviewed && !isOwn && (
-            <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-primary-400 ring-2 ring-white/60" />
           )}
-        </div>
-      </div>
-    </motion.div>
+        </span>
+      </span>
+
+      {/* Video play affordance */}
+      {isVideo && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/45 backdrop-blur-sm transition-transform group-hover:scale-110">
+            <PlayIcon className="ml-0.5 h-5 w-5 text-white" />
+          </span>
+        </span>
+      )}
+
+      {/* Bottom label */}
+      <span className="absolute inset-x-0 bottom-0 p-2.5">
+        <span className="block truncate text-[13px] font-semibold leading-tight text-white drop-shadow">
+          {authorName}
+        </span>
+        <span className="mt-0.5 flex items-center gap-1 text-[11px] text-white/75">
+          {story?.createdAt
+            ? new Date(story.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : 'Just now'}
+          {hasReaction && <HeartSolidIcon className="ml-auto h-3.5 w-3.5 text-rose-400" />}
+          {!hasReaction && story?.reactionCount > 0 && (
+            <span className="ml-auto flex items-center gap-0.5">
+              <HeartIcon className="h-3.5 w-3.5" />
+              {story.reactionCount}
+            </span>
+          )}
+        </span>
+      </span>
+
+      {/* Add-more affordance for your own story */}
+      {isOwn && (
+        <span className="absolute bottom-2.5 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-primary-600 shadow-lg transition-transform group-hover:scale-110">
+          <PlusIcon className="h-4 w-4" />
+        </span>
+      )}
+
+      {/* Highlight marker */}
+      {isHighlight && (
+        <span className="absolute left-2 top-12 rounded-full bg-violet-600/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+          Highlight
+        </span>
+      )}
+    </motion.button>
   )
 }
 

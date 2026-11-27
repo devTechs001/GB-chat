@@ -43,7 +43,7 @@ const CATEGORY_ICONS = {
   memories: SparklesIcon,
 }
 
-const StoryHighlights = ({ highlights = [], onAddHighlight, onEditHighlight, onDeleteHighlight }) => {
+const StoryHighlights = ({ highlights = [], onAddHighlight, onEditHighlight, onDeleteHighlight, onOpenHighlight }) => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedHighlight, setSelectedHighlight] = useState(null)
 
@@ -60,8 +60,8 @@ const StoryHighlights = ({ highlights = [], onAddHighlight, onEditHighlight, onD
 
   return (
     <>
-      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 p-4">
-        <div className="flex items-center justify-between mb-4">
+      <div className="mx-4 mt-4 rounded-2xl border border-gray-200/70 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/70 md:mx-6 md:mt-6">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <StarSolidIcon className="w-5 h-5 text-yellow-500" />
             Highlights
@@ -77,12 +77,12 @@ const StoryHighlights = ({ highlights = [], onAddHighlight, onEditHighlight, onD
         </div>
 
         {/* Highlights Grid */}
-        <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {highlights.map((highlight, index) => (
             <HighlightCard
               key={highlight._id || index}
               highlight={highlight}
-              onClick={() => setSelectedHighlight(highlight)}
+              onClick={() => (onOpenHighlight ? onOpenHighlight(highlight) : setSelectedHighlight(highlight))}
               onEdit={() => onEditHighlight?.(highlight)}
               onDelete={() => onDeleteHighlight?.(highlight)}
             />
@@ -95,7 +95,7 @@ const StoryHighlights = ({ highlights = [], onAddHighlight, onEditHighlight, onD
             onClick={() => setShowCreateModal(true)}
             className="flex-shrink-0 flex flex-col items-center gap-2"
           >
-            <div className="w-16 h-20 md:w-20 md:h-24 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex h-28 w-20 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/50 md:h-32 md:w-24">
               <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                 <PlusIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
               </div>
@@ -149,9 +149,11 @@ const HighlightCard = ({ highlight, onClick, onEdit, onDelete }) => {
       <div
         onClick={onClick}
         className={clsx(
-          'w-16 h-20 md:w-20 md:h-24 rounded-2xl overflow-hidden cursor-pointer',
-          'ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900',
-          'hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300'
+          // `relative` is load-bearing: the gradient layers below use
+          // `absolute inset-0` and used to escape the card entirely.
+          'relative h-28 w-20 overflow-hidden rounded-2xl cursor-pointer md:h-32 md:w-24',
+          'ring-2 ring-violet-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-950',
+          'transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/25'
         )}
       >
         {/* Gradient Background */}
@@ -181,7 +183,7 @@ const HighlightCard = ({ highlight, onClick, onEdit, onDelete }) => {
       </div>
 
       {/* Title */}
-      <p className="mt-2 text-xs text-center font-medium text-gray-900 dark:text-white truncate max-w-[80px]">
+      <p className="mt-2 max-w-[80px] truncate text-center text-xs font-semibold text-gray-900 dark:text-white md:max-w-[96px]">
         {highlight.title}
       </p>
 

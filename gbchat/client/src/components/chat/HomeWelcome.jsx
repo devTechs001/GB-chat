@@ -39,7 +39,7 @@ const Tile = ({ icon: Icon, label, hint, tone, onClick }) => (
     whileHover={{ y: -2 }}
     whileTap={{ scale: 0.98 }}
     onClick={onClick}
-    className="group flex items-start gap-3 rounded-2xl border border-gray-200/70 bg-white p-3 text-left shadow-sm transition-colors hover:border-primary-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-primary-700"
+    className="group flex items-start gap-3 rounded-2xl border border-gray-200/70 bg-white/90 p-3.5 text-left shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/80 dark:hover:border-primary-700"
   >
     <span className={clsx('flex h-10 w-10 flex-none items-center justify-center rounded-xl', tone)}>
       <Icon className="h-5 w-5" />
@@ -95,18 +95,30 @@ const HomeWelcome = ({ onNewChat, onSelectChat }) => {
   }
 
   return (
-    <div className="h-full w-full overflow-y-auto overscroll-contain bg-gray-50 dark:bg-gray-950">
-      <div className="mx-auto w-full max-w-3xl px-5 py-8">
+    <div className="relative h-full w-full overflow-y-auto overscroll-contain bg-gray-50 dark:bg-gray-950">
+      {/* Soft brand wash: gives the empty state depth without a hero image */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary-500/10 via-violet-500/5 to-transparent"
+      />
+      <div className="relative mx-auto w-full max-w-3xl px-5 py-8 lg:max-w-4xl lg:px-8 lg:py-10">
         {/* Greeting */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Avatar src={user?.avatar} alt={user?.fullName || 'You'} size="lg" status={onlineStatus(user)} />
+          <div className="flex items-center gap-3.5">
+            <Avatar
+              src={user?.avatar}
+              alt={user?.fullName || 'You'}
+              name={user?.fullName || user?.name}
+              size="xl"
+              status={onlineStatus(user)}
+              className="shadow-lg shadow-primary-500/10"
+            />
             <div>
               <p className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <GreetingIcon className="h-3.5 w-3.5" />
                 {greeting}
               </p>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white lg:text-3xl">
                 {firstName}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">

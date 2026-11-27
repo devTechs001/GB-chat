@@ -757,9 +757,10 @@ const ProfilePage = () => {
               <Avatar
                 src={profile.avatar}
                 alt={profile.name}
-                size="xl"
+                name={profile.name}
+                size="2xl"
                 status={profile.isOnline ? 'online' : 'offline'}
-                className="ring-4 ring-white shadow-xl dark:ring-gray-900"
+                className="rounded-full ring-4 ring-white shadow-xl dark:ring-gray-900"
               />
 
               {isMe && (

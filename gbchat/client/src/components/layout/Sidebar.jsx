@@ -6,6 +6,7 @@ import {
   UserGroupIcon,
   PhoneIcon,
   Cog6ToothIcon,
+  MagnifyingGlassIcon,
   MoonIcon,
   SunIcon,
   ArrowRightOnRectangleIcon,
@@ -79,7 +80,8 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
   return (
     <aside
       className={clsx(
-        'h-full flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200/80 dark:border-gray-800 theme-surface',
+        'h-full flex flex-col border-r border-gray-200/70 dark:border-gray-800/80',
+        'bg-white/80 backdrop-blur-xl dark:bg-gray-900/80',
         isDrawer ? 'w-[280px]' : isCollapsed ? 'w-[76px]' : 'w-72',
         'transition-[width] duration-200 ease-out'
       )}
@@ -157,6 +159,26 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
       </div>
 
       {/* ---------- Navigation ---------- */}
+      {/* Quick search — desktop only, mirrors the ⌘K shortcut. */}
+      {!isCollapsed && (
+        <div className="flex-shrink-0 px-3 pb-1 pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              onClose?.()
+              window.dispatchEvent(new CustomEvent('gbchat:focus-search'))
+            }}
+            className="flex w-full items-center gap-2 rounded-xl border border-gray-200/80 bg-gray-50/80 px-3 py-2 text-left text-sm text-gray-500 transition-colors hover:border-primary-300 hover:bg-white dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-primary-700"
+          >
+            <MagnifyingGlassIcon className="h-4 w-4" />
+            <span className="flex-1 truncate">Search chats</span>
+            <kbd className="rounded border border-gray-300/70 bg-white px-1 py-0.5 text-[10px] font-semibold text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
+      )}
+
       <nav
         className={clsx(
           'flex-1 min-h-0 overflow-y-auto overscroll-contain',
@@ -177,17 +199,22 @@ const Sidebar = ({ variant = 'desktop', collapsed = false, onToggleCollapse, onC
               title={isCollapsed ? item.name : undefined}
               aria-current={active ? 'page' : undefined}
               className={clsx(
-                'relative flex items-center rounded-xl transition-colors',
+                'group relative flex items-center rounded-xl transition-all duration-150',
                 isCollapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5',
                 active
-                  ? 'bg-primary-500/10 text-primary-700 dark:text-primary-300 font-semibold'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-primary-500/12 text-primary-700 shadow-sm ring-1 ring-primary-500/20 dark:text-primary-300 font-semibold'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100/80 hover:text-gray-900 dark:hover:bg-gray-800/70 dark:hover:text-white'
               )}
             >
               {active && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-primary-500" />
+                <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary-500" />
               )}
-              <Icon className={clsx('flex-shrink-0', active ? 'w-5 h-5' : 'w-5 h-5')} />
+              <Icon
+                className={clsx(
+                  'w-5 h-5 flex-shrink-0 transition-transform duration-150',
+                  !active && 'group-hover:scale-110'
+                )}
+              />
               {!isCollapsed && <span className="text-sm truncate">{item.name}</span>}
               {showBadge && (
                 <span

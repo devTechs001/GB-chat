@@ -10,8 +10,13 @@ import {
 } from '@heroicons/react/24/outline'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
-import WallpaperSelector from '../chat/WallpaperSelector'
-import { WALLPAPERS, DEFAULT_WALLPAPER } from '../chat/WallpaperSelector'
+import WallpaperGallery from './WallpaperGallery'
+import {
+  WALLPAPERS,
+  DEFAULT_WALLPAPER_ID,
+  resolveWallpaper,
+  serializeWallpaper,
+} from '../../lib/wallpapers'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import useChatStore from '../../store/useChatStore'
@@ -36,12 +41,19 @@ const ChatSettings = () => {
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
 
-  // Load global wallpaper on mount
+  // Load the global wallpaper on mount. Stored values may be a JSON
+  // descriptor (new) or a raw URL/data-URI (legacy) — resolveWallpaper accepts
+  // both, so an existing user's background survives the upgrade.
   useEffect(() => {
     const saved = localStorage.getItem('global-wallpaper')
-    if (saved) {
-      setGlobalWallpaper(saved)
+    if (!saved) return
+    let parsed = saved
+    try {
+      parsed = JSON.parse(saved)
+    } catch {
+      parsed = saved
     }
+    setGlobalWallpaper(parsed)
   }, [])
 
   const handleToggle = (key) => {
@@ -54,23 +66,28 @@ const ChatSettings = () => {
     toast.success(`Media quality set to ${quality}`)
   }
 
-  const handleGlobalWallpaperChange = (wallpaperUrl) => {
-    const wallpaper = wallpaperUrl || DEFAULT_WALLPAPER
-    setGlobalWallpaper(wallpaper)
-    localStorage.setItem('global-wallpaper', wallpaper)
+  const handleGlobalWallpaperChange = (serialized, wallpaper) => {
+    setGlobalWallpaper(serialized)
+    try {
+      localStorage.setItem('global-wallpaper', JSON.stringify(serialized))
+    } catch {
+      /* private mode / quota */
+    }
 
-    // Dispatch event to update all chat areas
-    window.dispatchEvent(new CustomEvent('global-wallpaper-change', {
-      detail: { wallpaper }
-    }))
+    // ChatArea listens for this and re-renders with the resolved CSS.
+    window.dispatchEvent(
+      new CustomEvent('global-wallpaper-change', { detail: { wallpaper: resolveWallpaper(serialized) } })
+    )
 
-    toast.success(wallpaperUrl ? 'Global wallpaper updated' : 'Wallpaper reset to default')
+    toast.success(wallpaper?.name ? `${wallpaper.name} is now the global wallpaper` : 'Global wallpaper updated')
   }
 
   const getCurrentWallpaperName = () => {
-    if (!globalWallpaper) return 'WhatsApp Default'
-    const found = WALLPAPERS.find(w => w.url === globalWallpaper)
-    return found ? found.name : 'Custom'
+    if (!globalWallpaper) return 'Aurora (default)'
+    const id = globalWallpaper?.id
+    const found = WALLPAPERS.find((entry) => entry.id === id)
+    if (found) return found.name
+    return globalWallpaper?.kind === 'image' ? 'Your image' : 'Custom'
   }
 
   const handleClearAllChats = async () => {
@@ -191,12 +208,19 @@ const ChatSettings = () => {
         <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
           {/* Preview */}
           <div
-            className="w-20 h-20 rounded-lg border-2 border-gray-200 dark:border-gray-600 shadow-sm flex-shrink-0"
-            style={{
-              backgroundImage: `url('${globalWallpaper || DEFAULT_WALLPAPER}')`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
+            className="h-20 w-20 flex-shrink-0 rounded-2xl border-2 border-gray-200 shadow-sm dark:border-gray-600"
+            style={(() => {
+              const css = resolveWallpaper(
+                globalWallpaper || { kind: 'css', value: '', id: DEFAULT_WALLPAPER_ID }
+              )
+              const fallback = resolveWallpaper(DEFAULT_WALLPAPER_ID)
+              const chosen = css || fallback
+              return {
+                background: chosen?.background,
+                backgroundSize: chosen?.backgroundSize,
+                backgroundPosition: chosen?.backgroundPosition,
+              }
+            })()}
           />
 
           <div className="flex-1">
@@ -386,13 +410,21 @@ const ChatSettings = () => {
         </div>
       </Modal>
 
-      {/* Wallpaper Selector Modal */}
-      <WallpaperSelector
+      {/* Wallpaper picker */}
+      <Modal
         isOpen={showWallpaperModal}
         onClose={() => setShowWallpaperModal(false)}
-        onSelect={handleGlobalWallpaperChange}
-        currentWallpaper={globalWallpaper}
-      />
+        title="Global wallpaper"
+        size="lg"
+      >
+        <WallpaperGallery
+          value={globalWallpaper}
+          onChange={(serialized, wallpaper) => {
+            handleGlobalWallpaperChange(serialized, wallpaper)
+            setShowWallpaperModal(false)
+          }}
+        />
+      </Modal>
     </div>
   )
 }

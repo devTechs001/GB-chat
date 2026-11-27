@@ -55,16 +55,11 @@ const ChannelCard = ({ channel }) => {
           handleClick()
         }
       }}
-      className="card-interactive bg-white dark:bg-gray-800 rounded-2xl p-5 cursor-pointer border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:border-primary-300 dark:hover:border-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      className="card-interactive relative overflow-hidden bg-white dark:bg-gray-800/90 rounded-2xl p-5 cursor-pointer border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:border-primary-300 dark:hover:border-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
     >
       {/* Channel Header */}
       <div className="flex items-start gap-4 mb-4">
-        <Avatar
-          src={channel.avatar}
-          alt={channel.name}
-          size="lg"
-          fallback={channel.name.charAt(0)}
-        />
+        <Avatar src={channel.avatar} alt={channel.name} name={channel.name} size="lg" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-gray-900 dark:text-white truncate">

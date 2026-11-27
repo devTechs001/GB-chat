@@ -11,13 +11,13 @@ import {
   HeartIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline'
-import StoryCard from '../components/stories/StoryCard'
 import StoryCardEnhanced from '../components/stories/StoryCardEnhanced'
 import StoryViewer from '../components/stories/StoryViewer'
 import StoryRing from '../components/stories/StoryRing'
 import StoryCreator from '../components/stories/StoryCreator'
 import StoryHighlights from '../components/stories/StoryHighlights'
 import StoryAnalytics from '../components/stories/StoryAnalytics'
+import { useNavigate } from 'react-router-dom'
 import useStoryStore from '../store/useStoryStore'
 import useAuthStore from '../store/useAuthStore'
 import Avatar from '../components/common/Avatar'
@@ -34,6 +34,7 @@ import toast from 'react-hot-toast'
 const HIGHLIGHT_CACHE_KEY = 'storyHighlights'
 
 const StoriesPage = () => {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const { stories, myStory, fetchStories, fetchMyStory } = useStoryStore()
   const [viewingStory, setViewingStory] = useState(null)
@@ -317,69 +318,85 @@ const StoriesPage = () => {
       {/* Scrollable body */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
 
-      {/* My Story Section */}
+      {/* My story — a wide hero card, not a thumbnail in a row of stats */}
       {myStory && (
-        <div className="mx-4 mt-4 md:mx-6 md:mt-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-800 p-4 md:p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              My story
-            </h2>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<ChartBarIcon className="w-4 h-4" />}
-              onClick={() => {
-                setSelectedStoryForAnalytics(myStory)
-                setShowAnalytics(true)
-              }}
-            >
-              Analytics
-            </Button>
-          </div>
-          <div className="flex items-center gap-4">
-            <StoryCardEnhanced
-              story={{ ...myStory, user: user || myStory.user, currentUserId: user?._id }}
-              onClick={() => handleStoryClick(myStory, -1)}
-              isOwn
+        <section className="px-4 pt-4 md:px-6 md:pt-6" aria-label="My story">
+          <div className="relative overflow-hidden rounded-2xl border border-gray-200/70 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-5">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-gradient-to-br from-primary-400/25 via-violet-400/20 to-rose-400/20 blur-2xl"
             />
-            <div className="flex-1">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div className="rounded-xl surface-muted px-2.5 py-2">
-                  <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-gray-500">
-                    <EyeIcon className="h-3 w-3" /> Views
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {myStory.viewCount ?? (myStory.viewers || []).length ?? 0}
-                  </p>
+            <div className="relative flex flex-col gap-5 md:flex-row md:items-center">
+              <div className="w-32 shrink-0 md:w-36">
+                <StoryCardEnhanced
+                  story={{ ...myStory, user: user || myStory.user, currentUserId: user?._id }}
+                  onClick={() => handleStoryClick(myStory, -1)}
+                  isOwn
+                />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900 dark:text-white md:text-lg">
+                      Your story is live
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Visible to your contacts · expires in {expiresIn(myStory.expiresAt)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<ChartBarIcon className="w-4 h-4" />}
+                    onClick={() => {
+                      setSelectedStoryForAnalytics(myStory)
+                      setShowAnalytics(true)
+                    }}
+                  >
+                    <span className="hidden sm:inline">Insights</span>
+                  </Button>
                 </div>
-                <div className="rounded-xl surface-muted px-2.5 py-2">
-                  <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-gray-500">
-                    <HeartIcon className="h-3 w-3" /> Reactions
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {myStory.reactions || 0}
-                  </p>
-                </div>
-                <div className="rounded-xl surface-muted px-2.5 py-2">
-                  <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-gray-500">
-                    <ChatBubbleLeftEllipsisIcon className="h-3 w-3" /> Replies
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {myStory.replies || 0}
-                  </p>
-                </div>
-                <div className="rounded-xl surface-muted px-2.5 py-2">
-                  <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-gray-500">
-                    <ClockIcon className="h-3 w-3" /> Expires
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    in {expiresIn(myStory.expiresAt)}
-                  </p>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    {
+                      label: 'Views',
+                      value: myStory.viewCount ?? (myStory.viewers || []).length ?? 0,
+                      icon: EyeIcon,
+                      tone: 'text-sky-600 dark:text-sky-400',
+                    },
+                    {
+                      label: 'Reactions',
+                      value: myStory.reactions || 0,
+                      icon: HeartIcon,
+                      tone: 'text-rose-500',
+                    },
+                    {
+                      label: 'Replies',
+                      value: myStory.replies || 0,
+                      icon: ChatBubbleLeftEllipsisIcon,
+                      tone: 'text-violet-500',
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800/70"
+                    >
+                      <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <stat.icon className={clsx('h-3 w-3', stat.tone)} />
+                        {stat.label}
+                      </p>
+                      <p className="mt-0.5 text-lg font-bold tabular-nums text-gray-900 dark:text-white">
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Story Highlights Section */}
@@ -389,6 +406,18 @@ const StoriesPage = () => {
           onAddHighlight={handleAddHighlight}
           onEditHighlight={handleEditHighlight}
           onDeleteHighlight={handleDeleteHighlight}
+          onOpenHighlight={(highlight) => {
+            // A highlight is a saved group of stories: open the first one in
+            // the viewer instead of doing nothing (the card used to be a
+            // dead click).
+            const first = (highlight.stories || [])[0]
+            if (first) {
+              setViewingStory(first)
+              setCurrentIndex(0)
+              return
+            }
+            toast('This highlight has no stories yet')
+          }}
         />
       )}
 
@@ -435,7 +464,7 @@ const StoriesPage = () => {
             }
           />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5">
             <AnimatePresence>
               {orderedStories.map((story, index) => (
                 <motion.div

@@ -59,7 +59,7 @@ const ReplyPreview = ({ message, onCancel }) => {
         <img
           src={message.media[0].thumbnail || message.media[0].url}
           alt=""
-          className="w-10 h-10 rounded object-cover"
+          className="h-10 w-10 rounded-lg object-cover ring-1 ring-black/5 dark:ring-white/10"
         />
       )}
 

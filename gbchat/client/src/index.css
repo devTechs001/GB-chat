@@ -314,6 +314,31 @@
     overflow: hidden;
   }
 
+  /* ---- Desktop shell (round 12) --------------------------------------
+     A floating, glassy pane layout reads as "modern app" on a wide screen
+     without changing the mobile layout at all: every rule here is lg+. */
+  @media (min-width: 1024px) {
+    .shell-glass {
+      background-color: color-mix(in srgb, var(--app-surface) 82%, transparent);
+      backdrop-filter: saturate(160%) blur(18px);
+      -webkit-backdrop-filter: saturate(160%) blur(18px);
+    }
+
+    /* The list pane sits on the canvas with a soft inner edge, not a hard line */
+    .pane-edge {
+      border-right: 1px solid var(--app-border);
+      box-shadow: 1px 0 0 0 color-mix(in srgb, var(--app-surface) 60%, transparent);
+    }
+
+    /* Hover lift for list rows: subtle, never jittery */
+    .row-hover {
+      transition: background-color 140ms ease, transform 140ms ease;
+    }
+    .row-hover:hover {
+      transform: translateX(1px);
+    }
+  }
+
   /* Divider that disappears at the very edges of a scroll list. */
   .list-divide > :not([hidden]) ~ :not([hidden]) {
     border-top: 1px solid var(--app-border);
