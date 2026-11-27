@@ -12,7 +12,8 @@ import useAuthStore from '../../store/useAuthStore'
 import useThemeStore from '../../store/useThemeStore'
 import api from '../../lib/api'
 import clsx from 'clsx'
-import { Star as StarIcon } from 'lucide-react'
+import { Star as StarIcon, Heart as HeartIcon } from 'lucide-react'
+import { ArrowDownIcon } from '@heroicons/react/24/outline'
 import { shallow } from 'zustand/shallow'
 
 const ChatArea = ({ onInfoClick, onBack }) => {
@@ -57,6 +58,12 @@ const ChatArea = ({ onInfoClick, onBack }) => {
   const focusMessageId = searchParams.get('message')
   const [highlightedMessage, setHighlightedMessage] = useState(null)
   const messagesEndRef = useRef(null)
+  // "New messages" affordance: when the reader has scrolled up, new messages
+  // must not yank them away from what they were reading.
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false)
+  const [unseenCount, setUnseenCount] = useState(0)
+  // How many messages the list had on the previous render (new-message count).
+  const previousCount = useRef(0)
   const chatContainerRef = useRef(null)
   const [replyTo, setReplyTo] = useState(null)
   const [selectedMessages, setSelectedMessages] = useState([])
@@ -142,17 +149,55 @@ const ChatArea = ({ onInfoClick, onBack }) => {
 
   // Load messages when active chat changes
   useEffect(() => {
+    previousCount.current = 0
+    setUnseenCount(0)
+    setShowJumpToLatest(false)
     if (activeChat?._id) {
       fetchMessages(activeChat._id)
     }
   }, [activeChat?._id, fetchMessages])
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToBottom = (behavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior })
+    setShowJumpToLatest(false)
+    setUnseenCount(0)
+  }
+
+  // Distance from the bottom of the message list, in px.
+  const distanceFromBottom = () => {
+    const el = chatContainerRef.current
+    if (!el) return 0
+    return el.scrollHeight - el.scrollTop - el.clientHeight
   }
 
   useEffect(() => {
-    scrollToBottom()
+    const el = chatContainerRef.current
+    if (!el) return undefined
+
+    const onScroll = () => {
+      const nearBottom = distanceFromBottom() < 120
+      setShowJumpToLatest(!nearBottom)
+      if (nearBottom) setUnseenCount(0)
+    }
+
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const count = messages?.length || 0
+    const added = Math.max(count - previousCount.current, 0)
+    previousCount.current = count
+
+    // First paint of a conversation always lands at the newest message;
+    // afterwards we only follow when the reader is already near the bottom,
+    // otherwise their position would jump while they read back.
+    if (count === 0 || distanceFromBottom() < 160) {
+      scrollToBottom(count === 0 ? 'auto' : 'smooth')
+    } else if (added > 0) {
+      setUnseenCount((n) => n + added)
+      setShowJumpToLatest(true)
+    }
   }, [messages])
 
   /* Deep link to one message: scroll to it, flash a ring, then drop the param
@@ -435,6 +480,27 @@ const ChatArea = ({ onInfoClick, onBack }) => {
         )}
         
         <div ref={messagesEndRef} />
+
+        {/* Jump-to-latest: only when the reader has scrolled away from the
+            newest message, so an incoming message never moves the view. */}
+        <AnimatePresence>
+          {showJumpToLatest && (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 12, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.9 }}
+              onClick={() => scrollToBottom()}
+              className="sticky bottom-2 mx-auto z-20 flex items-center gap-2 rounded-full bg-white/95 dark:bg-gray-800/95 backdrop-blur px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-100 shadow-lg ring-1 ring-black/5 dark:ring-white/10 hover:bg-white dark:hover:bg-gray-800"
+              aria-label="Jump to the latest message"
+            >
+              <ArrowDownIcon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              {unseenCount > 0
+                ? `${unseenCount} new message${unseenCount === 1 ? '' : 's'}`
+                : 'Latest'}
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Reply Preview - Mobile optimized */}

@@ -10,6 +10,32 @@ Tests: `cd gbchat/server && npm test` → 45 passing.
 
 ---
 
+## 0.e Round 10 — UI polish
+
+A look-pass over the shared shell and the components every screen reuses. No
+feature was removed; each item is either a visual fix or an accessibility bug.
+
+| Area | Before | After |
+| --- | --- | --- |
+| **Reduced motion** | `@media (prefers-reduced-motion: reduce)` targeted `html[data-mode=…] *`, so it matched nothing and every animation kept running — including for users who asked the OS to stop them. | The rule now covers every element (`*`, `::before`, `::after`), and the in-app toggle `html[data-reduced-motion='true']` has a matching block. `scroll-behavior` is reset too. |
+| **Dark mode on first paint** | The boot script in `index.html` set only a *class*; the stylesheet keys dark surfaces off `data-mode`. So a refresh rendered light surfaces until React mounted. | The boot script sets `data-mode`, `data-theme` **and** `data-reduced-motion` before the first paint, plus a background colour for the initial frame (no white flash on a dark theme or PWA launch). |
+| **Buttons** | `btn` used `focus:ring` (drawn on mouse clicks too), no press feedback, and `btn-secondary` was a grey block with a heavy ring. | One `.btn` base: consistent height, `focus-visible` ring only for keyboard, `active:scale-[0.98]` press, and a bordered white/dark `btn-secondary` that matches the cards around it. |
+| **Focus ring** | Two competing rules (`:focus-visible` in base and `.focus-ring` later). | A single `:focus-visible` policy for links, buttons, tabs, inputs and `[contenteditable]`, always visible against both themes. |
+| **Skip link** | Tailwind `sr-only … focus:not-sr-only` chain that only worked with the `focus` variant. | `.skip-link` class: slides into view on focus (and `:focus-visible`), rounded, on top of the shell. |
+| **Avatars** | Flat grey circle with an initial — every contact looked identical in a list, and images popped in without a placeholder. | Deterministic per-name gradient (same person = same colour, forever), lazy + async-decoded images with a grey placeholder, subtle ring, and a press animation when clickable. |
+| **Bottom navigation** | Active tab was colour-only (a problem for colour-blind users), badge was brand blue (same colour as the highlight), no press feedback. | Active tab gets a pill, a coloured label **and** a dot underneath; unread badge is rose with a surface-coloured ring for contrast; `group-active:scale-90` on tap. |
+| **Skeletons** | `animate-pulse` on every placeholder — a whole screen breathing in unison reads as "broken". | `.skeleton` with a directional shimmer, theme-aware (white sweep on light, 7 % white on dark). |
+| **Chat scrolling** | Every message list update called `scrollIntoView`, so an incoming message yanked the reader to the bottom mid-read. | Scrolls only when the reader is already near the bottom (or on first paint); otherwise a **"N new messages"** pill appears and stays until tapped. New messages no longer steal position; the count resets per conversation. |
+| **Chat list rows** | Timestamps jittered between rows; the unread badge used the brand colour and competed with the selected row. | `tabular-nums` timestamps, a rose unread badge with an accessible label, and a "selected" state that stays distinct from "unread". |
+| **Channel cards** | `motion.div` with `onClick` — invisible to keyboard and screen readers, and a bespoke hover animation that fought `.card-interactive`. | `role="button"`, `tabIndex`, Enter/Space handling, focus ring, and the shared `.card-interactive` lift/press. |
+| **Help centre CTA** | Green/teal gradient — the only screen in the app not using the brand palette — and a "Live Chat" button that did nothing. | Brand gradient, both actions are real `mailto:` links (labelled honestly: "Email support" / "Request a call"). |
+| **Typography** | Numbers in counters, timers and metrics changed width as digits changed; long words could overflow on a 320 px screen. | `font-variant-numeric: tabular-nums` for `.tabular-nums`/`[data-tabular]`, contextual ligatures, `text-size-adjust`, and a `.line-clamp-2-safe` helper. |
+
+Build: **`npx vite build` succeeds**, `npx eslint .` **0 errors** (214 warnings,
+unchanged), preview verified at 5173 with the dev server.
+
+---
+
 ## 0.d Round 9 — server-side errors fixed
 
 Everything below was found by booting the server from `gbchat/server` (how

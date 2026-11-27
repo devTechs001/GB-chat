@@ -8,7 +8,7 @@ Welcome to the GBChat technical documentation. This folder contains comprehensiv
 
 ### 0. Audit, offline & backup (newest)
 - [Endpoint audit](./ENDPOINT_AUDIT.md) — generated inventory: every route, per router, with auth status and client usage.
-- [Improvement backlog](./IMPROVEMENTS.md) — what the review found, what was fixed, what is recommended next.
+- [Improvement backlog](./IMPROVEMENTS.md) — what the review found, what was fixed, what is recommended next (includes the round-10 UI polish pass: motion, focus, avatars, navigation, skeletons, chat scrolling).
 - [Offline mode & local backup](./OFFLINE_AND_BACKUP.md) — the SQLite mirror, the browser cache and the outbox.
 - [Observability](./OBSERVABILITY.md) — request ids, per-route latency percentiles, Prometheus output, gRPC trace propagation, browser crash digest, crash isolation, error-response contract.
 - [Web Push](./PUSH_NOTIFICATIONS.md) — VAPID setup, subscription storage, delivery hooks, service-worker behaviour, troubleshooting.

@@ -36,40 +36,57 @@ const Avatar = ({
   }
 
   const showFallback = !src || imgError
+  const initial = (fallback || alt?.charAt(0) || '?').toString().charAt(0).toUpperCase()
+
+  // Deterministic per-name hue so every contact keeps the same colour across
+  // sessions (a flat grey blob gives no way to tell people apart in a list).
+  const hue = [...(alt || '?')].reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) % 360, 7)
+  const fallbackStyle = showFallback
+    ? {
+        backgroundImage: `linear-gradient(135deg, hsl(${hue} 72% 58%), hsl(${(hue + 38) % 360} 68% 46%))`,
+        color: '#fff',
+      }
+    : undefined
 
   return (
     <div className={clsx('relative inline-block', className)}>
       {showFallback ? (
         <div
           onClick={onClick}
+          aria-label={alt}
+          role={onClick ? 'button' : undefined}
+          style={fallbackStyle}
           className={clsx(
             sizes[size],
-            'rounded-full bg-gray-300 dark:bg-gray-600',
-            'flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold',
-            onClick && 'cursor-pointer hover:opacity-90'
+            'rounded-full flex items-center justify-center font-semibold select-none',
+            'ring-1 ring-black/5 dark:ring-white/10',
+            size === 'xs' || size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-lg',
+            onClick && 'cursor-pointer transition hover:brightness-105 active:scale-95'
           )}
         >
-          {fallback || alt?.charAt(0)?.toUpperCase()}
+          {initial}
         </div>
       ) : (
         <img
           src={src}
           alt={alt}
+          loading="lazy"
+          decoding="async"
           onClick={onClick}
           onError={() => setImgError(true)}
           className={clsx(
             sizes[size],
-            'rounded-full object-cover',
-            onClick && 'cursor-pointer hover:opacity-90'
+            'rounded-full object-cover bg-gray-200 dark:bg-gray-700',
+            'ring-1 ring-black/5 dark:ring-white/10',
+            onClick && 'cursor-pointer transition hover:brightness-105 active:scale-95'
           )}
-          style={{ objectFit: 'cover' }}
         />
       )}
       
       {status && (
         <span
           className={clsx(
-            'absolute bottom-0 right-0 block rounded-full ring-2 ring-white dark:ring-gray-800',
+            'absolute bottom-0 right-0 block rounded-full ring-2 ring-white dark:ring-gray-900',
             statusSizes[size],
             statusColors[status]
           )}

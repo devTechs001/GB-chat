@@ -242,7 +242,7 @@ const ChatListItem = ({ chat, onClick }) => {
           {/* Timestamp on far right */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span className={clsx(
-              'text-[10px] md:text-xs flex-shrink-0 font-medium',
+              'text-[10px] md:text-xs flex-shrink-0 font-medium tabular-nums',
               unreadCount > 0
                 ? 'text-primary-600 dark:text-primary-400'
                 : 'text-gray-400 dark:text-gray-500'
@@ -270,12 +270,14 @@ const ChatListItem = ({ chat, onClick }) => {
 
             {/* Unread badge with gradient */}
             {unreadCount > 0 && (
-              <span className={clsx(
-                'inline-flex items-center justify-center min-w-[20px] h-5 text-xs font-bold text-white rounded-full px-1.5 shadow-lg',
-                'bg-gradient-to-r from-primary-500 to-primary-600',
-                'shadow-primary-500/30',
-                unreadCount > 99 && 'from-red-500 to-red-600 shadow-red-500/30'
-              )}>
+              <span
+                aria-label={`${unreadCount} unread`}
+                className={clsx(
+                  'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full',
+                  'text-[11px] font-bold leading-none text-white tabular-nums',
+                  'bg-gradient-to-br from-primary-500 to-primary-600 shadow-sm shadow-primary-500/30'
+                )}
+              >
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
